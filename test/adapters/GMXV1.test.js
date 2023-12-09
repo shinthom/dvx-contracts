@@ -69,7 +69,6 @@ describe("GMXV1", () => {
         collateralAmount,
         size,
         long,
-        fee,
         {
           value: fee,
         }
@@ -90,7 +89,6 @@ describe("GMXV1", () => {
           collateralAmount,
           size,
           long,
-          fee,
           {
             value: fee,
           }
@@ -104,7 +102,7 @@ describe("GMXV1", () => {
       });
 
       it("decrease position (1/2)", async () => {
-        await gmxV1.decreasePosition(collateral, index, size / 2n, long, fee, {
+        await gmxV1.decreasePosition(collateral, index, size / 2n, long, {
           value: fee,
         });
 
@@ -116,7 +114,7 @@ describe("GMXV1", () => {
       });
 
       it("decrease position (2/2)", async () => {
-        await gmxV1.decreasePosition(collateral, index, size, long, fee, {
+        await gmxV1.decreasePosition(collateral, index, size, long, {
           value: fee,
         });
 
@@ -136,7 +134,6 @@ describe("GMXV1", () => {
           index,
           collateralAmount,
           long,
-          fee,
           {
             value: fee,
           }
@@ -151,16 +148,9 @@ describe("GMXV1", () => {
 
       it("decrease collateral (half)", async () => {
         const amountUsd = ethers.parseUnits("100", 30);
-        await gmxV1.decreaseCollateral(
-          collateral,
-          index,
-          amountUsd,
-          long,
-          fee,
-          {
-            value: fee,
-          }
-        );
+        await gmxV1.decreaseCollateral(collateral, index, amountUsd, long, {
+          value: fee,
+        });
 
         const requestKey = await gmxV1.requestKey();
 
@@ -198,7 +188,6 @@ describe("GMXV1", () => {
         collateralAmount,
         size,
         short,
-        fee,
         {
           value: fee,
         }
@@ -219,7 +208,6 @@ describe("GMXV1", () => {
           collateralAmount,
           size,
           short,
-          fee,
           {
             value: fee,
           }
@@ -233,7 +221,7 @@ describe("GMXV1", () => {
       });
 
       it("decrease position (1/2)", async () => {
-        await gmxV1.decreasePosition(collateral, index, size / 2n, short, fee, {
+        await gmxV1.decreasePosition(collateral, index, size / 2n, short, {
           value: fee,
         });
 
@@ -245,7 +233,7 @@ describe("GMXV1", () => {
       });
 
       it("decrease position (2/2)", async () => {
-        await gmxV1.decreasePosition(collateral, index, size, short, fee, {
+        await gmxV1.decreasePosition(collateral, index, size, short, {
           value: fee,
         });
 
@@ -263,7 +251,6 @@ describe("GMXV1", () => {
           index,
           collateralAmount,
           short,
-          fee,
           {
             value: fee,
           }
@@ -278,16 +265,9 @@ describe("GMXV1", () => {
 
       it("decrease collateral (half)", async () => {
         const amountUsd = ethers.parseUnits("100", 30);
-        await gmxV1.decreaseCollateral(
-          collateral,
-          index,
-          amountUsd,
-          short,
-          fee,
-          {
-            value: fee,
-          }
-        );
+        await gmxV1.decreaseCollateral(collateral, index, amountUsd, short, {
+          value: fee,
+        });
 
         const requestKey = await gmxV1.requestKey();
         await gmxV1.executeDecreasePosition(requestKey, user0.address);

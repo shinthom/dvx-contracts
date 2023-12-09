@@ -45,8 +45,7 @@ describe("MUX", () => {
     });
 
     it("increases position", async () => {
-      const fee = 0;
-      await mux.increasePosition(collateral, index, amount, size, long, fee, {
+      await mux.increasePosition(collateral, index, amount, size, long, {
         value: amount,
       });
 
@@ -61,10 +60,8 @@ describe("MUX", () => {
     });
 
     describe("after increase position", () => {
-      const fee = 0;
-
       beforeEach(async () => {
-        await mux.increasePosition(collateral, index, amount, size, long, fee, {
+        await mux.increasePosition(collateral, index, amount, size, long, {
           value: amount,
         });
 
@@ -80,7 +77,7 @@ describe("MUX", () => {
       });
 
       it("decrease position (1/2)", async () => {
-        await mux.decreasePosition(collateral, index, size / 2n, long, fee);
+        await mux.decreasePosition(collateral, index, size / 2n, long);
 
         const orderId = await mux.orderId();
         await orderBook.connect(impersonatedBroker).fillPositionOrder(
@@ -94,7 +91,7 @@ describe("MUX", () => {
       });
 
       it("decrease position (2/2)", async () => {
-        await mux.decreasePosition(collateral, index, size, long, fee);
+        await mux.decreasePosition(collateral, index, size, long);
 
         const orderId = await mux.orderId();
         await orderBook.connect(impersonatedBroker).fillPositionOrder(
@@ -109,7 +106,7 @@ describe("MUX", () => {
       });
 
       it("increase collateral", async () => {
-        await mux.increaseCollateral(collateral, index, amount, long, fee, {
+        await mux.increaseCollateral(collateral, index, amount, long, {
           value: amount,
         });
 
@@ -117,16 +114,9 @@ describe("MUX", () => {
       });
 
       it("decrease collateral", async () => {
-        await mux.decreaseCollateral(
-          collateral,
-          index,
-          amount / 10n,
-          long,
-          fee,
-          {
-            value: amount,
-          }
-        );
+        await mux.decreaseCollateral(collateral, index, amount / 10n, long, {
+          value: amount,
+        });
 
         const orderId = await mux.orderId();
 
@@ -156,8 +146,7 @@ describe("MUX", () => {
     });
 
     it("increases position", async () => {
-      const fee = 0;
-      await mux.increasePosition(collateral, index, amount, size, short, fee, {
+      await mux.increasePosition(collateral, index, amount, size, short, {
         value: amount,
       });
 
@@ -172,20 +161,10 @@ describe("MUX", () => {
     });
 
     describe("after increase position", () => {
-      const fee = 0;
-
       beforeEach(async () => {
-        await mux.increasePosition(
-          collateral,
-          index,
-          amount,
-          size,
-          short,
-          fee,
-          {
-            value: amount,
-          }
-        );
+        await mux.increasePosition(collateral, index, amount, size, short, {
+          value: amount,
+        });
 
         const orderId = await mux.orderId();
 
@@ -199,7 +178,7 @@ describe("MUX", () => {
       });
 
       it("decrease position (1/2)", async () => {
-        await mux.decreasePosition(collateral, index, size / 2n, short, fee);
+        await mux.decreasePosition(collateral, index, size / 2n, short);
 
         const orderId = await mux.orderId();
         await orderBook.connect(impersonatedBroker).fillPositionOrder(
@@ -213,7 +192,7 @@ describe("MUX", () => {
       });
 
       it("decrease position (2/2)", async () => {
-        await mux.decreasePosition(collateral, index, size, short, fee);
+        await mux.decreasePosition(collateral, index, size, short);
 
         const orderId = await mux.orderId();
         await orderBook.connect(impersonatedBroker).fillPositionOrder(
@@ -228,7 +207,7 @@ describe("MUX", () => {
       });
 
       it("increase collateral", async () => {
-        await mux.increaseCollateral(collateral, index, amount, short, fee, {
+        await mux.increaseCollateral(collateral, index, amount, short, {
           value: amount,
         });
 
@@ -236,16 +215,9 @@ describe("MUX", () => {
       });
 
       it("decrease collateral", async () => {
-        await mux.decreaseCollateral(
-          collateral,
-          index,
-          amount / 10n,
-          short,
-          fee,
-          {
-            value: amount,
-          }
-        );
+        await mux.decreaseCollateral(collateral, index, amount / 10n, short, {
+          value: amount,
+        });
 
         const orderId = await mux.orderId();
 

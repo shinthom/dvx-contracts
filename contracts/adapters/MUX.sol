@@ -46,8 +46,7 @@ contract MUX is IAdapter {
         address index,
         uint256 collateralAmount,
         uint256 size,
-        bool isLong,
-        uint256 fee
+        bool isLong
     ) override payable public {
         // todo: mapping token address to asset id
         bytes32 subAccountId = _assembleSubAccountId(
@@ -56,7 +55,6 @@ contract MUX is IAdapter {
             3, // WETH
             isLong
         );
-        console.logBytes32(subAccountId);
 
         IOrderBook(_orderBook).placePositionOrder3{value: collateralAmount}(
             subAccountId,
@@ -78,8 +76,7 @@ contract MUX is IAdapter {
         address index,
         // uint256 collateralAmount, // TODO: remove collateralAmount (issue 3)
         uint256 size,
-        bool isLong,
-        uint256 fee
+        bool isLong
     ) override payable public {
         bytes32 subAccountId = _assembleSubAccountId(
             address(this), // TODO: set msg.sender to account
@@ -107,8 +104,7 @@ contract MUX is IAdapter {
         address collateral,
         address index,
         uint256 collateralAmount,
-        bool isLong,
-        uint256 fee
+        bool isLong
     ) override payable public {
         bytes32 subAccountId = _assembleSubAccountId(
             address(this), // TODO: set msg.sender to account
@@ -125,8 +121,7 @@ contract MUX is IAdapter {
         address index,
         uint256 collateralAmount,
         // uint256 size,
-        bool isLong,
-        uint256 fee
+        bool isLong
     ) override payable public {
         bytes32 subAccountId = _assembleSubAccountId(
             address(this), // TODO: set msg.sender to account

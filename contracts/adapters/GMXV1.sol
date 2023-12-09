@@ -17,6 +17,9 @@ contract GMXV1 is IAdapter {
     address private _vault;
     address private _swapRouter; // test
 
+    // todo: make setFee function
+    uint256 fee = 180_000_000_000_000;
+
     constructor(
         address positionRouter,
         address router,
@@ -104,8 +107,7 @@ contract GMXV1 is IAdapter {
         address index,
         uint256 collateralAmount,
         uint256 size,
-        bool isLong,
-        uint256 fee
+        bool isLong
     ) private {
         if (!IRouter(_router).approvedPlugins(address(this), _positionRouter)) {
             IRouter(_router).approvePlugin(_positionRouter);
@@ -142,8 +144,7 @@ contract GMXV1 is IAdapter {
         address index,
         uint256 collateralAmount,
         uint256 size,
-        bool isLong,
-        uint256 fee
+        bool isLong
     ) private {
         address[] memory path = new address[](1);
         path[0] = collateral;
@@ -173,16 +174,14 @@ contract GMXV1 is IAdapter {
         address index,
         uint256 collateralAmount,
         uint256 size,
-        bool isLong,
-        uint256 fee
+        bool isLong
     ) override payable public {
         _increase(
             collateral,
             index,
             collateralAmount,
             size,
-            isLong,
-            fee
+            isLong
         );
     }
 
@@ -191,16 +190,14 @@ contract GMXV1 is IAdapter {
         address index,
         // uint256 collateralAmount, // TODO: remove collateralAmount (issue 3)
         uint256 size,
-        bool isLong,
-        uint256 fee
+        bool isLong
     ) override payable public {
         _decrease(
             collateral,
             index,
             0,
             size,
-            isLong,
-            fee
+            isLong
         );
     }
 
@@ -208,16 +205,14 @@ contract GMXV1 is IAdapter {
         address collateral,
         address index,
         uint256 collateralAmount,
-        bool isLong,
-        uint256 fee
+        bool isLong
     ) override payable public {
         _increase(
             collateral,
             index,
             collateralAmount,
             0,
-            isLong,
-            fee
+            isLong
         );
     }
 
@@ -226,16 +221,14 @@ contract GMXV1 is IAdapter {
         address index,
         uint256 collateralAmount,
         // uint256 size,
-        bool isLong,
-        uint256 fee
+        bool isLong
     ) override payable public {
         _decrease(
             collateral,
             index,
             collateralAmount,
             0,
-            isLong,
-            fee
+            isLong
         );
     }
 
