@@ -15,7 +15,7 @@ interface IAdapter {
     function increasePosition(
         address collateral,
         address index,
-        uint256 amount,
+        uint256 collateralAmount,
         uint256 size,
         bool isLong,
         uint256 fee
@@ -24,7 +24,7 @@ interface IAdapter {
     function decreasePosition(
         address collateral,
         address index,
-        // uint256 amount,
+        // uint256 collateralAmount,
         uint256 size,
         bool isLong,
         uint256 fee
@@ -33,7 +33,7 @@ interface IAdapter {
     function increaseCollateral(
         address collateral,
         address index,
-        uint256 amount,
+        uint256 collateralAmount,
         // uint256 size,
         bool isLong,
         uint256 fee
@@ -42,7 +42,7 @@ interface IAdapter {
     function decreaseCollateral(
         address collateral,
         address index,
-        uint256 amount,
+        uint256 collateralAmount,
         // uint256 size,
         bool isLong,
         uint256 fee

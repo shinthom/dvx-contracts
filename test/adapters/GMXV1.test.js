@@ -54,18 +54,26 @@ describe("GMXV1", () => {
 
     const collateral = WETH;
     const index = WETH;
-    const amount = ethers.parseEther("0.1");
+    const collateralAmount = ethers.parseEther("1");
     const size = ethers.parseUnits("6000", 30);
 
     beforeEach(async () => {
-      await weth.deposit({ value: amount });
-      await weth.approve(gmxV1.target, amount);
+      await weth.deposit({ value: collateralAmount });
+      await weth.approve(gmxV1.target, collateralAmount);
     });
 
     it("increases position", async () => {
-      await gmxV1.increasePosition(collateral, index, amount, size, long, fee, {
-        value: fee,
-      });
+      await gmxV1.increasePosition(
+        collateral,
+        index,
+        collateralAmount,
+        size,
+        long,
+        fee,
+        {
+          value: fee,
+        }
+      );
 
       const requestKey = await gmxV1.requestKey();
       await gmxV1.executeIncreasePosition(requestKey, user0.address);
@@ -79,7 +87,7 @@ describe("GMXV1", () => {
         await gmxV1.increasePosition(
           collateral,
           index,
-          amount,
+          collateralAmount,
           size,
           long,
           fee,
@@ -120,12 +128,19 @@ describe("GMXV1", () => {
       });
 
       it("increase collateral", async () => {
-        await weth.deposit({ value: amount });
-        await weth.approve(gmxV1.target, amount);
+        await weth.deposit({ value: collateralAmount });
+        await weth.approve(gmxV1.target, collateralAmount);
 
-        await gmxV1.increaseCollateral(collateral, index, amount, long, fee, {
-          value: fee,
-        });
+        await gmxV1.increaseCollateral(
+          collateral,
+          index,
+          collateralAmount,
+          long,
+          fee,
+          {
+            value: fee,
+          }
+        );
 
         const requestKey = await gmxV1.requestKey();
         await gmxV1.executeIncreasePosition(requestKey, user0.address);
@@ -163,7 +178,7 @@ describe("GMXV1", () => {
     const collateral = USDC;
     const index = WETH;
 
-    const amount = ethers.parseUnits("600", 6);
+    const collateralAmount = ethers.parseUnits("1000", 6);
     const size = ethers.parseUnits("6000", 30);
 
     beforeEach(async () => {
@@ -173,14 +188,14 @@ describe("GMXV1", () => {
       await weth.transfer(gmxV1.target, ethAmount);
 
       await gmxV1.swap(WETH, USDC, ethAmount);
-      await usdc.approve(gmxV1.target, amount);
+      await usdc.approve(gmxV1.target, collateralAmount);
     });
 
     it("increases position", async () => {
       await gmxV1.increasePosition(
         collateral,
         index,
-        amount,
+        collateralAmount,
         size,
         short,
         fee,
@@ -201,7 +216,7 @@ describe("GMXV1", () => {
         await gmxV1.increasePosition(
           collateral,
           index,
-          amount,
+          collateralAmount,
           size,
           short,
           fee,
@@ -242,10 +257,17 @@ describe("GMXV1", () => {
       });
 
       it("increase collateral", async () => {
-        await usdc.approve(gmxV1.target, amount);
-        await gmxV1.increaseCollateral(collateral, index, amount, short, fee, {
-          value: fee,
-        });
+        await usdc.approve(gmxV1.target, collateralAmount);
+        await gmxV1.increaseCollateral(
+          collateral,
+          index,
+          collateralAmount,
+          short,
+          fee,
+          {
+            value: fee,
+          }
+        );
 
         const requestKey = await gmxV1.requestKey();
         await gmxV1.executeIncreasePosition(requestKey, user0.address);

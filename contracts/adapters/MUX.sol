@@ -12,16 +12,18 @@ contract MUX is IAdapter {
     address private _orderBook;
     address private _liquidityPool;
 
+    receive() external payable {}
+
     constructor(address orderBook, address liquidityPool) {
         _orderBook = orderBook;
         _liquidityPool = liquidityPool;
     }
 
     function getPosition(
-        address c, // TODO: naming
+        address collateral, // TODO: naming
         address index,
         bool isLong
-    ) public view returns (uint96 collateral, uint96 size, uint32 lastIncreasedTime, uint96 entryPrice, uint128 entryFunding) {
+    ) public view returns (uint96 collateralAmount, uint96 size, uint32 lastIncreasedTime, uint96 entryPrice, uint128 entryFunding) {
         bytes32 subAccountId = _assembleSubAccountId(
             address(this), // TODO: set msg.sender to account
             3, // WETH
@@ -29,14 +31,14 @@ contract MUX is IAdapter {
             isLong
         );
 
-        (collateral, size, lastIncreasedTime, entryPrice, entryFunding)
+        (collateralAmount, size, lastIncreasedTime, entryPrice, entryFunding)
             = ILiquidityPool(_liquidityPool).getSubAccount(subAccountId);
     }
 
     function increasePosition(
         address collateral,
         address index,
-        uint256 amount,
+        uint256 collateralAmount,
         uint256 size,
         bool isLong,
         uint256 fee
@@ -50,14 +52,14 @@ contract MUX is IAdapter {
         );
         console.logBytes32(subAccountId);
 
-        IOrderBook(_orderBook).placePositionOrder3{value: amount}(
+        IOrderBook(_orderBook).placePositionOrder3{value: collateralAmount}(
             subAccountId,
-            uint96(amount),
+            uint96(collateralAmount),
             uint96(size),
-            uint96(0), // price
+            0, // price
             0, // profitTokenId
             192, // flags
-            uint32(0),
+            0,
             0x0,
             IOrderBook.PositionOrderExtra(0, 0, 0, 0)
         );
@@ -68,33 +70,74 @@ contract MUX is IAdapter {
     function decreasePosition(
         address collateral,
         address index,
-        // uint256 amount, // TODO: remove amount (issue 3)
+        // uint256 collateralAmount, // TODO: remove collateralAmount (issue 3)
         uint256 size,
         bool isLong,
         uint256 fee
     ) override payable public {
-        console.log("1");
+        bytes32 subAccountId = _assembleSubAccountId(
+            address(this), // TODO: set msg.sender to account
+            3, // WETH
+            3, // WETH
+            isLong
+        );
+
+        IOrderBook(_orderBook).placePositionOrder3(
+            subAccountId,
+            0, // collateral
+            uint96(size),
+            0, // price
+            0, // profitTokenId
+            96, // flags
+            0,
+            0x0,
+            IOrderBook.PositionOrderExtra(0, 0, 0, 0)
+        );
+
+        orderId = IOrderBook(_orderBook).nextOrderId() - 1; // test
     }
 
     function increaseCollateral(
         address collateral,
         address index,
-        uint256 amount,
+        uint256 collateralAmount,
         bool isLong,
         uint256 fee
     ) override payable public {
-        console.log("2");
+        bytes32 subAccountId = _assembleSubAccountId(
+            address(this), // TODO: set msg.sender to account
+            3, // WETH
+            3, // WETH
+            isLong
+        );
+
+        IOrderBook(_orderBook).depositCollateral{value: msg.value}(subAccountId, collateralAmount);
     }
 
     function decreaseCollateral(
         address collateral,
         address index,
-        uint256 amount,
+        uint256 collateralAmount,
         // uint256 size,
         bool isLong,
         uint256 fee
     ) override payable public {
-        console.log("3");
+        bytes32 subAccountId = _assembleSubAccountId(
+            address(this), // TODO: set msg.sender to account
+            3, // WETH
+            3, // WETH
+            isLong
+        );
+
+        IOrderBook(_orderBook).placeWithdrawalOrder(
+            subAccountId,
+            uint96(collateralAmount),
+            0, // profitTokenId
+            // TODO: check logic in mux protocol
+            false // isProfit
+        );
+
+        orderId = IOrderBook(_orderBook).nextOrderId() - 1; // test
     }
 
 

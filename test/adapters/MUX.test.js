@@ -58,7 +58,206 @@ describe("MUX", () => {
         1 // profitAssetPrice
       );
       const position = await mux.getPosition(collateral, index, long);
-      console.log(position);
+    });
+
+    describe("after increase position", () => {
+      const fee = 0;
+
+      beforeEach(async () => {
+        await mux.increasePosition(collateral, index, amount, size, long, fee, {
+          value: amount,
+        });
+
+        const orderId = await mux.orderId();
+
+        await orderBook.connect(impersonatedBroker).fillPositionOrder(
+          orderId,
+          1, // collateralPrice
+          1, // assetPrice
+          1 // profitAssetPrice
+        );
+        const position = await mux.getPosition(collateral, index, long);
+      });
+
+      it("decrease position (1/2)", async () => {
+        await mux.decreasePosition(collateral, index, size / 2n, long, fee);
+
+        const orderId = await mux.orderId();
+        await orderBook.connect(impersonatedBroker).fillPositionOrder(
+          orderId,
+          1, // collateralPrice
+          1, // assetPrice
+          1 // profitAssetPrice
+        );
+
+        const position = await mux.getPosition(collateral, index, long);
+      });
+
+      it("decrease position (2/2)", async () => {
+        await mux.decreasePosition(collateral, index, size, long, fee);
+
+        const orderId = await mux.orderId();
+        await orderBook.connect(impersonatedBroker).fillPositionOrder(
+          orderId,
+          1, // collateralPrice
+          1, // assetPrice
+          1 // profitAssetPrice
+        );
+
+        // NOTE: receive function is called, because ether is sent to the contract
+        const position = await mux.getPosition(collateral, index, long);
+      });
+
+      it("increase collateral", async () => {
+        await mux.increaseCollateral(collateral, index, amount, long, fee, {
+          value: amount,
+        });
+
+        const position = await mux.getPosition(collateral, index, long);
+      });
+
+      it("decrease collateral", async () => {
+        await mux.decreaseCollateral(
+          collateral,
+          index,
+          amount / 10n,
+          long,
+          fee,
+          {
+            value: amount,
+          }
+        );
+
+        const orderId = await mux.orderId();
+
+        await orderBook.connect(impersonatedBroker).fillWithdrawalOrder(
+          orderId,
+          1, // collateralPrice
+          1, // assetPrice
+          1 // profitAssetPrice
+        );
+
+        const position = await mux.getPosition(collateral, index, long);
+      });
+    });
+  });
+
+  describe("short", () => {
+    const short = false;
+
+    const collateral = WETH;
+    const index = WETH;
+    const amount = ethers.parseEther("0.1");
+    const size = ethers.parseEther("2"); // different from GMX
+
+    beforeEach(async () => {
+      await weth.deposit({ value: amount });
+      await weth.approve(mux.target, amount);
+    });
+
+    it("increases position", async () => {
+      const fee = 0;
+      await mux.increasePosition(collateral, index, amount, size, short, fee, {
+        value: amount,
+      });
+
+      const orderId = await mux.orderId();
+      await orderBook.connect(impersonatedBroker).fillPositionOrder(
+        orderId,
+        1, // collateralPrice
+        1, // assetPrice
+        1 // profitAssetPrice
+      );
+      const position = await mux.getPosition(collateral, index, short);
+    });
+
+    describe("after increase position", () => {
+      const fee = 0;
+
+      beforeEach(async () => {
+        await mux.increasePosition(
+          collateral,
+          index,
+          amount,
+          size,
+          short,
+          fee,
+          {
+            value: amount,
+          }
+        );
+
+        const orderId = await mux.orderId();
+
+        await orderBook.connect(impersonatedBroker).fillPositionOrder(
+          orderId,
+          1, // collateralPrice
+          1, // assetPrice
+          1 // profitAssetPrice
+        );
+        const position = await mux.getPosition(collateral, index, short);
+      });
+
+      it("decrease position (1/2)", async () => {
+        await mux.decreasePosition(collateral, index, size / 2n, short, fee);
+
+        const orderId = await mux.orderId();
+        await orderBook.connect(impersonatedBroker).fillPositionOrder(
+          orderId,
+          1, // collateralPrice
+          1, // assetPrice
+          1 // profitAssetPrice
+        );
+
+        const position = await mux.getPosition(collateral, index, short);
+      });
+
+      it("decrease position (2/2)", async () => {
+        await mux.decreasePosition(collateral, index, size, short, fee);
+
+        const orderId = await mux.orderId();
+        await orderBook.connect(impersonatedBroker).fillPositionOrder(
+          orderId,
+          1, // collateralPrice
+          1, // assetPrice
+          1 // profitAssetPrice
+        );
+
+        // NOTE: receive function is called, because ether is sent to the contract
+        const position = await mux.getPosition(collateral, index, short);
+      });
+
+      it("increase collateral", async () => {
+        await mux.increaseCollateral(collateral, index, amount, short, fee, {
+          value: amount,
+        });
+
+        const position = await mux.getPosition(collateral, index, short);
+      });
+
+      it("decrease collateral", async () => {
+        await mux.decreaseCollateral(
+          collateral,
+          index,
+          amount / 10n,
+          short,
+          fee,
+          {
+            value: amount,
+          }
+        );
+
+        const orderId = await mux.orderId();
+
+        await orderBook.connect(impersonatedBroker).fillWithdrawalOrder(
+          orderId,
+          1, // collateralPrice
+          1, // assetPrice
+          1 // profitAssetPrice
+        );
+
+        const position = await mux.getPosition(collateral, index, short);
+      });
     });
   });
 });

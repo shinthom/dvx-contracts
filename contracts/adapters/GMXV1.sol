@@ -89,7 +89,7 @@ contract GMXV1 is IAdapter {
     function _increase(
         address collateral,
         address index,
-        uint256 amount,
+        uint256 collateralAmount,
         uint256 size,
         bool isLong,
         uint256 fee
@@ -98,9 +98,9 @@ contract GMXV1 is IAdapter {
             IRouter(_router).approvePlugin(_positionRouter);
         }
 
-        IERC20(collateral).transferFrom(msg.sender, address(this), amount);
+        IERC20(collateral).transferFrom(msg.sender, address(this), collateralAmount);
         // NOTE: approve to router not positionRouter
-        IERC20(collateral).approve(_router, amount);
+        IERC20(collateral).approve(_router, collateralAmount);
 
         address[] memory path = new address[](1);
         path[0] = collateral;
@@ -113,7 +113,7 @@ contract GMXV1 is IAdapter {
         requestKey = IPositionRouter(_positionRouter).createIncreasePosition{value: msg.value}(
             path,
             index,
-            amount,
+            collateralAmount,
             0,
             size,
             isLong,
@@ -127,7 +127,7 @@ contract GMXV1 is IAdapter {
     function _decrease(
         address collateral,
         address index,
-        uint256 amount,
+        uint256 collateralAmount,
         uint256 size,
         bool isLong,
         uint256 fee
@@ -143,7 +143,7 @@ contract GMXV1 is IAdapter {
         requestKey = IPositionRouter(_positionRouter).createDecreasePosition{value: msg.value}(
             path,
             index,
-            amount,
+            collateralAmount,
             size,
             isLong,
             msg.sender, // receiver
@@ -158,7 +158,7 @@ contract GMXV1 is IAdapter {
     function increasePosition(
         address collateral,
         address index,
-        uint256 amount,
+        uint256 collateralAmount,
         uint256 size,
         bool isLong,
         uint256 fee
@@ -166,7 +166,7 @@ contract GMXV1 is IAdapter {
         _increase(
             collateral,
             index,
-            amount,
+            collateralAmount,
             size,
             isLong,
             fee
@@ -176,7 +176,7 @@ contract GMXV1 is IAdapter {
     function decreasePosition(
         address collateral,
         address index,
-        // uint256 amount, // TODO: remove amount (issue 3)
+        // uint256 collateralAmount, // TODO: remove collateralAmount (issue 3)
         uint256 size,
         bool isLong,
         uint256 fee
@@ -194,14 +194,14 @@ contract GMXV1 is IAdapter {
     function increaseCollateral(
         address collateral,
         address index,
-        uint256 amount,
+        uint256 collateralAmount,
         bool isLong,
         uint256 fee
     ) override payable public {
         _increase(
             collateral,
             index,
-            amount,
+            collateralAmount,
             0,
             isLong,
             fee
@@ -211,7 +211,7 @@ contract GMXV1 is IAdapter {
     function decreaseCollateral(
         address collateral,
         address index,
-        uint256 amount,
+        uint256 collateralAmount,
         // uint256 size,
         bool isLong,
         uint256 fee
@@ -219,7 +219,7 @@ contract GMXV1 is IAdapter {
         _decrease(
             collateral,
             index,
-            amount,
+            collateralAmount,
             0,
             isLong,
             fee
