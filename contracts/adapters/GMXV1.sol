@@ -75,7 +75,13 @@ contract GMXV1 is IAdapter {
         address collateral,
         address index,
         bool isLong
-    ) public view returns (IVault.Position memory) {
+    ) override public view returns (
+        uint256,    // collateralAmount,
+        uint256,    // size,
+        uint256,    // lastIncreasedTime,
+        uint256,    // price,
+        uint256     // fundingRate
+    ) {
         bytes32 positionKey = IVault(_vault).getPositionKey(
             address(this),
             collateral,
@@ -83,7 +89,14 @@ contract GMXV1 is IAdapter {
             isLong
         );
 
-        return IVault(_vault).positions(positionKey);
+        IVault.Position memory position = IVault(_vault).positions(positionKey);
+        return (
+            position.collateral,
+            position.size,
+            position.lastIncreasedTime,
+            position.averagePrice,
+            position.entryFundingRate
+        );
     }
 
     function _increase(

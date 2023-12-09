@@ -20,10 +20,16 @@ contract MUX is IAdapter {
     }
 
     function getPosition(
-        address collateral, // TODO: naming
+        address collateral,
         address index,
         bool isLong
-    ) public view returns (uint96 collateralAmount, uint96 size, uint32 lastIncreasedTime, uint96 entryPrice, uint128 entryFunding) {
+    ) override public view returns (
+        uint256 collateralAmount,
+        uint256 size,
+        uint256 lastIncreasedTime,
+        uint256 price,
+        uint256 fundingRate
+    ) {
         bytes32 subAccountId = _assembleSubAccountId(
             address(this), // TODO: set msg.sender to account
             3, // WETH
@@ -31,7 +37,7 @@ contract MUX is IAdapter {
             isLong
         );
 
-        (collateralAmount, size, lastIncreasedTime, entryPrice, entryFunding)
+        (collateralAmount, size, lastIncreasedTime, price, fundingRate)
             = ILiquidityPool(_liquidityPool).getSubAccount(subAccountId);
     }
 
