@@ -10,15 +10,14 @@ import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol"; // test
 import "hardhat/console.sol"; // test
 
 contract GMXV1 is IAdapter {
-    bytes32 public requestKey; // test
+    // gmx contracts
+    address immutable private _positionRouter;
+    address immutable private _router;
+    address immutable private _vault;
+    address immutable private _swapRouter; // test
 
-    address private _positionRouter;
-    address private _router;
-    address private _vault;
-    address private _swapRouter; // test
-
-    // todo: make setFee function
-    uint256 fee = 180_000_000_000_000;
+    // gmx variables
+    uint256 immutable private _fee;
 
     constructor(
         address positionRouter,
@@ -30,25 +29,27 @@ contract GMXV1 is IAdapter {
         _router = router;
         _vault = vault;
         _swapRouter = swapRouter; // test
+
+        _fee = 180_000_000_000_000;
     }
 
     // test
     function executeIncreasePosition(
         bytes32 key,
-        address feeReceiver
+        address _feeReceiver
     ) public {
         IPositionRouter(_positionRouter).executeIncreasePosition(
-            key, payable(feeReceiver)
+            key, payable(_feeReceiver)
         );
     }
 
     // test
     function executeDecreasePosition(
         bytes32 key,
-        address feeReceiver
+        address _feeReceiver
     ) public {
         IPositionRouter(_positionRouter).executeDecreasePosition(
-            key, payable(feeReceiver)
+            key, payable(_feeReceiver)
         );
     }
 
@@ -125,7 +126,7 @@ contract GMXV1 is IAdapter {
             IVault(_vault).getMaxPrice(index) :
             IVault(_vault).getMinPrice(index);
 
-        requestKey = IPositionRouter(_positionRouter).createIncreasePosition{value: msg.value}(
+        IPositionRouter(_positionRouter).createIncreasePosition{value: msg.value}(
             path,
             index,
             collateralAmount,
@@ -133,7 +134,7 @@ contract GMXV1 is IAdapter {
             size,
             isLong,
             price,
-            fee,
+            _fee,
             0x0,
             address(0)
         );
@@ -154,7 +155,7 @@ contract GMXV1 is IAdapter {
             IVault(_vault).getMinPrice(index) :
             IVault(_vault).getMaxPrice(index);
 
-        requestKey = IPositionRouter(_positionRouter).createDecreasePosition{value: msg.value}(
+        IPositionRouter(_positionRouter).createDecreasePosition{value: msg.value}(
             path,
             index,
             collateralAmount,
@@ -163,7 +164,7 @@ contract GMXV1 is IAdapter {
             msg.sender, // receiver
             price,
             0,
-            fee,
+            _fee,
             false, // withdrawETH
             address(0)
         );
@@ -232,5 +233,5 @@ contract GMXV1 is IAdapter {
         );
     }
 
-    // function getFee() public;
+    // function get_fee() public;
 }

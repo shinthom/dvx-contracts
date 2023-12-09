@@ -49,7 +49,7 @@ describe("MUX", () => {
         value: amount,
       });
 
-      const orderId = await mux.orderId();
+      const orderId = (await orderBook.nextOrderId()) - 1n;
       await orderBook.connect(impersonatedBroker).fillPositionOrder(
         orderId,
         1, // collateralPrice
@@ -65,7 +65,7 @@ describe("MUX", () => {
           value: amount,
         });
 
-        const orderId = await mux.orderId();
+        const orderId = (await orderBook.nextOrderId()) - 1n;
 
         await orderBook.connect(impersonatedBroker).fillPositionOrder(
           orderId,
@@ -79,7 +79,7 @@ describe("MUX", () => {
       it("decrease position (1/2)", async () => {
         await mux.decreasePosition(collateral, index, size / 2n, long);
 
-        const orderId = await mux.orderId();
+        const orderId = (await orderBook.nextOrderId()) - 1n;
         await orderBook.connect(impersonatedBroker).fillPositionOrder(
           orderId,
           1, // collateralPrice
@@ -93,7 +93,7 @@ describe("MUX", () => {
       it("decrease position (2/2)", async () => {
         await mux.decreasePosition(collateral, index, size, long);
 
-        const orderId = await mux.orderId();
+        const orderId = (await orderBook.nextOrderId()) - 1n;
         await orderBook.connect(impersonatedBroker).fillPositionOrder(
           orderId,
           1, // collateralPrice
@@ -118,7 +118,7 @@ describe("MUX", () => {
           value: amount,
         });
 
-        const orderId = await mux.orderId();
+        const orderId = (await orderBook.nextOrderId()) - 1n;
 
         await orderBook.connect(impersonatedBroker).fillWithdrawalOrder(
           orderId,
@@ -150,7 +150,7 @@ describe("MUX", () => {
         value: amount,
       });
 
-      const orderId = await mux.orderId();
+      const orderId = (await orderBook.nextOrderId()) - 1n;
       await orderBook.connect(impersonatedBroker).fillPositionOrder(
         orderId,
         1, // collateralPrice
@@ -166,7 +166,7 @@ describe("MUX", () => {
           value: amount,
         });
 
-        const orderId = await mux.orderId();
+        const orderId = (await orderBook.nextOrderId()) - 1n;
 
         await orderBook.connect(impersonatedBroker).fillPositionOrder(
           orderId,
@@ -180,7 +180,7 @@ describe("MUX", () => {
       it("decrease position (1/2)", async () => {
         await mux.decreasePosition(collateral, index, size / 2n, short);
 
-        const orderId = await mux.orderId();
+        const orderId = (await orderBook.nextOrderId()) - 1n;
         await orderBook.connect(impersonatedBroker).fillPositionOrder(
           orderId,
           1, // collateralPrice
@@ -194,7 +194,7 @@ describe("MUX", () => {
       it("decrease position (2/2)", async () => {
         await mux.decreasePosition(collateral, index, size, short);
 
-        const orderId = await mux.orderId();
+        const orderId = (await orderBook.nextOrderId()) - 1n;
         await orderBook.connect(impersonatedBroker).fillPositionOrder(
           orderId,
           1, // collateralPrice
@@ -219,7 +219,7 @@ describe("MUX", () => {
           value: amount,
         });
 
-        const orderId = await mux.orderId();
+        const orderId = (await orderBook.nextOrderId()) - 1n;
 
         await orderBook.connect(impersonatedBroker).fillWithdrawalOrder(
           orderId,

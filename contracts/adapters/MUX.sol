@@ -7,10 +7,8 @@ import "../interfaces/IAdapter.sol";
 import "hardhat/console.sol"; // test
 
 contract MUX is IAdapter {
-    uint256 public orderId; // test
-
-    address private _orderBook;
-    address private _liquidityPool;
+    address immutable private _orderBook;
+    address immutable private _liquidityPool;
 
     receive() external payable {}
 
@@ -67,8 +65,6 @@ contract MUX is IAdapter {
             0x0,
             IOrderBook.PositionOrderExtra(0, 0, 0, 0)
         );
-
-        orderId = IOrderBook(_orderBook).nextOrderId() - 1; // test
     }
 
     function decreasePosition(
@@ -96,8 +92,6 @@ contract MUX is IAdapter {
             0x0,
             IOrderBook.PositionOrderExtra(0, 0, 0, 0)
         );
-
-        orderId = IOrderBook(_orderBook).nextOrderId() - 1; // test
     }
 
     function increaseCollateral(
@@ -137,8 +131,6 @@ contract MUX is IAdapter {
             // TODO: check logic in mux protocol
             false // isProfit
         );
-
-        orderId = IOrderBook(_orderBook).nextOrderId() - 1; // test
     }
 
 

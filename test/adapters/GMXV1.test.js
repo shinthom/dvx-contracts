@@ -24,6 +24,28 @@ describe("GMXV1", () => {
 
   const fee = BigInt("180000000000000");
 
+  const executeIncreasePosition = async () => {
+    const increasePositionsIndex = await positionRouter.increasePositionsIndex(
+      gmxV1.target
+    );
+    const requestKey = await positionRouter.getRequestKey(
+      gmxV1.target,
+      increasePositionsIndex
+    );
+    await gmxV1.executeIncreasePosition(requestKey, user0.address);
+  };
+
+  const executeDecreasePosition = async () => {
+    const decreasePositionsIndex = await positionRouter.decreasePositionsIndex(
+      gmxV1.target
+    );
+    const requestKey = await positionRouter.getRequestKey(
+      gmxV1.target,
+      decreasePositionsIndex
+    );
+    await gmxV1.executeDecreasePosition(requestKey, user0.address);
+  };
+
   before(async () => {
     [user0] = await ethers.getSigners();
     impersonatedAdmin = await ethers.getImpersonatedSigner(
@@ -73,9 +95,7 @@ describe("GMXV1", () => {
           value: fee,
         }
       );
-
-      const requestKey = await gmxV1.requestKey();
-      await gmxV1.executeIncreasePosition(requestKey, user0.address);
+      await executeIncreasePosition();
 
       const position = await gmxV1.getPosition(WETH, WETH, long);
       // console.log(position);
@@ -93,9 +113,7 @@ describe("GMXV1", () => {
             value: fee,
           }
         );
-
-        const requestKey = await gmxV1.requestKey();
-        await gmxV1.executeIncreasePosition(requestKey, user0.address);
+        await executeIncreasePosition();
 
         const position = await gmxV1.getPosition(WETH, WETH, long);
         // console.log(position);
@@ -105,9 +123,7 @@ describe("GMXV1", () => {
         await gmxV1.decreasePosition(collateral, index, size / 2n, long, {
           value: fee,
         });
-
-        const requestKey = await gmxV1.requestKey();
-        await gmxV1.executeDecreasePosition(requestKey, user0.address);
+        await executeDecreasePosition();
 
         const position = await gmxV1.getPosition(WETH, WETH, long);
         // console.log(position);
@@ -117,9 +133,7 @@ describe("GMXV1", () => {
         await gmxV1.decreasePosition(collateral, index, size, long, {
           value: fee,
         });
-
-        const requestKey = await gmxV1.requestKey();
-        await gmxV1.executeDecreasePosition(requestKey, user0.address);
+        await executeDecreasePosition();
 
         const position = await gmxV1.getPosition(WETH, WETH, long);
         // console.log(position);
@@ -138,9 +152,7 @@ describe("GMXV1", () => {
             value: fee,
           }
         );
-
-        const requestKey = await gmxV1.requestKey();
-        await gmxV1.executeIncreasePosition(requestKey, user0.address);
+        await executeIncreasePosition();
 
         const position = await gmxV1.getPosition(WETH, WETH, long);
         // console.log(position);
@@ -151,10 +163,7 @@ describe("GMXV1", () => {
         await gmxV1.decreaseCollateral(collateral, index, amountUsd, long, {
           value: fee,
         });
-
-        const requestKey = await gmxV1.requestKey();
-
-        await gmxV1.executeDecreasePosition(requestKey, user0.address);
+        await executeDecreasePosition();
 
         const position = await gmxV1.getPosition(WETH, WETH, long);
         // console.log(position);
@@ -192,9 +201,7 @@ describe("GMXV1", () => {
           value: fee,
         }
       );
-
-      const requestKey = await gmxV1.requestKey();
-      await gmxV1.executeIncreasePosition(requestKey, user0.address);
+      await executeIncreasePosition();
 
       const position = await gmxV1.getPosition(USDC, WETH, short);
       // console.log(position);
@@ -212,9 +219,7 @@ describe("GMXV1", () => {
             value: fee,
           }
         );
-
-        const requestKey = await gmxV1.requestKey();
-        await gmxV1.executeIncreasePosition(requestKey, user0.address);
+        await executeIncreasePosition();
 
         const position = await gmxV1.getPosition(USDC, WETH, short);
         // console.log(position);
@@ -224,9 +229,7 @@ describe("GMXV1", () => {
         await gmxV1.decreasePosition(collateral, index, size / 2n, short, {
           value: fee,
         });
-
-        const requestKey = await gmxV1.requestKey();
-        await gmxV1.executeDecreasePosition(requestKey, user0.address);
+        await executeDecreasePosition();
 
         const position = await gmxV1.getPosition(USDC, WETH, short);
         // console.log(position);
@@ -236,9 +239,7 @@ describe("GMXV1", () => {
         await gmxV1.decreasePosition(collateral, index, size, short, {
           value: fee,
         });
-
-        const requestKey = await gmxV1.requestKey();
-        await gmxV1.executeDecreasePosition(requestKey, user0.address);
+        await executeDecreasePosition();
 
         const position = await gmxV1.getPosition(USDC, WETH, short);
         // console.log(position);
@@ -255,9 +256,7 @@ describe("GMXV1", () => {
             value: fee,
           }
         );
-
-        const requestKey = await gmxV1.requestKey();
-        await gmxV1.executeIncreasePosition(requestKey, user0.address);
+        await executeIncreasePosition();
 
         const position = await gmxV1.getPosition(USDC, WETH, short);
         // console.log(position);
@@ -268,9 +267,7 @@ describe("GMXV1", () => {
         await gmxV1.decreaseCollateral(collateral, index, amountUsd, short, {
           value: fee,
         });
-
-        const requestKey = await gmxV1.requestKey();
-        await gmxV1.executeDecreasePosition(requestKey, user0.address);
+        await executeDecreasePosition();
 
         const position = await gmxV1.getPosition(USDC, WETH, short);
         // console.log(position);

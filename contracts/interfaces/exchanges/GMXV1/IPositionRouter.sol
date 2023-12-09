@@ -54,6 +54,8 @@ interface IPositionRouter {
 
     function executeIncreasePosition(bytes32 key, address payable feeReceiver) external;
     function executeDecreasePosition(bytes32 _key, address payable _executionFeeReceiver) external returns (bool);
+    function increasePositionsIndex(address _account) external view returns (uint256);
+    function decreasePositionsIndex(address _account) external view returns (uint256);
     function getRequestKey(address _account, uint256 _index) external pure returns (bytes32);
 
     // test
