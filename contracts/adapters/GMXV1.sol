@@ -75,7 +75,7 @@ contract GMXV1 is IAdapter {
         address collateral,
         address index,
         bool isLong
-    ) override public view returns (IVault.Position memory) {
+    ) public view returns (IVault.Position memory) {
         bytes32 positionKey = IVault(_vault).getPositionKey(
             address(this),
             collateral,

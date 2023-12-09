@@ -1,0 +1,64 @@
+const { ethers } = require("hardhat");
+
+describe("MUX", () => {
+  // mux contracts
+  const OrderBook = "0xa19fD5aB6C8DCffa2A295F78a5Bb4aC543AAF5e3";
+  const LiquidityPool = "0x3e0199792ce69dc29a0a36146bfa68bd7c8d6633";
+
+  // token contracts
+  const WETH = "0x82af49447d8a07e3bd95bd0d56f35241523fbab1";
+  const USDC = "0xaf88d065e77c8cc2239327c5edb3a432268e5831";
+
+  // signers
+  let user0;
+  let impersonatedBroker;
+
+  // contracts
+  let mux;
+
+  before(async () => {
+    [user0] = await ethers.getSigners();
+    impersonatedBroker = await ethers.getImpersonatedSigner(
+      "0x988aa44e12c7bce07e449a4156b4a269d6642b3a"
+    );
+
+    orderBook = await ethers.getContractAt("IOrderBook", OrderBook);
+    weth = await ethers.getContractAt("IERC20", WETH);
+    usdc = await ethers.getContractAt("IERC20", USDC);
+  });
+
+  beforeEach(async () => {
+    mux = await ethers.deployContract("MUX", [OrderBook, LiquidityPool]);
+  });
+
+  describe("long", () => {
+    const long = true;
+
+    const collateral = WETH;
+    const index = WETH;
+    const amount = ethers.parseEther("0.1");
+    const size = ethers.parseEther("2"); // different from GMX
+
+    beforeEach(async () => {
+      await weth.deposit({ value: amount });
+      await weth.approve(mux.target, amount);
+    });
+
+    it("increases position", async () => {
+      const fee = 0;
+      await mux.increasePosition(collateral, index, amount, size, long, fee, {
+        value: amount,
+      });
+
+      const orderId = await mux.orderId();
+      await orderBook.connect(impersonatedBroker).fillPositionOrder(
+        orderId,
+        1, // collateralPrice
+        1, // assetPrice
+        1 // profitAssetPrice
+      );
+      const position = await mux.getPosition(collateral, index, long);
+      console.log(position);
+    });
+  });
+});

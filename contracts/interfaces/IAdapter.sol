@@ -4,11 +4,11 @@ pragma solidity 0.8.0;
 import "../interfaces/exchanges/GMXV1/IVault.sol";
 
 interface IAdapter {
-    function getPosition(
-        address collateral,
-        address index,
-        bool isLong
-    ) external view returns(IVault.Position memory);
+    // function getPosition(
+    //     address collateral,
+    //     address index,
+    //     bool isLong
+    // ) external view returns(IVault.Position memory);
 
     // function getFee() external;
 

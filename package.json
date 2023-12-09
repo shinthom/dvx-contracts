@@ -6,7 +6,8 @@
   "scripts": {
     "compile": "hardhat compile",
     "deploy": "hardhat run scripts/deploy.js",
-    "test": "hardhat test test/adapters/GMXV1.test.js --network local"
+    "test0": "hardhat test test/adapters/GMXV1.test.js --network local",
+    "test1": "hardhat test test/adapters/MUX.test.js --network local"
   },
   "keywords": [],
   "author": "",
