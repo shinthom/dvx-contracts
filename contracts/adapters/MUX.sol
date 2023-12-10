@@ -39,34 +39,6 @@ contract MUX is IAdapter {
             = ILiquidityPool(_liquidityPool).getSubAccount(subAccountId);
     }
 
-    function increasePosition2(
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 size,
-        bool isLong
-    ) payable public {
-        // todo: mapping token address to asset id
-        bytes32 subAccountId = _assembleSubAccountId(
-            address(this), // TODO: set msg.sender to account
-            3, // WETH
-            3, // WETH
-            isLong
-        );
-
-        IOrderBook(_orderBook).placePositionOrder3{value: collateralAmount}(
-            subAccountId,
-            uint96(collateralAmount),
-            uint96(size),
-            0, // price
-            0, // profitTokenId
-            192, // flags
-            0,
-            0x0,
-            IOrderBook.PositionOrderExtra(0, 0, 0, 0)
-        );
-    }
-
     function increasePosition(
         address collateral,
         address index,
