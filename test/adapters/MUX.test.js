@@ -19,7 +19,7 @@ describe("MUX", () => {
   before(async () => {
     [user0] = await ethers.getSigners();
     impersonatedBroker = await ethers.getImpersonatedSigner(
-      "0x988aa44e12c7bce07e449a4156b4a269d6642b3a"
+      "0x988aa44e12c7bce07e449a4156b4a269d6642b3a" // mux broker
     );
 
     orderBook = await ethers.getContractAt("IOrderBook", OrderBook);
@@ -56,7 +56,13 @@ describe("MUX", () => {
         1, // assetPrice
         1 // profitAssetPrice
       );
-      const position = await mux.getPosition(collateral, index, long);
+      const position = await mux.getPosition(
+        mux.target,
+        collateral,
+        index,
+        long
+      );
+      console.log(`position: ${position}`);
     });
 
     describe("after increase position", () => {
@@ -73,7 +79,13 @@ describe("MUX", () => {
           1, // assetPrice
           1 // profitAssetPrice
         );
-        const position = await mux.getPosition(collateral, index, long);
+        const position = await mux.getPosition(
+          mux.target,
+          collateral,
+          index,
+          long
+        );
+        console.log(`position: ${position}`);
       });
 
       it("decrease position (1/2)", async () => {
@@ -87,7 +99,13 @@ describe("MUX", () => {
           1 // profitAssetPrice
         );
 
-        const position = await mux.getPosition(collateral, index, long);
+        const position = await mux.getPosition(
+          mux.target,
+          collateral,
+          index,
+          long
+        );
+        console.log(`position: ${position}`);
       });
 
       it("decrease position (2/2)", async () => {
@@ -102,7 +120,13 @@ describe("MUX", () => {
         );
 
         // NOTE: receive function is called, because ether is sent to the contract
-        const position = await mux.getPosition(collateral, index, long);
+        const position = await mux.getPosition(
+          mux.target,
+          collateral,
+          index,
+          long
+        );
+        console.log(`position: ${position}`);
       });
 
       it("increase collateral", async () => {
@@ -110,7 +134,13 @@ describe("MUX", () => {
           value: amount,
         });
 
-        const position = await mux.getPosition(collateral, index, long);
+        const position = await mux.getPosition(
+          mux.target,
+          collateral,
+          index,
+          long
+        );
+        console.log(`position: ${position}`);
       });
 
       it("decrease collateral", async () => {
@@ -127,7 +157,13 @@ describe("MUX", () => {
           1 // profitAssetPrice
         );
 
-        const position = await mux.getPosition(collateral, index, long);
+        const position = await mux.getPosition(
+          mux.target,
+          collateral,
+          index,
+          long
+        );
+        console.log(`position: ${position}`);
       });
     });
   });
@@ -157,7 +193,13 @@ describe("MUX", () => {
         1, // assetPrice
         1 // profitAssetPrice
       );
-      const position = await mux.getPosition(collateral, index, short);
+      const position = await mux.getPosition(
+        mux.target,
+        collateral,
+        index,
+        short
+      );
+      console.log(`position: ${position}`);
     });
 
     describe("after increase position", () => {
@@ -174,7 +216,13 @@ describe("MUX", () => {
           1, // assetPrice
           1 // profitAssetPrice
         );
-        const position = await mux.getPosition(collateral, index, short);
+        const position = await mux.getPosition(
+          mux.target,
+          collateral,
+          index,
+          short
+        );
+        console.log(`position: ${position}`);
       });
 
       it("decrease position (1/2)", async () => {
@@ -188,7 +236,13 @@ describe("MUX", () => {
           1 // profitAssetPrice
         );
 
-        const position = await mux.getPosition(collateral, index, short);
+        const position = await mux.getPosition(
+          mux.target,
+          collateral,
+          index,
+          short
+        );
+        console.log(`position: ${position}`);
       });
 
       it("decrease position (2/2)", async () => {
@@ -203,7 +257,13 @@ describe("MUX", () => {
         );
 
         // NOTE: receive function is called, because ether is sent to the contract
-        const position = await mux.getPosition(collateral, index, short);
+        const position = await mux.getPosition(
+          mux.target,
+          collateral,
+          index,
+          short
+        );
+        console.log(`position: ${position}`);
       });
 
       it("increase collateral", async () => {
@@ -211,7 +271,13 @@ describe("MUX", () => {
           value: amount,
         });
 
-        const position = await mux.getPosition(collateral, index, short);
+        const position = await mux.getPosition(
+          mux.target,
+          collateral,
+          index,
+          short
+        );
+        console.log(`position: ${position}`);
       });
 
       it("decrease collateral", async () => {
@@ -228,7 +294,13 @@ describe("MUX", () => {
           1 // profitAssetPrice
         );
 
-        const position = await mux.getPosition(collateral, index, short);
+        const position = await mux.getPosition(
+          mux.target,
+          collateral,
+          index,
+          short
+        );
+        console.log(`position: ${position}`);
       });
     });
   });

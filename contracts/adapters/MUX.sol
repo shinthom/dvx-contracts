@@ -4,7 +4,6 @@ pragma solidity 0.8.0;
 import "../interfaces/exchanges/MUX/ILiquidityPool.sol";
 import "../interfaces/exchanges/MUX/IOrderBook.sol";
 import "../interfaces/IAdapter.sol";
-import "hardhat/console.sol"; // test
 
 contract MUX is IAdapter {
     address immutable private _orderBook;
@@ -18,6 +17,7 @@ contract MUX is IAdapter {
     }
 
     function getPosition(
+        address account,
         address collateral,
         address index,
         bool isLong
@@ -29,7 +29,7 @@ contract MUX is IAdapter {
         uint256 fundingRate
     ) {
         bytes32 subAccountId = _assembleSubAccountId(
-            address(this), // TODO: set msg.sender to account
+            account, // TODO: set msg.sender to account
             3, // WETH
             3, // WETH
             isLong
@@ -37,6 +37,34 @@ contract MUX is IAdapter {
 
         (collateralAmount, size, lastIncreasedTime, price, fundingRate)
             = ILiquidityPool(_liquidityPool).getSubAccount(subAccountId);
+    }
+
+    function increasePosition2(
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        uint256 size,
+        bool isLong
+    ) payable public {
+        // todo: mapping token address to asset id
+        bytes32 subAccountId = _assembleSubAccountId(
+            address(this), // TODO: set msg.sender to account
+            3, // WETH
+            3, // WETH
+            isLong
+        );
+
+        IOrderBook(_orderBook).placePositionOrder3{value: collateralAmount}(
+            subAccountId,
+            uint96(collateralAmount),
+            uint96(size),
+            0, // price
+            0, // profitTokenId
+            192, // flags
+            0,
+            0x0,
+            IOrderBook.PositionOrderExtra(0, 0, 0, 0)
+        );
     }
 
     function increasePosition(

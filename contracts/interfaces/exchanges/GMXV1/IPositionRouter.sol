@@ -60,4 +60,6 @@ interface IPositionRouter {
 
     // test
     function setDelayValues(uint256 _minBlockDelayKeeper, uint256 _minTimeDelayPublic, uint256 _maxTimeDelay) external;
+    function setPositionKeeper(address _account, bool _isActive) external;
+    function isPositionKeeper(address _account) external view returns (bool);
 }

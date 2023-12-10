@@ -56,6 +56,9 @@ describe("GMXV1", () => {
       "IPositionRouter",
       PositionRouter
     );
+    // execution reverted: delay
+    await positionRouter.connect(impersonatedAdmin).setDelayValues(0, 0, 100);
+
     weth = await ethers.getContractAt("IERC20", WETH);
     usdc = await ethers.getContractAt("IERC20", USDC);
   });
@@ -67,8 +70,6 @@ describe("GMXV1", () => {
       Vault,
       SwapRouter,
     ]);
-    // execution reverted: delay
-    await positionRouter.connect(impersonatedAdmin).setDelayValues(0, 0, 100);
   });
 
   describe("long", () => {
@@ -81,10 +82,10 @@ describe("GMXV1", () => {
 
     beforeEach(async () => {
       await weth.deposit({ value: collateralAmount });
-      await weth.approve(gmxV1.target, collateralAmount);
+      await weth.transfer(gmxV1.target, collateralAmount);
     });
 
-    it("increases position", async () => {
+    it("increase position", async () => {
       await gmxV1.increasePosition(
         collateral,
         index,
@@ -97,8 +98,8 @@ describe("GMXV1", () => {
       );
       await executeIncreasePosition();
 
-      const position = await gmxV1.getPosition(WETH, WETH, long);
-      // console.log(position);
+      const position = await gmxV1.getPosition(gmxV1.target, WETH, WETH, long);
+      console.log(`position: ${position}`);
     });
 
     describe("after increase position", () => {
@@ -115,8 +116,13 @@ describe("GMXV1", () => {
         );
         await executeIncreasePosition();
 
-        const position = await gmxV1.getPosition(WETH, WETH, long);
-        // console.log(position);
+        const position = await gmxV1.getPosition(
+          gmxV1.target,
+          WETH,
+          WETH,
+          long
+        );
+        console.log(`position: ${position}`);
       });
 
       it("decrease position (1/2)", async () => {
@@ -125,8 +131,13 @@ describe("GMXV1", () => {
         });
         await executeDecreasePosition();
 
-        const position = await gmxV1.getPosition(WETH, WETH, long);
-        // console.log(position);
+        const position = await gmxV1.getPosition(
+          gmxV1.target,
+          WETH,
+          WETH,
+          long
+        );
+        console.log(`position: ${position}`);
       });
 
       it("decrease position (2/2)", async () => {
@@ -135,13 +146,18 @@ describe("GMXV1", () => {
         });
         await executeDecreasePosition();
 
-        const position = await gmxV1.getPosition(WETH, WETH, long);
-        // console.log(position);
+        const position = await gmxV1.getPosition(
+          gmxV1.target,
+          WETH,
+          WETH,
+          long
+        );
+        console.log(`position: ${position}`);
       });
 
       it("increase collateral", async () => {
         await weth.deposit({ value: collateralAmount });
-        await weth.approve(gmxV1.target, collateralAmount);
+        await weth.transfer(gmxV1.target, collateralAmount);
 
         await gmxV1.increaseCollateral(
           collateral,
@@ -154,19 +170,29 @@ describe("GMXV1", () => {
         );
         await executeIncreasePosition();
 
-        const position = await gmxV1.getPosition(WETH, WETH, long);
-        // console.log(position);
+        const position = await gmxV1.getPosition(
+          gmxV1.target,
+          WETH,
+          WETH,
+          long
+        );
+        console.log(`position: ${position}`);
       });
 
-      it("decrease collateral (half)", async () => {
-        const amountUsd = ethers.parseUnits("100", 30);
+      it("decrease collateral", async () => {
+        const amountUsd = ethers.parseUnits("1000", 30);
         await gmxV1.decreaseCollateral(collateral, index, amountUsd, long, {
           value: fee,
         });
         await executeDecreasePosition();
 
-        const position = await gmxV1.getPosition(WETH, WETH, long);
-        // console.log(position);
+        const position = await gmxV1.getPosition(
+          gmxV1.target,
+          WETH,
+          WETH,
+          long
+        );
+        console.log(`position: ${position}`);
       });
     });
   });
@@ -187,10 +213,10 @@ describe("GMXV1", () => {
       await weth.transfer(gmxV1.target, ethAmount);
 
       await gmxV1.swap(WETH, USDC, ethAmount);
-      await usdc.approve(gmxV1.target, collateralAmount);
+      await usdc.transfer(gmxV1.target, collateralAmount);
     });
 
-    it("increases position", async () => {
+    it("increase position", async () => {
       await gmxV1.increasePosition(
         collateral,
         index,
@@ -203,8 +229,8 @@ describe("GMXV1", () => {
       );
       await executeIncreasePosition();
 
-      const position = await gmxV1.getPosition(USDC, WETH, short);
-      // console.log(position);
+      const position = await gmxV1.getPosition(gmxV1.target, USDC, WETH, short);
+      console.log(`position: ${position}`);
     });
 
     describe("after increase position", () => {
@@ -221,8 +247,13 @@ describe("GMXV1", () => {
         );
         await executeIncreasePosition();
 
-        const position = await gmxV1.getPosition(USDC, WETH, short);
-        // console.log(position);
+        const position = await gmxV1.getPosition(
+          gmxV1.target,
+          USDC,
+          WETH,
+          short
+        );
+        console.log(`position: ${position}`);
       });
 
       it("decrease position (1/2)", async () => {
@@ -231,8 +262,13 @@ describe("GMXV1", () => {
         });
         await executeDecreasePosition();
 
-        const position = await gmxV1.getPosition(USDC, WETH, short);
-        // console.log(position);
+        const position = await gmxV1.getPosition(
+          gmxV1.target,
+          USDC,
+          WETH,
+          short
+        );
+        console.log(`position: ${position}`);
       });
 
       it("decrease position (2/2)", async () => {
@@ -241,12 +277,17 @@ describe("GMXV1", () => {
         });
         await executeDecreasePosition();
 
-        const position = await gmxV1.getPosition(USDC, WETH, short);
-        // console.log(position);
+        const position = await gmxV1.getPosition(
+          gmxV1.target,
+          USDC,
+          WETH,
+          short
+        );
+        console.log(`position: ${position}`);
       });
 
       it("increase collateral", async () => {
-        await usdc.approve(gmxV1.target, collateralAmount);
+        await usdc.transfer(gmxV1.target, collateralAmount);
         await gmxV1.increaseCollateral(
           collateral,
           index,
@@ -258,19 +299,29 @@ describe("GMXV1", () => {
         );
         await executeIncreasePosition();
 
-        const position = await gmxV1.getPosition(USDC, WETH, short);
-        // console.log(position);
+        const position = await gmxV1.getPosition(
+          gmxV1.target,
+          USDC,
+          WETH,
+          short
+        );
+        console.log(`position: ${position}`);
       });
 
-      it("decrease collateral (half)", async () => {
-        const amountUsd = ethers.parseUnits("100", 30);
+      it("decrease collateral", async () => {
+        const amountUsd = ethers.parseUnits("500", 30);
         await gmxV1.decreaseCollateral(collateral, index, amountUsd, short, {
           value: fee,
         });
         await executeDecreasePosition();
 
-        const position = await gmxV1.getPosition(USDC, WETH, short);
-        // console.log(position);
+        const position = await gmxV1.getPosition(
+          gmxV1.target,
+          USDC,
+          WETH,
+          short
+        );
+        console.log(`position: ${position}`);
       });
     });
   });

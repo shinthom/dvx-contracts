@@ -7,7 +7,6 @@ import "../interfaces/exchanges/GMXV1/IVault.sol";
 import "../interfaces/tokens/IERC20.sol";
 import "../interfaces/IAdapter.sol";
 import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol"; // test
-import "hardhat/console.sol"; // test
 
 contract GMXV1 is IAdapter {
     // gmx contracts
@@ -76,6 +75,7 @@ contract GMXV1 is IAdapter {
     }
 
     function getPosition(
+        address account,
         address collateral,
         address index,
         bool isLong
@@ -87,7 +87,7 @@ contract GMXV1 is IAdapter {
         uint256     // fundingRate
     ) {
         bytes32 positionKey = IVault(_vault).getPositionKey(
-            address(this),
+            account,
             collateral,
             index,
             isLong
@@ -114,7 +114,8 @@ contract GMXV1 is IAdapter {
             IRouter(_router).approvePlugin(_positionRouter);
         }
 
-        IERC20(collateral).transferFrom(msg.sender, address(this), collateralAmount);
+        // NOTE: EOA should send collateral token to this contract separately.
+        // IERC20(collateral).transferFrom(msg.sender, address(this), collateralAmount);
         // NOTE: approve to router not positionRouter
         IERC20(collateral).approve(_router, collateralAmount);
 
