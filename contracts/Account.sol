@@ -139,21 +139,21 @@ contract Account is IAccount {
 
     function createOrders(
         Order order,
-        address[] calldata exchange, // [exchange0, exchange1, ...]
+        address[] calldata exchanges,
         address collateral,
         address index,
-        uint256[] calldata collateralAmount, // [collateralAmount0, collateralAmount1, ...]
-        uint256[] calldata size, // [size0, size1, ...]
+        uint256[] calldata collateralAmounts,
+        uint256[] calldata sizes,
         bool isLong
     ) payable external {
         for (uint256 i = 0; i < exchange.length; i++) {
             (bool success, bytes memory data) = _createOrder(
                 order,
-                exchange[i],
+                exchanges[i],
                 collateral,
                 index,
-                collateralAmount[i],
-                size[i],
+                collateralAmounts[i],
+                sizes[i],
                 isLong
             );
             require(success, string(data));
@@ -161,7 +161,7 @@ contract Account is IAccount {
     }
 
     // called by decentralized admin(or executor)
-    // function manageOrders();
+    // function manageMargins() onlyExchange;
 
     // function getPositions();
     // TODO: consider using variable for multiple position

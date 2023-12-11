@@ -21,7 +21,7 @@ interface IAdapter {
         address collateral,
         address index,
         uint256 collateralAmount,
-        uint256 size,
+        uint256 size, // TODO: considering using leverage instead of size (it could be more easy to calcualte size from leverage)
         bool isLong
     ) payable external;
 
