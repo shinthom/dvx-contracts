@@ -81,7 +81,7 @@ describe("Account", () => {
   });
 
   describe("after deposit", () => {
-    const order = {
+    const orderType = {
       increasePosition: 0,
       decreasePosition: 1,
       increaseCollateral: 2,
@@ -108,13 +108,17 @@ describe("Account", () => {
 
         it("increase position", async () => {
           await account.createOrders(
-            order.increasePosition,
             [gmxV1.target],
-            collateral,
-            index,
-            [collateralAmount],
-            [size],
-            long,
+            orderType.increasePosition,
+            [
+              {
+                collateral,
+                index,
+                collateralAmount,
+                size,
+                isLong: long,
+              },
+            ],
             {
               value: fee,
             }
@@ -144,17 +148,20 @@ describe("Account", () => {
 
         it("increase position", async () => {
           await account.createOrders(
-            order.increasePosition,
             [mux.target],
-            collateral,
-            index,
-            [collateralAmount],
-            [size],
-            long,
-            {
-              value: collateralAmount,
-            }
+            orderType.increasePosition,
+            [
+              {
+                collateral,
+                index,
+                collateralAmount,
+                size,
+                isLong: long,
+              },
+            ],
+            { value: collateralAmount }
           );
+
           const orderId = (await orderBook.nextOrderId()) - 1n;
           await orderBook.connect(impersonatedBroker).fillPositionOrder(
             orderId,

@@ -5,7 +5,7 @@ import "./interfaces/tokens/IERC20.sol";
 import "./interfaces/IAccount.sol";
 
 contract Account is IAccount {
-    enum Order {
+    enum OrderType {
         IncreasePosition,
         DecreasePosition,
         IncreaseCollateral,
@@ -53,6 +53,7 @@ contract Account is IAccount {
     }
 
     function deposit(address token, uint256 amount) override external {
+        // TODO: deposit -> _depositToken / _depositETH
         require(amount > 0, "Account: amount must be greater than 0");
 
         _deposit(token, amount);
@@ -85,76 +86,64 @@ contract Account is IAccount {
     }
 
     function _createOrder(
-        Order order,
         address exchange,
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 size,
-        bool isLong
+        OrderType orderType,
+        Order calldata order
     ) private returns (bool success, bytes memory data) {
-        if (order == Order.IncreasePosition) {
+        if (orderType == OrderType.IncreasePosition) {
             return exchange.delegatecall(
                 abi.encodeWithSignature(
                     "increasePosition(address,address,uint256,uint256,bool)",
-                    collateral,
-                    index,
-                    collateralAmount,
-                    size,
-                    isLong
+                    order.collateral,
+                    order.index,
+                    order.collateralAmount,
+                    order.size,
+                    order.isLong
                 )
             );
-        } else if (order == Order.DecreasePosition) {
+        } else if (orderType == OrderType.DecreasePosition) {
             return exchange.delegatecall(
                 abi.encodeWithSignature(
                     "decreasePosition(address,address,uint256,bool)",
-                    collateral,
-                    index,
-                    size,
-                    isLong
+                    order.collateral,
+                    order.index,
+                    order.size,
+                    order.isLong
                 )
             );
-        } else if (order == Order.IncreaseCollateral) {
+        } else if (orderType == OrderType.IncreaseCollateral) {
             return exchange.delegatecall(
                 abi.encodeWithSignature(
                     "increaseCollateral(address,address,uint256,bool)",
-                    collateral,
-                    index,
-                    collateralAmount,
-                    isLong
+                    order.collateral,
+                    order.index,
+                    order.collateralAmount,
+                    order.isLong
                 )
             );
-        } else if (order == Order.DecreaseCollateral) {
+        } else if (orderType == OrderType.DecreaseCollateral) {
             return exchange.delegatecall(
                 abi.encodeWithSignature(
                     "decreaseCollateral(address,address,uint256,bool)",
-                    collateral,
-                    index,
-                    collateralAmount,
-                    isLong
+                    order.collateral,
+                    order.index,
+                    order.collateralAmount,
+                    order.isLong
                 )
             );
         }
     }
 
     function createOrders(
-        Order order,
         address[] calldata exchanges,
-        address collateral,
-        address index,
-        uint256[] calldata collateralAmounts,
-        uint256[] calldata sizes,
-        bool isLong
+        OrderType orderType,
+        Order[] calldata orders
     ) payable external {
-        for (uint256 i = 0; i < exchange.length; i++) {
+        for (uint256 i = 0; i < exchanges.length; i++) {
             (bool success, bytes memory data) = _createOrder(
-                order,
                 exchanges[i],
-                collateral,
-                index,
-                collateralAmounts[i],
-                sizes[i],
-                isLong
+                orderType,
+                orders[i]
             );
             require(success, string(data));
         }
