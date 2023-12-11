@@ -15,9 +15,6 @@ contract GMXV1 is IAdapter {
     address immutable private _vault;
     address immutable private _swapRouter; // test
 
-    // gmx variables
-    uint256 immutable private _fee;
-
     constructor(
         address positionRouter,
         address router,
@@ -28,8 +25,6 @@ contract GMXV1 is IAdapter {
         _router = router;
         _vault = vault;
         _swapRouter = swapRouter; // test
-
-        _fee = 180_000_000_000_000;
     }
 
     // test
@@ -126,6 +121,7 @@ contract GMXV1 is IAdapter {
             isLong ?
             IVault(_vault).getMaxPrice(index) :
             IVault(_vault).getMinPrice(index);
+        uint256 fee = IPositionRouter(_positionRouter).minExecutionFee();
 
         IPositionRouter(_positionRouter).createIncreasePosition{value: msg.value}(
             path,
@@ -135,7 +131,7 @@ contract GMXV1 is IAdapter {
             size,
             isLong,
             price,
-            _fee,
+            fee,
             0x0,
             address(0)
         );
@@ -155,6 +151,7 @@ contract GMXV1 is IAdapter {
             isLong ?
             IVault(_vault).getMinPrice(index) :
             IVault(_vault).getMaxPrice(index);
+        uint256 fee = IPositionRouter(_positionRouter).minExecutionFee();
 
         IPositionRouter(_positionRouter).createDecreasePosition{value: msg.value}(
             path,
@@ -165,7 +162,7 @@ contract GMXV1 is IAdapter {
             msg.sender, // receiver
             price,
             0,
-            _fee,
+            fee,
             false, // withdrawETH
             address(0)
         );
