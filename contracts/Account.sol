@@ -5,13 +5,6 @@ import "./interfaces/tokens/IERC20.sol";
 import "./interfaces/IAccount.sol";
 
 contract Account is IAccount {
-    enum OrderType {
-        IncreasePosition,
-        DecreasePosition,
-        IncreaseCollateral,
-        DecreaseCollateral
-    }
-
     address private _owner;
     // address private _exchange;
     mapping(address => uint256) private _balances;
@@ -87,9 +80,10 @@ contract Account is IAccount {
 
     function _createOrder(
         address exchange,
-        OrderType orderType,
         Order calldata order
     ) private returns (bool success, bytes memory data) {
+        OrderType orderType = order.orderType;
+
         if (orderType == OrderType.IncreasePosition) {
             return exchange.delegatecall(
                 abi.encodeWithSignature(
@@ -136,13 +130,11 @@ contract Account is IAccount {
 
     function createOrders(
         address[] calldata exchanges,
-        OrderType orderType,
-        Order[] calldata orders
+        Order[] calldata orders // TODO: order has orderType
     ) payable external {
         for (uint256 i = 0; i < exchanges.length; i++) {
             (bool success, bytes memory data) = _createOrder(
                 exchanges[i],
-                orderType,
                 orders[i]
             );
             require(success, string(data));

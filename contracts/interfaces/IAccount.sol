@@ -1,6 +1,23 @@
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
 interface IAccount {
+    enum OrderType {
+        IncreasePosition,
+        DecreasePosition,
+        IncreaseCollateral,
+        DecreaseCollateral
+    }
+
+    struct Order {
+        OrderType orderType;
+        address collateral;
+        address index;
+        uint256 collateralAmount;
+        uint256 size;
+        bool isLong;
+    }
+
     event Deposited(address indexed account, address indexed token, uint256 amount);
     event Withdrawn(address indexed account, address indexed token, uint256 amount);
 

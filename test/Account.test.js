@@ -98,8 +98,6 @@ describe("Account", () => {
 
     describe("long", async () => {
       const long = true;
-      const collateral = WETH;
-      const index = WETH;
       const collateralAmount = wethAmount;
 
       describe("gmx", () => {
@@ -109,11 +107,11 @@ describe("Account", () => {
         it("increase position", async () => {
           await account.createOrders(
             [gmxV1.target],
-            orderType.increasePosition,
             [
               {
-                collateral,
-                index,
+                orderType: orderType.increasePosition,
+                collateral: WETH,
+                index: WETH,
                 collateralAmount,
                 size,
                 isLong: long,
@@ -149,11 +147,11 @@ describe("Account", () => {
         it("increase position", async () => {
           await account.createOrders(
             [mux.target],
-            orderType.increasePosition,
             [
               {
-                collateral,
-                index,
+                orderType: orderType.increasePosition,
+                collateral: WETH,
+                index: WETH,
                 collateralAmount,
                 size,
                 isLong: long,
@@ -172,8 +170,8 @@ describe("Account", () => {
 
           const position = await mux.getPosition(
             account.target,
-            collateral,
-            index,
+            WETH,
+            WETH,
             long
           );
           console.log(`position: ${position}`);

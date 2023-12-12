@@ -133,7 +133,6 @@ contract MUX is IAdapter {
         );
     }
 
-
     function _assembleSubAccountId(
         address account,
         uint8 collateralId,
