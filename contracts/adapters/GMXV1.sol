@@ -123,7 +123,7 @@ contract GMXV1 is IAdapter {
             IVault(_vault).getMinPrice(index);
         uint256 fee = IPositionRouter(_positionRouter).minExecutionFee();
 
-        IPositionRouter(_positionRouter).createIncreasePosition{value: msg.value}(
+        IPositionRouter(_positionRouter).createIncreasePosition{value: fee}(
             path,
             index,
             collateralAmount,
@@ -153,7 +153,7 @@ contract GMXV1 is IAdapter {
             IVault(_vault).getMaxPrice(index);
         uint256 fee = IPositionRouter(_positionRouter).minExecutionFee();
 
-        IPositionRouter(_positionRouter).createDecreasePosition{value: msg.value}(
+        IPositionRouter(_positionRouter).createDecreasePosition{value: fee}(
             path,
             index,
             collateralAmount,

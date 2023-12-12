@@ -1,0 +1,94 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.0;
+
+import "./interfaces/IAccount.sol";
+import "./interfaces/tokens/IERC20.sol";
+import "./interfaces/exchanges/GMXV1/IVault.sol";
+import "hardhat/console.sol";
+
+contract Quoter {
+    // gmx contract
+    address private _vault = 0x489ee077994B6658eAfA855C308275EAd8097C4A;
+
+    function quoteGMX(
+        IAccount.OrderType orderType,
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        uint256 leverage,
+        bool isLong
+    )
+    external
+    view
+    returns (
+        // address[] memory, (TODO: route to exchanges by calculating fee)
+        // IAccount.Order[] memory
+        IAccount.Order memory order
+    ) {
+        (uint256 sizeUsd, ) = _calculateSizeUsd(
+            collateral,
+            index,
+            collateralAmount,
+            leverage,
+            isLong
+        );
+
+        order.orderType = orderType;
+        order.collateral = collateral;
+        order.index = index;
+        order.collateralAmount = collateralAmount;
+        order.size = sizeUsd;
+        order.isLong = isLong;
+    }
+
+    function quoteMUX(
+        IAccount.OrderType orderType,
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        uint256 leverage,
+        bool isLong
+    )
+    external
+    view
+    returns (
+        // address[] memory, (TODO: route to exchanges by calculating fee)
+        // IAccount.Order[] memory
+        IAccount.Order memory order
+    ) {
+        (uint256 sizeUsd, uint256 price) = _calculateSizeUsd(
+            collateral,
+            index,
+            collateralAmount,
+            leverage,
+            isLong
+        );
+
+        uint8 indexDecimals = IERC20(index).decimals();
+        uint256 size = sizeUsd * (10 ** indexDecimals) / price;
+
+        order.orderType = orderType;
+        order.collateral = collateral;
+        order.index = index;
+        order.collateralAmount = collateralAmount;
+        order.size = size;
+        order.isLong = isLong;
+    }
+
+    function _calculateSizeUsd(
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        uint256 leverage,
+        bool isLong
+    ) private view returns (uint256, uint256) {
+        uint8 collateralDecimals = IERC20(collateral).decimals();
+
+        // TODO: if the token is stable token, we just use 1 USD as price.
+        uint256 price =
+            isLong ? IVault(_vault).getMaxPrice(collateral) : IVault(_vault).getMinPrice(collateral);
+        uint256 collateralAmountUsd = collateralAmount * price / (10 ** collateralDecimals);
+
+        return (collateralAmountUsd * leverage, price);
+    }
+}
