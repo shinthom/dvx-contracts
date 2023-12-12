@@ -68,6 +68,52 @@ const deploy = async () => {
   quoter = await ethers.deployContract("Quoter");
   account = await ethers.deployContract("Account");
 
+  const executeIncreasePosition = async () => {
+    const increasePositionsIndex = await positionRouter.increasePositionsIndex(
+      account.target
+    );
+    const requestKey = await positionRouter.getRequestKey(
+      account.target,
+      increasePositionsIndex
+    );
+    await positionRouter
+      .connect(impersonatedPositionKeeper)
+      .executeIncreasePosition(requestKey, user0.address);
+  };
+
+  const executeDecreasePosition = async () => {
+    const decreasePositionsIndex = await positionRouter.decreasePositionsIndex(
+      account.target
+    );
+    const requestKey = await positionRouter.getRequestKey(
+      account.target,
+      decreasePositionsIndex
+    );
+    await positionRouter
+      .connect(impersonatedPositionKeeper)
+      .executeDecreasePosition(requestKey, user0.address);
+  };
+
+  const fillPositionOrder = async () => {
+    const orderId = (await orderBook.nextOrderId()) - 1n;
+    await orderBook.connect(impersonatedBroker).fillPositionOrder(
+      orderId,
+      1, // collateralPrice
+      1, // assetPrice
+      1 // profitAssetPrice
+    );
+  };
+
+  const fillWithdrawalOrder = async () => {
+    const orderId = (await orderBook.nextOrderId()) - 1n;
+    await orderBook.connect(impersonatedBroker).fillWithdrawalOrder(
+      orderId,
+      1, // collateralPrice
+      1, // assetPrice
+      1 // profitAssetPrice
+    );
+  };
+
   return {
     user0,
     impersonatedAdmin,
@@ -85,6 +131,10 @@ const deploy = async () => {
       WETH,
       USDC,
     },
+    executeIncreasePosition,
+    executeDecreasePosition,
+    fillPositionOrder,
+    fillWithdrawalOrder,
   };
 };
 
