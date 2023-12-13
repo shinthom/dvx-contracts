@@ -16,6 +16,14 @@ contract Account is IAccount {
         _owner = msg.sender;
     }
 
+    function getBalance(address token) public view returns (uint256) {
+        if (token == address(0)) {
+            return address(this).balance;
+        } else {
+            return IERC20(token).balanceOf(address(this));
+        }
+    }
+
     function _deposit(address token, uint256 amount) private {
         require(amount > 0, "Account: amount must be greater than 0");
 

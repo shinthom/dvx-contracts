@@ -25,7 +25,7 @@ contract Quoter {
         // IAccount.Order[] memory
         IAccount.Order memory order
     ) {
-        (uint256 sizeUsd, ) = _calculateSizeUsd(
+        uint256 sizeUsd = _calculateSizeUsd(
             collateral,
             index,
             collateralAmount,
@@ -56,16 +56,18 @@ contract Quoter {
         // IAccount.Order[] memory
         IAccount.Order memory order
     ) {
-        (uint256 sizeUsd, uint256 price) = _calculateSizeUsd(
+        uint256 sizeUsd = _calculateSizeUsd(
             collateral,
             index,
             collateralAmount,
             leverage,
             isLong
         );
+        uint256 indexPrice =
+            isLong ? IVault(_vault).getMaxPrice(index) : IVault(_vault).getMinPrice(index);
 
         uint8 indexDecimals = IERC20(index).decimals();
-        uint256 size = sizeUsd * (10 ** indexDecimals) / price;
+        uint256 size = sizeUsd * (10 ** indexDecimals) / indexPrice;
 
         order.orderType = orderType;
         order.collateral = collateral;
@@ -81,14 +83,14 @@ contract Quoter {
         uint256 collateralAmount,
         uint256 leverage,
         bool isLong
-    ) private view returns (uint256, uint256) {
+    ) private view returns (uint256) {
         uint8 collateralDecimals = IERC20(collateral).decimals();
 
         // TODO: if the token is stable token, we just use 1 USD as price.
-        uint256 price =
+        uint256 collateralPrice =
             isLong ? IVault(_vault).getMaxPrice(collateral) : IVault(_vault).getMinPrice(collateral);
-        uint256 collateralAmountUsd = collateralAmount * price / (10 ** collateralDecimals);
+        uint256 collateralAmountUsd = collateralAmount * collateralPrice / (10 ** collateralDecimals);
 
-        return (collateralAmountUsd * leverage, price);
+        return collateralAmountUsd * leverage;
     }
 }

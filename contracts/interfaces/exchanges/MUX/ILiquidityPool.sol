@@ -60,6 +60,7 @@ interface ILiquidityPool {
     }
 
     // view functions
+    function getAllAssetInfo() external view returns (Asset[] memory);
     function getAssetInfo(uint8 assetId) external view returns (Asset memory);
     function getSubAccount(
         bytes32 subAccountId

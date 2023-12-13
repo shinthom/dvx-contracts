@@ -93,7 +93,7 @@ describe("GMXV1", () => {
         size,
         long,
         {
-          value: fee,
+          value: fee + collateralAmount,
         }
       );
       await executeIncreasePosition();
@@ -111,7 +111,7 @@ describe("GMXV1", () => {
           size,
           long,
           {
-            value: fee,
+            value: fee + collateralAmount,
           }
         );
         await executeIncreasePosition();
@@ -156,16 +156,13 @@ describe("GMXV1", () => {
       });
 
       it("increase collateral", async () => {
-        await weth.deposit({ value: collateralAmount });
-        await weth.transfer(gmxV1.target, collateralAmount);
-
         await gmxV1.increaseCollateral(
           collateral,
           index,
           collateralAmount,
           long,
           {
-            value: fee,
+            value: fee + collateralAmount,
           }
         );
         await executeIncreasePosition();

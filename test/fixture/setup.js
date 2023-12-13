@@ -68,6 +68,13 @@ const deploy = async () => {
   quoter = await ethers.deployContract("Quoter");
   account = await ethers.deployContract("Account");
 
+  const swap = async (from, to, fromAmount) => {
+    await weth.deposit({ value: fromAmount });
+    await weth.transfer(gmxV1.target, fromAmount);
+
+    await gmxV1.swap(from, to, fromAmount);
+  };
+
   const executeIncreasePosition = async () => {
     const increasePositionsIndex = await positionRouter.increasePositionsIndex(
       account.target
@@ -131,6 +138,7 @@ const deploy = async () => {
       WETH,
       USDC,
     },
+    swap,
     executeIncreasePosition,
     executeDecreasePosition,
     fillPositionOrder,

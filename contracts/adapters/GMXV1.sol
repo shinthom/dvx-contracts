@@ -109,11 +109,6 @@ contract GMXV1 is IAdapter {
             IRouter(_router).approvePlugin(_positionRouter);
         }
 
-        // NOTE: EOA should send collateral token to this contract separately.
-        // IERC20(collateral).transferFrom(msg.sender, address(this), collateralAmount);
-        // NOTE: approve to router not positionRouter
-        IERC20(collateral).approve(_router, collateralAmount);
-
         address[] memory path = new address[](1);
         path[0] = collateral;
 
@@ -123,18 +118,52 @@ contract GMXV1 is IAdapter {
             IVault(_vault).getMinPrice(index);
         uint256 fee = IPositionRouter(_positionRouter).minExecutionFee();
 
-        IPositionRouter(_positionRouter).createIncreasePosition{value: fee}(
-            path,
-            index,
-            collateralAmount,
-            0,
-            size,
-            isLong,
-            price,
-            fee,
-            0x0,
-            address(0)
-        );
+        if (isLong) {
+            // WETH
+            if (collateral == 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1) {
+                IPositionRouter(_positionRouter).createIncreasePositionETH{value: collateralAmount + fee}(
+                    path,
+                    index,
+                    collateralAmount,
+                    size,
+                    isLong,
+                    price,
+                    fee,
+                    0x0,
+                    address(0)
+                );
+            } else {
+                IERC20(collateral).approve(_router, collateralAmount);
+
+                IPositionRouter(_positionRouter).createIncreasePosition{value: fee}(
+                    path,
+                    index,
+                    collateralAmount,
+                    0,
+                    size,
+                    isLong,
+                    price,
+                    fee,
+                    0x0,
+                    address(0)
+                );
+            }
+        } else {
+            IERC20(collateral).approve(_router, collateralAmount);
+
+            IPositionRouter(_positionRouter).createIncreasePosition{value: fee}(
+                path,
+                index,
+                collateralAmount,
+                0,
+                size,
+                isLong,
+                price,
+                fee,
+                0x0,
+                address(0)
+            );
+        }
     }
 
     function _decrease(

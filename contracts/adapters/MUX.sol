@@ -3,7 +3,9 @@ pragma solidity 0.8.0;
 
 import "../interfaces/exchanges/MUX/ILiquidityPool.sol";
 import "../interfaces/exchanges/MUX/IOrderBook.sol";
+import "../interfaces/tokens/IERC20.sol";
 import "../interfaces/IAdapter.sol";
+import "hardhat/console.sol";
 
 contract MUX is IAdapter {
     address immutable private _orderBook;
@@ -28,15 +30,28 @@ contract MUX is IAdapter {
         uint256 price,
         uint256 fundingRate
     ) {
+        uint8 collateralId = _getIdFromAsset(collateral);
+        uint8 indexId = _getIdFromAsset(index);
+
         bytes32 subAccountId = _assembleSubAccountId(
             account, // TODO: set msg.sender to account
-            3, // WETH
-            3, // WETH
+            collateralId,
+            indexId,
             isLong
         );
 
         (collateralAmount, size, lastIncreasedTime, price, fundingRate)
             = ILiquidityPool(_liquidityPool).getSubAccount(subAccountId);
+    }
+
+    function _getIdFromAsset(address tokenAddress) private view returns (uint8) {
+        ILiquidityPool.Asset[] memory assets = ILiquidityPool(_liquidityPool).getAllAssetInfo();
+        for (uint256 i = 0; i < assets.length; i++) {
+            if (assets[i].tokenAddress == tokenAddress) {
+                return assets[i].id;
+            }
+        }
+        revert("asset not found");
     }
 
     function increasePosition(
@@ -46,25 +61,45 @@ contract MUX is IAdapter {
         uint256 size,
         bool isLong
     ) override payable public {
-        // todo: mapping token address to asset id
+        uint8 collateralId = _getIdFromAsset(collateral);
+        uint8 indexId = _getIdFromAsset(index);
+
         bytes32 subAccountId = _assembleSubAccountId(
             address(this), // TODO: set msg.sender to account
-            3, // WETH
-            3, // WETH
+            collateralId,
+            indexId,
             isLong
         );
 
-        IOrderBook(_orderBook).placePositionOrder3{value: collateralAmount}(
-            subAccountId,
-            uint96(collateralAmount),
-            uint96(size),
-            0, // price
-            0, // profitTokenId
-            192, // flags
-            0,
-            0x0,
-            IOrderBook.PositionOrderExtra(0, 0, 0, 0)
-        );
+        // ETH
+        if (collateralId == 3) {
+            console.log("MUX: increasePosition: ETH");
+            IOrderBook(_orderBook).placePositionOrder3{value: collateralAmount}(
+                subAccountId,
+                uint96(collateralAmount),
+                uint96(size),
+                0, // price
+                0, // profitTokenId
+                192, // flags
+                0,
+                0x0,
+                IOrderBook.PositionOrderExtra(0, 0, 0, 0)
+            );
+        } else {
+            IERC20(collateral).approve(_orderBook, collateralAmount);
+
+            IOrderBook(_orderBook).placePositionOrder3(
+                subAccountId,
+                uint96(collateralAmount),
+                uint96(size),
+                0, // price
+                0, // profitTokenId
+                192, // flags
+                0,
+                0x0,
+                IOrderBook.PositionOrderExtra(0, 0, 0, 0)
+            );
+        }
     }
 
     function decreasePosition(
@@ -74,10 +109,13 @@ contract MUX is IAdapter {
         uint256 size,
         bool isLong
     ) override payable public {
+        uint8 collateralId = _getIdFromAsset(collateral);
+        uint8 indexId = _getIdFromAsset(index);
+
         bytes32 subAccountId = _assembleSubAccountId(
             address(this), // TODO: set msg.sender to account
-            3, // WETH
-            3, // WETH
+            collateralId,
+            indexId,
             isLong
         );
 
@@ -100,10 +138,13 @@ contract MUX is IAdapter {
         uint256 collateralAmount,
         bool isLong
     ) override payable public {
+        uint8 collateralId = _getIdFromAsset(collateral);
+        uint8 indexId = _getIdFromAsset(index);
+
         bytes32 subAccountId = _assembleSubAccountId(
             address(this), // TODO: set msg.sender to account
-            3, // WETH
-            3, // WETH
+            collateralId,
+            indexId,
             isLong
         );
 
@@ -117,10 +158,13 @@ contract MUX is IAdapter {
         // uint256 size,
         bool isLong
     ) override payable public {
+        uint8 collateralId = _getIdFromAsset(collateral);
+        uint8 indexId = _getIdFromAsset(index);
+
         bytes32 subAccountId = _assembleSubAccountId(
             address(this), // TODO: set msg.sender to account
-            3, // WETH
-            3, // WETH
+            collateralId,
+            indexId,
             isLong
         );
 

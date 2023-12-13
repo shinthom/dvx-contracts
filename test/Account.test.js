@@ -11,22 +11,18 @@ describe("Account", () => {
     decreaseCollateral: 3,
   };
 
-  it("WETH -> WETH (long)", async () => {
+  it("ETH -> ETH (long)", async () => {
     const {
       gmxV1,
       mux,
       quoter,
       account,
       tokens,
-      weth,
       executeIncreasePosition,
-      executeDecreasePosition,
       fillPositionOrder,
-      fillWithdrawalOrder,
     } = await loadFixture(deploy);
 
     const WETH = tokens.WETH;
-    const USDC = tokens.USDC;
 
     const collateralAmount = ethers.parseEther("1");
     const leverage = 10n;
@@ -48,10 +44,7 @@ describe("Account", () => {
       true // long
     );
 
-    await weth.deposit({ value: collateralAmount });
-    await weth.approve(account.target, collateralAmount);
-
-    await account.deposit(WETH, collateralAmount);
+    await account.depositETH(collateralAmount, { value: collateralAmount });
     await account.createOrders(
       [gmxV1.target],
       [
@@ -65,16 +58,12 @@ describe("Account", () => {
         },
       ],
       {
-        value: BigInt("180000000000000"),
+        value: BigInt("180000000000000"), // NOTE: gmx fee
       }
     );
     await executeIncreasePosition();
-    console.log(await gmxV1.getPosition(account.target, WETH, WETH, true));
 
-    await weth.deposit({ value: collateralAmount });
-    await weth.approve(account.target, collateralAmount);
-
-    await account.deposit(WETH, collateralAmount);
+    await account.depositETH(collateralAmount, { value: collateralAmount });
     await account.createOrders(
       [mux.target],
       [
@@ -86,18 +75,13 @@ describe("Account", () => {
           size: muxOrder.size,
           isLong: muxOrder.isLong,
         },
-      ],
-      {
-        value: collateralAmount,
-      }
+      ]
     );
     await fillPositionOrder();
-    console.log(await mux.getPosition(account.target, WETH, WETH, true));
 
-    await weth.deposit({ value: collateralAmount * 2n });
-    await weth.approve(account.target, collateralAmount * 2n);
-
-    await account.deposit(WETH, collateralAmount * 2n);
+    await account.depositETH(collateralAmount * 2n, {
+      value: collateralAmount * 2n,
+    });
     await account.createOrders(
       [gmxV1.target, mux.target],
       [
@@ -119,16 +103,121 @@ describe("Account", () => {
         },
       ],
       {
-        value: BigInt("180000000000000") + collateralAmount,
+        value: BigInt("180000000000000"),
       }
     );
     await executeIncreasePosition();
-    console.log(await gmxV1.getPosition(account.target, WETH, WETH, true));
     await fillPositionOrder();
-    console.log(await mux.getPosition(account.target, WETH, WETH, true));
+  });
+
+  it("USDC -> ETH (short)", async () => {
+    const {
+      gmxV1,
+      mux,
+      quoter,
+      account,
+      tokens,
+      usdc,
+      swap,
+      executeIncreasePosition,
+      fillPositionOrder,
+    } = await loadFixture(deploy);
+
+    const USDC = tokens.USDC;
+    const WETH = tokens.WETH;
+    await swap(WETH, USDC, ethers.parseEther("10"));
+
+    const collateralAmount = ethers.parseUnits("600", 6); // USDC
+    const leverage = 10n;
+
+    const gmxOrder = await quoter.quoteGMX(
+      orderType.increasePosition,
+      USDC,
+      WETH,
+      collateralAmount,
+      leverage,
+      false // short
+    );
+    const muxOrder = await quoter.quoteMUX(
+      orderType.increasePosition,
+      USDC,
+      WETH,
+      collateralAmount,
+      leverage,
+      false // short
+    );
+
+    await usdc.approve(account.target, collateralAmount);
+    await account.deposit(USDC, collateralAmount);
+
+    await account.createOrders(
+      [gmxV1.target],
+      [
+        {
+          orderType: gmxOrder.orderType,
+          collateral: gmxOrder.collateral,
+          index: gmxOrder.index,
+          collateralAmount: gmxOrder.collateralAmount,
+          size: gmxOrder.size,
+          isLong: gmxOrder.isLong,
+        },
+      ],
+      {
+        value: BigInt("180000000000000"),
+      }
+    );
+    await executeIncreasePosition();
+
+    await usdc.approve(account.target, collateralAmount);
+    await account.deposit(USDC, collateralAmount);
+
+    await account.createOrders(
+      [mux.target],
+      [
+        {
+          orderType: muxOrder.orderType,
+          collateral: muxOrder.collateral,
+          index: muxOrder.index,
+          collateralAmount: muxOrder.collateralAmount,
+          size: muxOrder.size,
+          isLong: muxOrder.isLong,
+        },
+      ]
+    );
+    await fillPositionOrder();
+
+    await usdc.approve(account.target, collateralAmount * 2n);
+    await account.deposit(USDC, collateralAmount * 2n);
+
+    await account.createOrders(
+      [gmxV1.target, mux.target],
+      [
+        {
+          orderType: gmxOrder.orderType,
+          collateral: gmxOrder.collateral,
+          index: gmxOrder.index,
+          collateralAmount: gmxOrder.collateralAmount,
+          size: gmxOrder.size,
+          isLong: gmxOrder.isLong,
+        },
+        {
+          orderType: muxOrder.orderType,
+          collateral: muxOrder.collateral,
+          index: muxOrder.index,
+          collateralAmount: muxOrder.collateralAmount,
+          size: muxOrder.size,
+          isLong: muxOrder.isLong,
+        },
+      ],
+      {
+        value: BigInt("180000000000000"),
+      }
+    );
+    await executeIncreasePosition();
+    await fillPositionOrder();
   });
 
   it("USDC -> WETH (long)", async () => {});
-  it("WETH -> WETH (short)", async () => {});
+
   it("USDC -> WETH (short)", async () => {});
 });
