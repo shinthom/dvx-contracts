@@ -28,7 +28,7 @@ contract MUX is IAdapter {
         uint8 indexId = _getIdFromAsset(index);
 
         bytes32 subAccountId = _assembleSubAccountId(
-            account, // TODO: set msg.sender to account
+            account,
             collateralId,
             indexId,
             isLong
@@ -71,7 +71,7 @@ contract MUX is IAdapter {
         uint8 indexId = _getIdFromAsset(index);
 
         bytes32 subAccountId = _assembleSubAccountId(
-            address(this), // TODO: set msg.sender to account
+            address(this),
             collateralId,
             indexId,
             isLong
@@ -115,11 +115,12 @@ contract MUX is IAdapter {
         uint256 size,
         bool isLong
     ) override payable public {
+        console.log("decreasePosition");
         uint8 collateralId = _getIdFromAsset(collateral);
         uint8 indexId = _getIdFromAsset(index);
 
         bytes32 subAccountId = _assembleSubAccountId(
-            address(this), // TODO: set msg.sender to account
+            address(this),
             collateralId,
             indexId,
             isLong
@@ -148,7 +149,7 @@ contract MUX is IAdapter {
         uint8 indexId = _getIdFromAsset(index);
 
         bytes32 subAccountId = _assembleSubAccountId(
-            address(this), // TODO: set msg.sender to account
+            address(this),
             collateralId,
             indexId,
             isLong
@@ -168,7 +169,7 @@ contract MUX is IAdapter {
         uint8 indexId = _getIdFromAsset(index);
 
         bytes32 subAccountId = _assembleSubAccountId(
-            address(this), // TODO: set msg.sender to account
+            address(this),
             collateralId,
             indexId,
             isLong

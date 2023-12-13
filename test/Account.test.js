@@ -27,6 +27,7 @@ describe("Account", () => {
       executeIncreasePosition,
       executeDecreasePosition,
       fillPositionOrder,
+      fillWithdrawalOrder,
     } = await loadFixture(deploy);
 
     const collateralAmount = ethers.parseEther("1");
@@ -52,7 +53,6 @@ describe("Account", () => {
     await account.depositETH(collateralAmount * 2n, {
       value: collateralAmount * 2n,
     });
-    console.log("\ncreate orders(increase position)");
     await account.createOrders(
       [gmxV1.target, mux.target],
       [
@@ -81,6 +81,7 @@ describe("Account", () => {
     await executeIncreasePosition();
     await fillPositionOrder();
 
+    console.log("\nincrease position (gmxV1, mux)");
     gmxV1Position = await gmxV1.getPosition(account.target, WETH, WETH, true);
     muxPosition = await mux.getPosition(account.target, WETH, WETH, true);
     console.log(
@@ -89,7 +90,6 @@ describe("Account", () => {
     console.log(`position(gmx-v1): ${gmxV1Position}`);
     console.log(`position(mux)   : ${muxPosition}`);
 
-    console.log("\ncreate orders(decrease position)");
     await account.createOrders(
       [gmxV1.target],
       [
@@ -108,6 +108,7 @@ describe("Account", () => {
     );
     await executeDecreasePosition();
 
+    console.log("\ndecrease position (gmxV1)");
     gmxV1Position = await gmxV1.getPosition(account.target, WETH, WETH, true);
     muxPosition = await mux.getPosition(account.target, WETH, WETH, true);
     console.log(
@@ -116,10 +117,32 @@ describe("Account", () => {
     console.log(`position(gmx-v1): ${gmxV1Position}`);
     console.log(`position(mux)   : ${muxPosition}`);
 
-    // TODO: mux
+    await account.createOrders(
+      [mux.target],
+      [
+        {
+          orderType: orderType.decreasePosition,
+          collateral: WETH,
+          index: WETH,
+          collateralAmount: 0,
+          size: muxPosition.size,
+          isLong: true,
+        },
+      ]
+    );
+    await fillPositionOrder();
+
+    console.log("\ndecrease position (mux)");
+    gmxV1Position = await gmxV1.getPosition(account.target, WETH, WETH, true);
+    muxPosition = await mux.getPosition(account.target, WETH, WETH, true);
+    console.log(
+      `balance(eth)    : ${await account.getBalance(ethers.ZeroAddress)}`
+    );
+    console.log(`position(gmx-v1): ${gmxV1Position}`);
+    console.log(`position(mux)   : ${muxPosition}`);
   });
 
-  it("long: USDC -> WETH", async () => {
+  it("long: USDC -> ETH", async () => {
     const {
       gmxV1,
       mux,
@@ -182,6 +205,7 @@ describe("Account", () => {
     await executeIncreasePosition();
     await fillPositionOrder();
 
+    console.log("\nincrease position (gmxV1, mux)");
     gmxV1Position = await gmxV1.getPosition(account.target, WETH, WETH, true);
     muxPosition = await mux.getPosition(account.target, USDC, WETH, true);
     console.log(
@@ -190,7 +214,6 @@ describe("Account", () => {
     console.log(`position(gmx-v1): ${gmxV1Position}`);
     console.log(`position(mux)   : ${muxPosition}`);
 
-    console.log("\ncreate orders(decrease position)");
     await account.createOrders(
       [gmxV1.target],
       [
@@ -209,11 +232,37 @@ describe("Account", () => {
     );
     await executeDecreasePosition();
 
+    console.log("\ndecrease position (gmxV1)");
     gmxV1Position = await gmxV1.getPosition(account.target, WETH, WETH, true);
     muxPosition = await mux.getPosition(account.target, USDC, WETH, true);
     console.log(
       `balance(eth)    : ${await account.getBalance(ethers.ZeroAddress)}`
     );
+    console.log(`position(gmx-v1): ${gmxV1Position}`);
+    console.log(`position(mux)   : ${muxPosition}`);
+
+    await account.createOrders(
+      [mux.target],
+      [
+        {
+          orderType: orderType.decreasePosition,
+          collateral: USDC,
+          index: WETH,
+          collateralAmount: 0,
+          size: muxPosition.size,
+          isLong: true,
+        },
+      ]
+    );
+    await fillPositionOrder();
+
+    console.log("\ndecrease position (mux)");
+    gmxV1Position = await gmxV1.getPosition(account.target, WETH, WETH, true);
+    muxPosition = await mux.getPosition(account.target, USDC, WETH, true);
+    console.log(
+      `balance(eth)    : ${await account.getBalance(ethers.ZeroAddress)}`
+    );
+    console.log(`balance(usdc)   : ${await account.getBalance(USDC)}`);
     console.log(`position(gmx-v1): ${gmxV1Position}`);
     console.log(`position(mux)   : ${muxPosition}`);
   });
@@ -283,6 +332,7 @@ describe("Account", () => {
     await executeIncreasePosition();
     await fillPositionOrder();
 
+    console.log("\nincrease position (gmxV1, mux)");
     gmxV1Position = await gmxV1.getPosition(account.target, USDC, WETH, false);
     muxPosition = await mux.getPosition(account.target, USDC, WETH, false);
     console.log(
@@ -291,7 +341,6 @@ describe("Account", () => {
     console.log(`position(gmx-v1): ${gmxV1Position}`);
     console.log(`position(mux)   : ${muxPosition}`);
 
-    console.log("\ncreate orders(decrease position)");
     await account.createOrders(
       [gmxV1.target],
       [
@@ -310,11 +359,37 @@ describe("Account", () => {
     );
     await executeDecreasePosition();
 
+    console.log("\ndecrease position (gmxV1)");
     gmxV1Position = await gmxV1.getPosition(account.target, USDC, WETH, false);
     muxPosition = await mux.getPosition(account.target, USDC, WETH, false);
     console.log(
       `balance(eth)    : ${await account.getBalance(ethers.ZeroAddress)}`
     );
+    console.log(`position(gmx-v1): ${gmxV1Position}`);
+    console.log(`position(mux)   : ${muxPosition}`);
+
+    await account.createOrders(
+      [mux.target],
+      [
+        {
+          orderType: orderType.decreasePosition,
+          collateral: USDC,
+          index: WETH,
+          collateralAmount: 0,
+          size: muxPosition.size,
+          isLong: false,
+        },
+      ]
+    );
+    await fillPositionOrder();
+
+    console.log("\ndecrease position (mux)");
+    gmxV1Position = await gmxV1.getPosition(account.target, WETH, WETH, false);
+    muxPosition = await mux.getPosition(account.target, USDC, WETH, false);
+    console.log(
+      `balance(eth)    : ${await account.getBalance(ethers.ZeroAddress)}`
+    );
+    console.log(`balance(usdc)   : ${await account.getBalance(USDC)}`);
     console.log(`position(gmx-v1): ${gmxV1Position}`);
     console.log(`position(mux)   : ${muxPosition}`);
   });
@@ -381,6 +456,7 @@ describe("Account", () => {
     await executeIncreasePosition();
     await fillPositionOrder();
 
+    console.log("\nincrease position (gmxV1, mux)");
     gmxV1Position = await gmxV1.getPosition(account.target, USDC, WETH, false);
     muxPosition = await mux.getPosition(account.target, WETH, WETH, false);
     console.log(
@@ -389,7 +465,6 @@ describe("Account", () => {
     console.log(`position(gmx-v1): ${gmxV1Position}`);
     console.log(`position(mux)   : ${muxPosition}`);
 
-    console.log("\ncreate orders(decrease position)");
     await account.createOrders(
       [gmxV1.target],
       [
@@ -408,11 +483,38 @@ describe("Account", () => {
     );
     await executeDecreasePosition();
 
+    console.log("\ndecrease position (gmxV1)");
     gmxV1Position = await gmxV1.getPosition(account.target, USDC, WETH, false);
     muxPosition = await mux.getPosition(account.target, WETH, WETH, false);
     console.log(
       `balance(eth)    : ${await account.getBalance(ethers.ZeroAddress)}`
     );
+    console.log(`position(gmx-v1): ${gmxV1Position}`);
+    console.log(`position(mux)   : ${muxPosition}`);
+
+    await account.createOrders(
+      [mux.target],
+      [
+        {
+          orderType: orderType.decreasePosition,
+          collateral: WETH,
+          index: WETH,
+          collateralAmount: 0,
+          size: muxPosition.size,
+          isLong: false, // short
+        },
+      ]
+    );
+    await fillPositionOrder();
+
+    console.log("\ndecrease position (mux)");
+    gmxV1Position = await gmxV1.getPosition(account.target, USDC, WETH, false);
+    muxPosition = await mux.getPosition(account.target, WETH, WETH, false);
+    console.log(
+      `balance(eth)    : ${await account.getBalance(ethers.ZeroAddress)}`
+    );
+    console.log(`balance(weth)   : ${await account.getBalance(WETH)}`);
+    console.log(`balance(usdc)   : ${await account.getBalance(USDC)}`);
     console.log(`position(gmx-v1): ${gmxV1Position}`);
     console.log(`position(mux)   : ${muxPosition}`);
   });
