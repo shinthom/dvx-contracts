@@ -174,8 +174,14 @@ contract GMXV1 is IAdapter {
                     address(0)
                 );
             } else {
-                path = new address[](1);
-                path[0] = collateral;
+                if (collateral != USDC) {
+                    path = new address[](2);
+                    path[0] = collateral;
+                    path[1] = USDC;
+                } else {
+                    path = new address[](1);
+                    path[0] = collateral;
+                }
 
                 IERC20(collateral).approve(_router, collateralAmount);
 
