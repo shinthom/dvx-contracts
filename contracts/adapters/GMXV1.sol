@@ -78,28 +78,22 @@ contract GMXV1 is IAdapter {
         address collateral,
         address index,
         bool isLong
-    ) override public view returns (
-        uint256,    // collateralAmount,
-        uint256,    // size,
-        uint256,    // lastIncreasedTime,
-        uint256,    // price,
-        uint256     // fundingRate
-    ) {
+    ) override public view returns (IAdapter.Position memory) {
         bytes32 positionKey = IVault(_vault).getPositionKey(
             account,
             collateral,
             index,
             isLong
         );
-
         IVault.Position memory position = IVault(_vault).positions(positionKey);
-        return (
-            position.collateral,
-            position.size,
-            position.lastIncreasedTime,
-            position.averagePrice,
-            position.entryFundingRate
-        );
+
+        return IAdapter.Position({
+            collateralAmount: position.collateral,
+            size: position.size,
+            lastIncreasedTime: position.lastIncreasedTime,
+            price: position.averagePrice,
+            fundingRate: position.entryFundingRate
+        });
     }
 
     function _increase(
@@ -208,14 +202,21 @@ contract GMXV1 is IAdapter {
         uint256 size,
         bool isLong
     ) private {
-        address[] memory path = new address[](1);
-        path[0] = collateral;
-
         uint256 price =
             isLong ?
             IVault(_vault).getMinPrice(index) :
             IVault(_vault).getMaxPrice(index);
         uint256 fee = IPositionRouter(_positionRouter).minExecutionFee();
+
+        address[] memory path;
+        if (collateral == WETH) {
+            path = new address[](1);
+            path[0] = collateral;
+        } else {
+            path = new address[](2);
+            path[0] = collateral;
+            path[1] = WETH;
+        }
 
         IPositionRouter(_positionRouter).createDecreasePosition{value: fee}(
             path,
@@ -223,11 +224,11 @@ contract GMXV1 is IAdapter {
             collateralAmount,
             size,
             isLong,
-            msg.sender, // receiver
+            address(this), // receiver
             price,
             0,
             fee,
-            false, // withdrawETH
+            true, // withdrawETH
             address(0)
         );
     }

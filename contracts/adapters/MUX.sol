@@ -23,13 +23,7 @@ contract MUX is IAdapter {
         address collateral,
         address index,
         bool isLong
-    ) override public view returns (
-        uint256 collateralAmount,
-        uint256 size,
-        uint256 lastIncreasedTime,
-        uint256 price,
-        uint256 fundingRate
-    ) {
+    ) override public view returns (IAdapter.Position memory) {
         uint8 collateralId = _getIdFromAsset(collateral);
         uint8 indexId = _getIdFromAsset(index);
 
@@ -39,9 +33,21 @@ contract MUX is IAdapter {
             indexId,
             isLong
         );
+        (
+            uint256 collateralAmount,
+            uint256 size,
+            uint256 lastIncreasedTime,
+            uint256 price,
+            uint256 fundingRate
+        ) = ILiquidityPool(_liquidityPool).getSubAccount(subAccountId);
 
-        (collateralAmount, size, lastIncreasedTime, price, fundingRate)
-            = ILiquidityPool(_liquidityPool).getSubAccount(subAccountId);
+        return IAdapter.Position(
+            collateralAmount,
+            size,
+            lastIncreasedTime,
+            price,
+            fundingRate
+        );
     }
 
     function _getIdFromAsset(address tokenAddress) private view returns (uint8) {

@@ -15,6 +15,9 @@ const orderType = {
 };
 
 describe("Account", () => {
+  let gmxV1Position;
+  let muxPosition;
+
   it("long: ETH -> ETH", async () => {
     const {
       gmxV1,
@@ -22,6 +25,7 @@ describe("Account", () => {
       quoter,
       account,
       executeIncreasePosition,
+      executeDecreasePosition,
       fillPositionOrder,
     } = await loadFixture(deploy);
 
@@ -48,6 +52,7 @@ describe("Account", () => {
     await account.depositETH(collateralAmount * 2n, {
       value: collateralAmount * 2n,
     });
+    console.log("\ncreate orders(increase position)");
     await account.createOrders(
       [gmxV1.target, mux.target],
       [
@@ -75,22 +80,43 @@ describe("Account", () => {
 
     await executeIncreasePosition();
     await fillPositionOrder();
+
+    gmxV1Position = await gmxV1.getPosition(account.target, WETH, WETH, true);
+    muxPosition = await mux.getPosition(account.target, WETH, WETH, true);
     console.log(
-      `position(gmx-v1): ${await gmxV1.getPosition(
-        account.target,
-        WETH,
-        WETH,
-        true
-      )}`
+      `balance(eth)    : ${await account.getBalance(ethers.ZeroAddress)}`
     );
+    console.log(`position(gmx-v1): ${gmxV1Position}`);
+    console.log(`position(mux)   : ${muxPosition}`);
+
+    console.log("\ncreate orders(decrease position)");
+    await account.createOrders(
+      [gmxV1.target],
+      [
+        {
+          orderType: orderType.decreasePosition,
+          collateral: WETH,
+          index: WETH,
+          collateralAmount: 0,
+          size: gmxV1Position.size,
+          isLong: true,
+        },
+      ],
+      {
+        value: BigInt("180000000000000"),
+      }
+    );
+    await executeDecreasePosition();
+
+    gmxV1Position = await gmxV1.getPosition(account.target, WETH, WETH, true);
+    muxPosition = await mux.getPosition(account.target, WETH, WETH, true);
     console.log(
-      `position(mux)   : ${await mux.getPosition(
-        account.target,
-        WETH,
-        WETH,
-        true
-      )}`
+      `balance(eth)    : ${await account.getBalance(ethers.ZeroAddress)}`
     );
+    console.log(`position(gmx-v1): ${gmxV1Position}`);
+    console.log(`position(mux)   : ${muxPosition}`);
+
+    // TODO: mux
   });
 
   it("long: USDC -> WETH", async () => {
@@ -100,6 +126,7 @@ describe("Account", () => {
       quoter,
       account,
       executeIncreasePosition,
+      executeDecreasePosition,
       fillPositionOrder,
       swap,
     } = await loadFixture(deploy);
@@ -154,22 +181,41 @@ describe("Account", () => {
     );
     await executeIncreasePosition();
     await fillPositionOrder();
+
+    gmxV1Position = await gmxV1.getPosition(account.target, WETH, WETH, true);
+    muxPosition = await mux.getPosition(account.target, USDC, WETH, true);
     console.log(
-      `position(gmx-v1): ${await gmxV1.getPosition(
-        account.target,
-        WETH,
-        WETH,
-        true
-      )}`
+      `balance(eth)    : ${await account.getBalance(ethers.ZeroAddress)}`
     );
+    console.log(`position(gmx-v1): ${gmxV1Position}`);
+    console.log(`position(mux)   : ${muxPosition}`);
+
+    console.log("\ncreate orders(decrease position)");
+    await account.createOrders(
+      [gmxV1.target],
+      [
+        {
+          orderType: orderType.decreasePosition,
+          collateral: WETH,
+          index: WETH,
+          collateralAmount: 0,
+          size: gmxV1Position.size,
+          isLong: true,
+        },
+      ],
+      {
+        value: BigInt("180000000000000"),
+      }
+    );
+    await executeDecreasePosition();
+
+    gmxV1Position = await gmxV1.getPosition(account.target, WETH, WETH, true);
+    muxPosition = await mux.getPosition(account.target, USDC, WETH, true);
     console.log(
-      `position(mux)   : ${await mux.getPosition(
-        account.target,
-        USDC,
-        WETH,
-        true
-      )}`
+      `balance(eth)    : ${await account.getBalance(ethers.ZeroAddress)}`
     );
+    console.log(`position(gmx-v1): ${gmxV1Position}`);
+    console.log(`position(mux)   : ${muxPosition}`);
   });
 
   it("short: USDC -> ETH", async () => {
@@ -181,6 +227,7 @@ describe("Account", () => {
       usdc,
       swap,
       executeIncreasePosition,
+      executeDecreasePosition,
       fillPositionOrder,
     } = await loadFixture(deploy);
 
@@ -235,22 +282,41 @@ describe("Account", () => {
 
     await executeIncreasePosition();
     await fillPositionOrder();
+
+    gmxV1Position = await gmxV1.getPosition(account.target, USDC, WETH, false);
+    muxPosition = await mux.getPosition(account.target, USDC, WETH, false);
     console.log(
-      `position(gmx-v1): ${await gmxV1.getPosition(
-        account.target,
-        USDC,
-        WETH,
-        false
-      )}`
+      `balance(eth)    : ${await account.getBalance(ethers.ZeroAddress)}`
     );
+    console.log(`position(gmx-v1): ${gmxV1Position}`);
+    console.log(`position(mux)   : ${muxPosition}`);
+
+    console.log("\ncreate orders(decrease position)");
+    await account.createOrders(
+      [gmxV1.target],
+      [
+        {
+          orderType: orderType.decreasePosition,
+          collateral: USDC,
+          index: WETH,
+          collateralAmount: 0,
+          size: gmxV1Position.size,
+          isLong: false, // short
+        },
+      ],
+      {
+        value: BigInt("180000000000000"),
+      }
+    );
+    await executeDecreasePosition();
+
+    gmxV1Position = await gmxV1.getPosition(account.target, USDC, WETH, false);
+    muxPosition = await mux.getPosition(account.target, USDC, WETH, false);
     console.log(
-      `position(mux)   : ${await mux.getPosition(
-        account.target,
-        USDC,
-        WETH,
-        false
-      )}`
+      `balance(eth)    : ${await account.getBalance(ethers.ZeroAddress)}`
     );
+    console.log(`position(gmx-v1): ${gmxV1Position}`);
+    console.log(`position(mux)   : ${muxPosition}`);
   });
 
   it("short: ETH -> ETH", async () => {
@@ -260,6 +326,7 @@ describe("Account", () => {
       quoter,
       account,
       executeIncreasePosition,
+      executeDecreasePosition,
       fillPositionOrder,
     } = await loadFixture(deploy);
 
@@ -314,21 +381,39 @@ describe("Account", () => {
     await executeIncreasePosition();
     await fillPositionOrder();
 
+    gmxV1Position = await gmxV1.getPosition(account.target, USDC, WETH, false);
+    muxPosition = await mux.getPosition(account.target, WETH, WETH, false);
     console.log(
-      `position(gmx-v1): ${await gmxV1.getPosition(
-        account.target,
-        USDC,
-        WETH,
-        false
-      )}`
+      `balance(eth)    : ${await account.getBalance(ethers.ZeroAddress)}`
     );
+    console.log(`position(gmx-v1): ${gmxV1Position}`);
+    console.log(`position(mux)   : ${muxPosition}`);
+
+    console.log("\ncreate orders(decrease position)");
+    await account.createOrders(
+      [gmxV1.target],
+      [
+        {
+          orderType: orderType.decreasePosition,
+          collateral: USDC,
+          index: WETH,
+          collateralAmount: 0,
+          size: gmxV1Position.size,
+          isLong: false, // short
+        },
+      ],
+      {
+        value: BigInt("180000000000000"),
+      }
+    );
+    await executeDecreasePosition();
+
+    gmxV1Position = await gmxV1.getPosition(account.target, USDC, WETH, false);
+    muxPosition = await mux.getPosition(account.target, WETH, WETH, false);
     console.log(
-      `position(mux)   : ${await mux.getPosition(
-        account.target,
-        WETH,
-        WETH,
-        false
-      )}`
+      `balance(eth)    : ${await account.getBalance(ethers.ZeroAddress)}`
     );
+    console.log(`position(gmx-v1): ${gmxV1Position}`);
+    console.log(`position(mux)   : ${muxPosition}`);
   });
 });

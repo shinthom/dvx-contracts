@@ -2,18 +2,20 @@
 pragma solidity 0.8.0;
 
 interface IAdapter {
+    struct Position {
+        uint256 collateralAmount;
+        uint256 size;
+        uint256 lastIncreasedTime;
+        uint256 price;
+        uint256 fundingRate;
+    }
+
     function getPosition(
         address account,
         address collateral,
         address index,
         bool isLong
-    ) external view returns(
-        uint256 collateralAmount,
-        uint256 size,
-        uint256 lastIncreasedTime,
-        uint256 price,
-        uint256 fundingRate
-    );
+    ) external view returns (Position memory);
 
     // function getFee() external;
 

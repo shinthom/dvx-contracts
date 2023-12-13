@@ -16,6 +16,8 @@ contract Account is IAccount {
         _owner = msg.sender;
     }
 
+    receive() external payable {}
+
     function getBalance(address token) public view returns (uint256) {
         if (token == address(0)) {
             return address(this).balance;
