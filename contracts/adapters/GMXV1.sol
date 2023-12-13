@@ -7,6 +7,7 @@ import "../interfaces/exchanges/GMXV1/IVault.sol";
 import "../interfaces/tokens/IERC20.sol";
 import "../interfaces/IAdapter.sol";
 import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol"; // test
+import "hardhat/console.sol";
 
 contract GMXV1 is IAdapter {
     // gmx contracts
@@ -14,6 +15,9 @@ contract GMXV1 is IAdapter {
     address immutable private _router;
     address immutable private _vault;
     address immutable private _swapRouter; // test
+
+    address constant private WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
+    address constant private USDC = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
 
     constructor(
         address positionRouter,
@@ -109,9 +113,6 @@ contract GMXV1 is IAdapter {
             IRouter(_router).approvePlugin(_positionRouter);
         }
 
-        address[] memory path = new address[](1);
-        path[0] = collateral;
-
         uint256 price =
             isLong ?
             IVault(_vault).getMaxPrice(index) :
@@ -119,12 +120,22 @@ contract GMXV1 is IAdapter {
         uint256 fee = IPositionRouter(_positionRouter).minExecutionFee();
 
         if (isLong) {
+            address[] memory path;
+            if (collateral == index) {
+                path = new address[](1);
+                path[0] = collateral;
+            } else {
+                path = new address[](2);
+                path[0] = collateral;
+                path[1] = index;
+            }
+
             // WETH
-            if (collateral == 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1) {
+            if (collateral == WETH) {
                 IPositionRouter(_positionRouter).createIncreasePositionETH{value: collateralAmount + fee}(
                     path,
                     index,
-                    collateralAmount,
+                    0,
                     size,
                     isLong,
                     price,
@@ -149,20 +160,44 @@ contract GMXV1 is IAdapter {
                 );
             }
         } else {
-            IERC20(collateral).approve(_router, collateralAmount);
+            address[] memory path;
 
-            IPositionRouter(_positionRouter).createIncreasePosition{value: fee}(
-                path,
-                index,
-                collateralAmount,
-                0,
-                size,
-                isLong,
-                price,
-                fee,
-                0x0,
-                address(0)
-            );
+            if (collateral == WETH) {
+                // todo: distinguish stable and non-stable
+                path = new address[](2);
+                path[0] = collateral;
+                path[1] = USDC; // NOTE: default to USDC
+
+                IPositionRouter(_positionRouter).createIncreasePositionETH{value: collateralAmount + fee}(
+                    path,
+                    index,
+                    0,
+                    size,
+                    isLong,
+                    price,
+                    fee,
+                    0x0,
+                    address(0)
+                );
+            } else {
+                path = new address[](1);
+                path[0] = collateral;
+
+                IERC20(collateral).approve(_router, collateralAmount);
+
+                IPositionRouter(_positionRouter).createIncreasePosition{value: fee}(
+                    path,
+                    index,
+                    collateralAmount,
+                    0,
+                    size,
+                    isLong,
+                    price,
+                    fee,
+                    0x0,
+                    address(0)
+                );
+            }
         }
     }
 
