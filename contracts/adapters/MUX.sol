@@ -5,7 +5,6 @@ import "../interfaces/exchanges/MUX/ILiquidityPool.sol";
 import "../interfaces/exchanges/MUX/IOrderBook.sol";
 import "../interfaces/tokens/IERC20.sol";
 import "../interfaces/IAdapter.sol";
-import "hardhat/console.sol";
 
 contract MUX is IAdapter {
     address immutable private _orderBook;
@@ -79,7 +78,6 @@ contract MUX is IAdapter {
 
         // ETH
         if (collateralId == 3) {
-            console.log("MUX: increasePosition: ETH");
             IOrderBook(_orderBook).placePositionOrder3{value: collateralAmount}(
                 subAccountId,
                 uint96(collateralAmount),
@@ -115,7 +113,6 @@ contract MUX is IAdapter {
         uint256 size,
         bool isLong
     ) override payable public {
-        console.log("decreasePosition");
         uint8 collateralId = _getIdFromAsset(collateral);
         uint8 indexId = _getIdFromAsset(index);
 

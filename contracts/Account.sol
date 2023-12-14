@@ -3,6 +3,7 @@ pragma solidity 0.8.0;
 
 import "./interfaces/tokens/IERC20.sol";
 import "./interfaces/IAccount.sol";
+import "./interfaces/IExchange.sol";
 
 contract Account is IAccount {
     address private _owner;
@@ -26,18 +27,21 @@ contract Account is IAccount {
         }
     }
 
-    function _deposit(address token, uint256 amount) private {
-        require(amount > 0, "Account: amount must be greater than 0");
+    function deposit(address token, uint256 amount) override payable external {
+        require(amount > 0, "ZERO_AMOUNT");
 
-        if (token != address(0)) {
+        if (token == address(0)) {
+            require(amount == msg.value, "VAL");
+        } else {
             IERC20(token).transferFrom(msg.sender, address(this), amount );
         }
         emit Deposited(msg.sender, token, amount);
     }
 
-    /// Regardless of whether the token is allowed or not, it can be withdrawn.
-    /// If the only allowed token can be withdrawn, it could be locked in the vault forever.
-    function _withdraw(address token, uint256 amount) private {
+    function withdraw(address token, uint256 amount) override external {
+        require(msg.sender == _owner, "NOT_OWNER");
+        require(amount > 0, "ZERO_AMOUNT");
+
         if (token == address(0)) {
             payable(msg.sender).transfer(amount);
         } else {
@@ -46,57 +50,34 @@ contract Account is IAccount {
         emit Withdrawn(msg.sender, token, amount);
     }
 
-    function deposit(address token, uint256 amount) override external {
-        // TODO: deposit -> _depositToken / _depositETH
-        require(amount > 0, "Account: amount must be greater than 0");
-
-        _deposit(token, amount);
-    }
-
-    function depositETH(uint256 amount) override payable external {
-        require(amount > 0, "Account: amount must be greater than 0");
-        require(amount == msg.value, "Account: amount must be equal to msg.value");
-
-        _deposit(address(0), amount);
-    }
-
-    function withdraw(address token, uint256 amount) override external {
-        require(
-            msg.sender == _owner,
-            "Account: only owner can withdraw"
-        );
-
-        _withdraw(token, amount);
-    }
-
-    function withdrawETH(uint256 amount) override payable external {
-        require(
-            msg.sender == _owner,
-            "Account: only owner can withdraw"
-        );
-        require(amount > 0, "Account: amount must be greater than 0");
-
-        _withdraw(address(0), amount);
-    }
-
     function _createOrder(
         address exchange,
-        Order calldata order
+        IExchange.Order calldata order
     ) private returns (bool success, bytes memory data) {
-        OrderType orderType = order.orderType;
+        IExchange.OrderType orderType = order.orderType;
 
-        if (orderType == OrderType.IncreasePosition) {
+        // // todo: fix
+        // uint256 fee;
+        // if (_exchange != address(0)) {
+        //     fee = IExchange(_exchange).getFee(
+        //         orderType,
+        //         order
+        //     );
+        // }
+
+        if (orderType == IExchange.OrderType.IncreasePosition) {
             return exchange.delegatecall(
                 abi.encodeWithSignature(
                     "increasePosition(address,address,uint256,uint256,bool)",
                     order.collateral,
                     order.index,
+                    // order.collateralAmount - fee,
                     order.collateralAmount,
                     order.size,
                     order.isLong
                 )
             );
-        } else if (orderType == OrderType.DecreasePosition) {
+        } else if (orderType == IExchange.OrderType.DecreasePosition) {
             return exchange.delegatecall(
                 abi.encodeWithSignature(
                     "decreasePosition(address,address,uint256,bool)",
@@ -106,17 +87,18 @@ contract Account is IAccount {
                     order.isLong
                 )
             );
-        } else if (orderType == OrderType.IncreaseCollateral) {
+        } else if (orderType == IExchange.OrderType.IncreaseCollateral) {
             return exchange.delegatecall(
                 abi.encodeWithSignature(
                     "increaseCollateral(address,address,uint256,bool)",
                     order.collateral,
                     order.index,
+                    // order.collateralAmount - fee,
                     order.collateralAmount,
                     order.isLong
                 )
             );
-        } else if (orderType == OrderType.DecreaseCollateral) {
+        } else if (orderType == IExchange.OrderType.DecreaseCollateral) {
             return exchange.delegatecall(
                 abi.encodeWithSignature(
                     "decreaseCollateral(address,address,uint256,bool)",
@@ -130,14 +112,16 @@ contract Account is IAccount {
     }
 
     function createOrders(
-        address[] calldata exchanges,
-        Order[] calldata orders // TODO: order has orderType
+        address[] calldata adapters,
+        IExchange.Order[] calldata orders
     ) payable external {
-        for (uint256 i = 0; i < exchanges.length; i++) {
+        for (uint256 i = 0; i < adapters.length; i++) {
             (bool success, bytes memory data) = _createOrder(
-                exchanges[i],
+                adapters[i],
                 orders[i]
             );
+            emit OrderCreated(address(this), adapters[i], orders[i]);
+
             require(success, string(data));
         }
     }

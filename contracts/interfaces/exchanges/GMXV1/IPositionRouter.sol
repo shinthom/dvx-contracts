@@ -19,9 +19,9 @@ interface IPositionRouter {
         address callbackTarget;
     }
 
-    function depositFee() external returns (uint256);
-    function minExecutionFee() external returns (uint256);
-    function BASIS_POINTS_DIVISOR() external returns (uint256);
+    function depositFee() external view returns (uint256);
+    function minExecutionFee() external view returns (uint256);
+    function BASIS_POINTS_DIVISOR() external view returns (uint256);
 
     function increasePositionRequests(bytes32 key) external view returns (IncreasePositionRequest memory);
 

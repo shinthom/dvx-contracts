@@ -13,23 +13,23 @@ describe("Exchange", () => {
   });
 
   it("(un)register exchange", async () => {
-    const newExchange = "0x" + "1".repeat(40);
+    const newAdapter = "0x" + "1".repeat(40);
 
-    await exchange.connect(owner).registerExchange(newExchange);
-    expect(await exchange.isRegisteredExchange(newExchange)).to.equal(true);
+    await exchange.connect(owner).registerAdapter(newAdapter);
+    expect(await exchange.isRegisteredAdapter(newAdapter)).to.equal(true);
 
-    await exchange.connect(owner).unregisterExchange(newExchange);
-    expect(await exchange.isRegisteredExchange(newExchange)).to.equal(false);
+    await exchange.connect(owner).unregisterAdapter(newAdapter);
+    expect(await exchange.isRegisteredAdapter(newAdapter)).to.equal(false);
   });
 
   it("reverts when non-owner (un)register exchange", async () => {
-    const newExchange = "0x" + "1".repeat(40);
+    const newAdapter = "0x" + "1".repeat(40);
 
     await expect(
-      exchange.connect(user0).registerExchange(newExchange)
+      exchange.connect(user0).registerAdapter(newAdapter)
     ).to.be.revertedWith("NOT_OWNER");
     await expect(
-      exchange.connect(user0).unregisterExchange(newExchange)
+      exchange.connect(user0).unregisterAdapter(newAdapter)
     ).to.be.revertedWith("NOT_OWNER");
   });
 

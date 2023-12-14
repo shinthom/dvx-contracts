@@ -11,9 +11,9 @@ contract Exchange is IExchange {
     mapping(address => address) private _accounts; // wallet => account
 
     mapping(address => bool) private _registeredTokens;
-    mapping(address => bool) private _registeredExchanges;
+    mapping(address => bool) private _registeredAdapters;
 
-    // TODO: fee
+    uint256 private _positionFeeBasisPoints;
 
     constructor() {
         _owner = msg.sender;
@@ -27,8 +27,8 @@ contract Exchange is IExchange {
         return _totalAccount;
     }
 
-    function isRegisteredExchange(address exchange) public view returns (bool) {
-        return _registeredExchanges[exchange];
+    function isRegisteredAdapter(address adapter) public view returns (bool) {
+        return _registeredAdapters[adapter];
     }
 
     function isRegisteredToken(address token) public view returns (bool) {
@@ -45,7 +45,6 @@ contract Exchange is IExchange {
 
     function createAccount() external returns (address) {
         Account account = _createAccount();
-
         return address(account);
     }
 
@@ -56,23 +55,20 @@ contract Exchange is IExchange {
     {
         Account account = _createAccount();
 
-        if (token == address(0)) {
-            account.depositETH{value: msg.value}(amount);
-        } else {
+        token == address(0) ?
+            account.deposit{value: msg.value}(address(0), amount) :
             account.deposit(token, amount);
-        }
-
         return address(account);
     }
 
-    function registerExchange(address exchange) external {
+    function registerAdapter(address adapter) external {
         require(msg.sender == _owner, "NOT_OWNER");
-        _registeredExchanges[exchange] = true;
+        _registeredAdapters[adapter] = true;
     }
 
-    function unregisterExchange(address exchange) external {
+    function unregisterAdapter(address adapter) external {
         require(msg.sender == _owner, "NOT_OWNER");
-        _registeredExchanges[exchange] = false;
+        _registeredAdapters[adapter] = false;
     }
 
     function registerToken(address token) external {

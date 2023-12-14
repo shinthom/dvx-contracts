@@ -33,7 +33,9 @@ async function main() {
 
   console.log("\n`deposit`");
   const depositAmount = ethers.parseEther("2");
-  await account.depositETH(depositAmount, { value: depositAmount });
+  await account.deposit(ethers.ZeroAddress, depositAmount, {
+    value: depositAmount,
+  });
   console.log(await account.getBalance(ethers.ZeroAddress));
 
   console.log("\n`quote`");

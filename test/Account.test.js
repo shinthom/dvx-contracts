@@ -195,7 +195,7 @@ describe("Account", () => {
     const long = true;
 
     const approveAndDeposit = async (account) => {
-      await account.depositETH(collateralAmount * 2n, {
+      await account.deposit(ethers.ZeroAddress, collateralAmount * 2n, {
         value: collateralAmount * 2n,
       });
     };
@@ -267,7 +267,7 @@ describe("Account", () => {
     const long = true;
 
     const approveAndDeposit = async (account) => {
-      await account.depositETH(collateralAmount * 2n, {
+      await account.deposit(ethers.ZeroAddress, collateralAmount * 2n, {
         value: collateralAmount * 2n,
       });
     };
@@ -387,7 +387,7 @@ describe("Account", () => {
     const short = false;
 
     const approveAndDeposit = async (account) => {
-      await account.depositETH(collateralAmount * 2n, {
+      await account.deposit(ethers.ZeroAddress, collateralAmount * 2n, {
         value: collateralAmount * 2n,
       });
     };

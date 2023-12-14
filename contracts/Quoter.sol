@@ -1,17 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
-import "./interfaces/IAccount.sol";
+import "./interfaces/IExchange.sol";
 import "./interfaces/tokens/IERC20.sol";
 import "./interfaces/exchanges/GMXV1/IVault.sol";
-import "hardhat/console.sol";
 
 contract Quoter {
     // gmx contract
     address private _vault = 0x489ee077994B6658eAfA855C308275EAd8097C4A;
 
+    // function quote(IExchange.Order memory order) {
+        
+    // }
+
     function quoteGMX(
-        IAccount.OrderType orderType,
+        IExchange.OrderType orderType,
         address collateral,
         address index,
         uint256 collateralAmount,
@@ -22,8 +25,8 @@ contract Quoter {
     view
     returns (
         // address[] memory, (TODO: route to exchanges by calculating fee)
-        // IAccount.Order[] memory
-        IAccount.Order memory order
+        // IExchange.Order[] memory
+        IExchange.Order memory order
     ) {
         uint256 sizeUsd = _calculateSizeUsd(
             collateral,
@@ -42,7 +45,7 @@ contract Quoter {
     }
 
     function quoteMUX(
-        IAccount.OrderType orderType,
+        IExchange.OrderType orderType,
         address collateral,
         address index,
         uint256 collateralAmount,
@@ -53,8 +56,8 @@ contract Quoter {
     view
     returns (
         // address[] memory, (TODO: route to exchanges by calculating fee)
-        // IAccount.Order[] memory
-        IAccount.Order memory order
+        // IExchange.Order[] memory
+        IExchange.Order memory order
     ) {
         uint256 sizeUsd = _calculateSizeUsd(
             collateral,
