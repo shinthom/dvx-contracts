@@ -72,7 +72,10 @@ const deploy = async () => {
   ]);
   mux = await ethers.deployContract("MUX", [OrderBook, LiquidityPool]);
   quoter = await ethers.deployContract("Quoter");
-  account = await ethers.deployContract("Account");
+  account = await ethers.deployContract("Account", [
+    user0.address,
+    ethers.ZeroAddress, // exchange
+  ]);
 
   const swap = async (from, to, fromAmount) => {
     await weth.deposit({ value: fromAmount });

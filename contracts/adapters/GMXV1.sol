@@ -174,7 +174,7 @@ contract GMXV1 is IAdapter {
                     address(0)
                 );
             } else {
-                if (collateral != USDC) {
+                if (collateral != USDC) { // TODO: if the collateral stable coin other than USDC
                     path = new address[](2);
                     path[0] = collateral;
                     path[1] = USDC;

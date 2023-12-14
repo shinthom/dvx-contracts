@@ -6,19 +6,19 @@ import "./interfaces/IAccount.sol";
 
 contract Account is IAccount {
     address private _owner;
-    // address private _exchange;
-    mapping(address => uint256) private _balances;
+    address private _exchange;
 
     constructor(
-        // address exchange
+        address wallet,
+        address exchange
     ) {
-        // _exchange = exchange;
-        _owner = msg.sender;
+        _owner = wallet;
+        _exchange = exchange;
     }
 
     receive() external payable {}
 
-    function getBalance(address token) public view returns (uint256) {
+    function getBalance(address token) override public view returns (uint256) {
         if (token == address(0)) {
             return address(this).balance;
         } else {
@@ -29,30 +29,21 @@ contract Account is IAccount {
     function _deposit(address token, uint256 amount) private {
         require(amount > 0, "Account: amount must be greater than 0");
 
-        _balances[token] += amount;
-        emit Deposited(msg.sender, token, amount);
-
         if (token != address(0)) {
             IERC20(token).transferFrom(msg.sender, address(this), amount );
         }
+        emit Deposited(msg.sender, token, amount);
     }
 
     /// Regardless of whether the token is allowed or not, it can be withdrawn.
     /// If the only allowed token can be withdrawn, it could be locked in the vault forever.
     function _withdraw(address token, uint256 amount) private {
-        require(
-            _balances[token] >= amount,
-            "Account: insufficient balance"
-        );
-
-        _balances[token] -= amount;
-        emit Withdrawn(msg.sender, token, amount);
-
         if (token == address(0)) {
             payable(msg.sender).transfer(amount);
         } else {
             IERC20(token).transfer(msg.sender, amount);
         }
+        emit Withdrawn(msg.sender, token, amount);
     }
 
     function deposit(address token, uint256 amount) override external {
