@@ -37,14 +37,11 @@ const openAndClosePosition = async (
     swap,
   } = await loadFixture(deploy);
 
-  console.log("");
-
   if (collateral != WETH) {
     // swap eth to sufficient collateral
     await swap(WETH, collateral, ethers.parseEther("10"));
   }
 
-  const toToken = await ethers.getContractAt("IERC20", collateral);
   await approveAndDeposit(account, collateral);
 
   const gmxOrder = await quoter.quoteGMX(
@@ -190,7 +187,6 @@ const openAndClosePosition = async (
 
 describe("Account", () => {
   it("long: col(ETH) -> idx(ETH)", async () => {
-    // TODO: make array
     const collateral = WETH;
     const index = WETH;
 

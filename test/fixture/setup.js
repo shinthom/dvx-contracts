@@ -14,6 +14,7 @@ const LiquidityPool = "0x3e0199792ce69dc29a0a36146bfa68bd7c8d6633";
 // token contracts
 const WETH = "0x82af49447d8a07e3bd95bd0d56f35241523fbab1";
 const USDC = "0xaf88d065e77c8cc2239327c5edb3a432268e5831";
+const WBTC = "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f";
 
 let user0;
 // gmx
@@ -21,6 +22,10 @@ let impersonatedAdmin;
 let impersonatedPositionKeeper;
 // mux
 let impersonatedBroker;
+
+let weth;
+let usdc;
+let wbtc;
 
 let positionRouter;
 let orderBook;
@@ -56,6 +61,7 @@ const deploy = async () => {
 
   weth = await ethers.getContractAt("IERC20", WETH);
   usdc = await ethers.getContractAt("IERC20", USDC);
+  wbtc = await ethers.getContractAt("IERC20", WBTC);
 
   // deploy
   gmxV1 = await ethers.deployContract("GMXV1", [
@@ -130,6 +136,7 @@ const deploy = async () => {
     orderBook,
     weth,
     usdc,
+    wbtc,
     gmxV1,
     mux,
     quoter,
@@ -137,6 +144,7 @@ const deploy = async () => {
     tokens: {
       WETH,
       USDC,
+      WBTC,
     },
     swap,
     executeIncreasePosition,

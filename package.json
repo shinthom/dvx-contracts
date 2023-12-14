@@ -5,11 +5,13 @@
   "main": "index.js",
   "scripts": {
     "compile": "hardhat compile",
-    "deploy": "hardhat run scripts/deploy.js",
+    "deploy": "hardhat run scripts/deploy-testnet.js --network local",
     "test": "hardhat test --network local",
     "test-account": "hardhat test test/Account.test.js --network local",
     "test-gmx-v1": "hardhat test test/adapters/GMXV1.test.js --network local",
-    "test-mux": "hardhat test test/adapters/MUX.test.js --network local"
+    "test-mux": "hardhat test test/adapters/MUX.test.js --network local",
+    "unset-automine": "hardhat unset-automine --network local",
+    "mine": "hardhat mine --network local"
   },
   "keywords": [],
   "author": "",
