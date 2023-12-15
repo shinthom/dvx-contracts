@@ -21,7 +21,7 @@ contract Account is IAccount {
     receive() external payable {}
 
     function getPositions(
-        IAdapter adapter,
+        address adapter,
         address[] memory collaterals,
         address[] memory indexs
     ) public view returns (IAdapter.Position[] memory) {
@@ -36,7 +36,7 @@ contract Account is IAccount {
             for (uint256 j = 0; j < indexs.length; j++) {
                 for (uint256 k = 0; k < isLongs.length; k++) {
                     positions[i * indexs.length * isLongs.length + j * isLongs.length + k]
-                        = adapter.getPosition(address(this), collaterals[i], indexs[j], isLongs[k]);
+                        = IAdapter(adapter).getPosition(address(this), collaterals[i], indexs[j], isLongs[k]);
                 }
             }
         }
@@ -44,12 +44,12 @@ contract Account is IAccount {
     }
 
     function getPosition(
-        IAdapter adapter,
+        address adapter,
         address collateral,
         address index,
         bool isLong
     ) public view returns (IAdapter.Position memory) {
-        return adapter.getPosition(address(this), collateral, index, isLong);
+        return IAdapter(adapter).getPosition(address(this), collateral, index, isLong);
     }
 
     function getBalance(address token) override public view returns (uint256) {
