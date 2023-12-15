@@ -11,6 +11,16 @@ describe("GMXV1", () => {
   // token contracts
   const WETH = "0x82af49447d8a07e3bd95bd0d56f35241523fbab1";
   const USDC = "0xaf88d065e77c8cc2239327c5edb3a432268e5831";
+  const WBTC = "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f";
+
+  const orderType = {
+    increasePosition: 0,
+    decreasePosition: 1,
+    increaseCollateral: 2,
+    decreaseCollateral: 3,
+  };
+
+  const fee = BigInt("180000000000000");
 
   // signers
   let user0;
@@ -21,8 +31,6 @@ describe("GMXV1", () => {
   let positionRouter;
   let weth;
   let usdc;
-
-  const fee = BigInt("180000000000000");
 
   const executeIncreasePosition = async () => {
     const increasePositionsIndex = await positionRouter.increasePositionsIndex(
@@ -61,6 +69,7 @@ describe("GMXV1", () => {
 
     weth = await ethers.getContractAt("IERC20", WETH);
     usdc = await ethers.getContractAt("IERC20", USDC);
+    wbtc = await ethers.getContractAt("IERC20", WBTC);
   });
 
   beforeEach(async () => {
@@ -70,6 +79,246 @@ describe("GMXV1", () => {
       Vault,
       SwapRouter,
     ]);
+  });
+
+  describe("fee", () => {
+    const depositAmount = ethers.parseEther("10");
+    const fee = ethers.parseEther("0.00018");
+    const size = ethers.parseUnits("6000", 30);
+
+    beforeEach(async () => {
+      await weth.deposit({ value: depositAmount });
+      await weth.transfer(gmxV1.target, depositAmount);
+    });
+
+    it("ETH -> ETH (long)", async () => {
+      let position;
+
+      console.log("\n`increasePosition`");
+      {
+        const collateralAmount = ethers.parseEther("1");
+        await gmxV1.increasePosition(WETH, WETH, collateralAmount, size, true, {
+          value: fee + collateralAmount,
+        });
+        await executeIncreasePosition();
+        position = await gmxV1.getPosition(gmxV1.target, WETH, WETH, true);
+        const { feeUsd, collateralAmountUsd } = await gmxV1.getFeeUsd(
+          orderType.increasePosition,
+          WETH,
+          WETH,
+          collateralAmount,
+          size,
+          true // long
+        );
+        console.log(`position  : ${position}`);
+        console.log(
+          "realFeeUsd:",
+          collateralAmountUsd - position.collateralAmount
+        );
+        console.log("feeUsd    :", feeUsd);
+      }
+
+      console.log("\n`increaseCollateral`");
+      {
+        const beforeCollateralAmountUsd = position.collateralAmount;
+
+        const collateralAmount = ethers.parseEther("1");
+        await gmxV1.increaseCollateral(WETH, WETH, collateralAmount, true, {
+          value: fee + collateralAmount,
+        });
+        await executeIncreasePosition();
+        position = await gmxV1.getPosition(gmxV1.target, WETH, WETH, true);
+        const collateralUsdDelta =
+          position.collateralAmount - beforeCollateralAmountUsd;
+
+        const { feeUsd, collateralAmountUsd } = await gmxV1.getFeeUsd(
+          orderType.increaseCollateral,
+          WETH,
+          WETH,
+          collateralAmount,
+          0,
+          true // long
+        );
+        console.log(`position  : ${position}`);
+        console.log("realFeeUsd:", collateralAmountUsd - collateralUsdDelta);
+        console.log("feeUsd    :", feeUsd);
+      }
+
+      console.log("\n`decreaseCollateral`");
+      {
+        const beforeCollateralAmountUsd = position.collateralAmount;
+
+        const collateralAmount = ethers.parseUnits("2000", 30);
+        await gmxV1.decreaseCollateral(WETH, WETH, collateralAmount, true, {
+          value: fee,
+        });
+        await executeDecreasePosition();
+        position = await gmxV1.getPosition(gmxV1.target, WETH, WETH, true);
+
+        const { feeUsd, collateralAmountUsd } = await gmxV1.getFeeUsd(
+          orderType.decreaseCollateral,
+          WETH,
+          WETH,
+          collateralAmount,
+          0,
+          true // long
+        );
+        console.log(`position  : ${position}`);
+        console.log(
+          "realFeeUsd:",
+          beforeCollateralAmountUsd -
+            collateralAmount -
+            position.collateralAmount
+        );
+        console.log("feeUsd    :", feeUsd);
+      }
+
+      console.log("\n`decreasePosition`");
+      {
+        const decreaseSize = size / 2n;
+        const beforeCollateralAmountUsd = position.collateralAmount;
+
+        await gmxV1.decreasePosition(WETH, WETH, decreaseSize, true, {
+          value: fee,
+        });
+        await executeDecreasePosition();
+        position = await gmxV1.getPosition(gmxV1.target, WETH, WETH, true);
+
+        const { feeUsd, collateralAmountUsd } = await gmxV1.getFeeUsd(
+          orderType.decreasePosition,
+          WETH,
+          WETH,
+          0,
+          decreaseSize,
+          true // long
+        );
+        console.log(
+          "realFeeUsd:",
+          beforeCollateralAmountUsd - position.collateralAmount
+        );
+        console.log("feeUsd    :", feeUsd);
+      }
+    });
+
+    it("USDC -> ETH (short)", async () => {
+      await gmxV1.swap(WETH, USDC, depositAmount);
+      await usdc.transfer(gmxV1.target, await usdc.balanceOf(user0.address));
+
+      let position;
+
+      console.log("\n`increasePosition`");
+      {
+        const collateralAmount = ethers.parseUnits("600", 6);
+        await gmxV1.increasePosition(
+          USDC,
+          WETH,
+          collateralAmount,
+          size,
+          false,
+          {
+            value: fee,
+          }
+        );
+        await executeIncreasePosition();
+        position = await gmxV1.getPosition(gmxV1.target, USDC, WETH, false);
+        const { feeUsd, collateralAmountUsd } = await gmxV1.getFeeUsd(
+          orderType.increasePosition,
+          USDC,
+          WETH,
+          collateralAmount,
+          size,
+          false // short
+        );
+        console.log(`position  : ${position}`);
+        console.log(
+          "realFeeUsd:",
+          collateralAmountUsd - position.collateralAmount
+        );
+        console.log("feeUsd    :", feeUsd);
+      }
+
+      console.log("\n`increaseCollateral`");
+      {
+        const beforeCollateralAmountUsd = position.collateralAmount;
+
+        const collateralAmount = ethers.parseUnits("600", 6);
+        await gmxV1.increaseCollateral(USDC, WETH, collateralAmount, false, {
+          value: fee + collateralAmount,
+        });
+        await executeIncreasePosition();
+        position = await gmxV1.getPosition(gmxV1.target, USDC, WETH, false);
+        const collateralUsdDelta =
+          position.collateralAmount - beforeCollateralAmountUsd;
+        console.log(collateralUsdDelta);
+
+        const { feeUsd, collateralAmountUsd } = await gmxV1.getFeeUsd(
+          orderType.increaseCollateral,
+          USDC,
+          WETH,
+          collateralAmount,
+          0,
+          false // short
+        );
+        console.log(`position  : ${position}`);
+        console.log("realFeeUsd:", collateralAmountUsd - collateralUsdDelta);
+        console.log("feeUsd    :", feeUsd);
+      }
+
+      console.log("\n`decreaseCollateral`");
+      {
+        const beforeCollateralAmountUsd = position.collateralAmount;
+
+        const collateralAmount = ethers.parseUnits("200", 30);
+        await gmxV1.decreaseCollateral(USDC, WETH, collateralAmount, false, {
+          value: fee,
+        });
+        await executeDecreasePosition();
+        position = await gmxV1.getPosition(gmxV1.target, USDC, WETH, false);
+
+        const { feeUsd, collateralAmountUsd } = await gmxV1.getFeeUsd(
+          orderType.decreaseCollateral,
+          USDC,
+          WETH,
+          collateralAmount,
+          0,
+          false // long
+        );
+        console.log(`position  : ${position}`);
+        console.log(
+          "realFeeUsd:",
+          beforeCollateralAmountUsd -
+            collateralAmount -
+            position.collateralAmount
+        );
+        console.log("feeUsd    :", feeUsd);
+      }
+
+      console.log("\n`decreasePosition`");
+      {
+        const decreaseSize = size / 2n;
+        const beforeCollateralAmountUsd = position.collateralAmount;
+
+        await gmxV1.decreasePosition(USDC, WETH, decreaseSize, false, {
+          value: fee,
+        });
+        await executeDecreasePosition();
+        position = await gmxV1.getPosition(gmxV1.target, USDC, WETH, false);
+
+        const { feeUsd, collateralAmountUsd } = await gmxV1.getFeeUsd(
+          orderType.decreasePosition,
+          USDC,
+          WETH,
+          0,
+          decreaseSize,
+          false // short
+        );
+        console.log(
+          "realFeeUsd:",
+          beforeCollateralAmountUsd - position.collateralAmount
+        );
+        console.log("feeUsd    :", feeUsd);
+      }
+    });
   });
 
   describe("long", () => {
@@ -200,16 +449,15 @@ describe("GMXV1", () => {
     const collateral = USDC;
     const index = WETH;
 
-    const collateralAmount = ethers.parseUnits("1000", 6);
+    const collateralAmount = ethers.parseUnits("600", 6);
     const size = ethers.parseUnits("6000", 30);
 
     beforeEach(async () => {
-      const ethAmount = ethers.parseEther("1");
+      const depositAmount = ethers.parseEther("10");
+      await weth.deposit({ value: depositAmount });
+      await weth.transfer(gmxV1.target, depositAmount);
 
-      await weth.deposit({ value: ethAmount });
-      await weth.transfer(gmxV1.target, ethAmount);
-
-      await gmxV1.swap(WETH, USDC, ethAmount);
+      await gmxV1.swap(WETH, USDC, depositAmount);
       await usdc.transfer(gmxV1.target, collateralAmount);
     });
 
