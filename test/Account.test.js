@@ -98,16 +98,15 @@ const openAndClosePosition = async (
 
   {
     const collateral = isLong ? index : USDC;
-    gmxV1Position = await gmxV1.getPosition(
-      account.target,
+    gmxV1Position = await account.getPosition(
+      gmxV1.target,
       collateral,
       index,
       isLong
     );
   }
-
-  muxPosition = await mux.getPosition(
-    account.target,
+  muxPosition = await account.getPosition(
+    mux.target,
     collateral,
     index,
     isLong
@@ -142,8 +141,8 @@ const openAndClosePosition = async (
 
     {
       const collateral = isLong ? index : USDC;
-      gmxV1Position = await gmxV1.getPosition(
-        account.target,
+      gmxV1Position = await account.getPosition(
+        gmxV1.target,
         collateral,
         index,
         isLong
@@ -171,8 +170,8 @@ const openAndClosePosition = async (
     ]
   );
   await fillPositionOrder();
-  muxPosition = await mux.getPosition(
-    account.target,
+  muxPosition = await account.getPosition(
+    mux.target,
     collateral,
     index,
     isLong

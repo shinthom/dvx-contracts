@@ -8,6 +8,7 @@ interface IAdapter {
         uint256 lastIncreasedTime;
         uint256 price;
         uint256 fundingRate;
+        bool isLong;
     }
 
     function getPosition(

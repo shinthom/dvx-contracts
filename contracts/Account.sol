@@ -3,6 +3,7 @@ pragma solidity 0.8.0;
 
 import "./interfaces/tokens/IERC20.sol";
 import "./interfaces/IAccount.sol";
+import "./interfaces/IAdapter.sol";
 import "./interfaces/IExchange.sol";
 
 contract Account is IAccount {
@@ -18,6 +19,38 @@ contract Account is IAccount {
     }
 
     receive() external payable {}
+
+    function getPositions(
+        IAdapter adapter,
+        address[] memory collaterals,
+        address[] memory indexs
+    ) public view returns (IAdapter.Position[] memory) {
+        bool[] memory isLongs = new bool[](2);
+        isLongs[0] = true;
+        isLongs[1] = false;
+
+        IAdapter.Position[] memory positions
+            = new IAdapter.Position[](collaterals.length * indexs.length * isLongs.length);
+
+        for (uint256 i = 0; i < collaterals.length; i++) {
+            for (uint256 j = 0; j < indexs.length; j++) {
+                for (uint256 k = 0; k < isLongs.length; k++) {
+                    positions[i * indexs.length * isLongs.length + j * isLongs.length + k]
+                        = adapter.getPosition(address(this), collaterals[i], indexs[j], isLongs[k]);
+                }
+            }
+        }
+        return positions;
+    }
+
+    function getPosition(
+        IAdapter adapter,
+        address collateral,
+        address index,
+        bool isLong
+    ) public view returns (IAdapter.Position memory) {
+        return adapter.getPosition(address(this), collateral, index, isLong);
+    }
 
     function getBalance(address token) override public view returns (uint256) {
         if (token == address(0)) {

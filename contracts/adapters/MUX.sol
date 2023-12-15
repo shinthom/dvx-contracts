@@ -45,7 +45,8 @@ contract MUX is IAdapter {
             size,
             lastIncreasedTime,
             price,
-            fundingRate
+            fundingRate,
+            isLong
         );
     }
 
