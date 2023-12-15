@@ -17,6 +17,7 @@ task("unset-automine", "Unset automine").setAction(async (_args, hre) => {
 task("execute-order:increase", "Execute GMX V1 increase order")
   .addParam("account", "Account address")
   .setAction(async ({ account }, { ethers }) => {
+    const [user0] = await ethers.getSigners();
     const PositionRouter = "0xb87a436b93ffe9d75c5cfa7bacfff96430b09868";
     const positionRouter = await ethers.getContractAt(
       "IPositionRouter",
@@ -43,6 +44,7 @@ task("execute-order:increase", "Execute GMX V1 increase order")
 task("execute-order:decrease", "Execute GMX V1 decrease order")
   .addParam("account", "Account address")
   .setAction(async ({ account }, { ethers }) => {
+    const [user0] = await ethers.getSigners();
     const PositionRouter = "0xb87a436b93ffe9d75c5cfa7bacfff96430b09868";
     const positionRouter = await ethers.getContractAt(
       "IPositionRouter",
