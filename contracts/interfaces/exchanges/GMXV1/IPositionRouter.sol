@@ -69,6 +69,7 @@ interface IPositionRouter {
     function increasePositionsIndex(address _account) external view returns (uint256);
     function decreasePositionsIndex(address _account) external view returns (uint256);
     function getRequestKey(address _account, uint256 _index) external pure returns (bytes32);
+    function maxGlobalLongSizes(address _token) external view returns (uint256);
 
     // test
     function setDelayValues(uint256 _minBlockDelayKeeper, uint256 _minTimeDelayPublic, uint256 _maxTimeDelay) external;

@@ -27,6 +27,8 @@ interface IVault {
 
     function poolAmounts(address token) external view returns (uint256);
 
+    function guaranteedUsd(address _token) external view returns (uint256);
+
     function getPositionDelta(address _account, address _collateralToken, address _indexToken, bool _isLong) external view returns (bool, uint256);
 
     function getPosition(address _account, address _collateralToken, address _indexToken, bool _isLong) external view returns (uint256, uint256, uint256, uint256, uint256, uint256, bool, uint256);

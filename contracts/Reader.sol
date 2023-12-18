@@ -30,10 +30,6 @@ contract Reader {
             for (uint256 j = 0; j < collaterals.length; j++) {
                 for (uint256 k = 0; k < indexs.length; k++) {
                     for (uint256 l = 0; l < isLongs.length; l++) {
-                        console.log("index: %s", i * collaterals.length * indexs.length * isLongs.length
-                            + j * indexs.length * isLongs.length
-                            + k * isLongs.length
-                            + l);
                         positions[i * collaterals.length * indexs.length * isLongs.length
                             + j * indexs.length * isLongs.length
                             + k * isLongs.length

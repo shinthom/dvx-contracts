@@ -4,85 +4,108 @@ pragma solidity 0.8.0;
 import "./interfaces/IExchange.sol";
 import "./interfaces/tokens/IERC20.sol";
 import "./interfaces/exchanges/GMXV1/IVault.sol";
+import "./quoters/GMXQuoter.sol";
+import "./quoters/MUXQuoter.sol";
 
-contract Quoter {
-    // gmx contract
-    address private _vault = 0x489ee077994B6658eAfA855C308275EAd8097C4A;
+// gmx + mux
+contract Quoter is GMXQuoter, MUXQuoter {
+    struct Order {
+        uint256 feeUsd;
+        uint256 availableLiquidity;
+        IExchange.Order order;
+    }
 
-    // function quote(IExchange.Order memory order) {
-        
-    // }
+    function quote(
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        uint256 leverage,
+        bool isLong,
+        uint256 price // 1e18 (mux)
+    ) external view returns (
+        Order[] memory
+    ) {
+        Order[] memory orders = new Order[](2);
+        orders[0] = quoteGMX(collateral, index, collateralAmount, leverage, isLong);
+        orders[1] = quoteMUX(collateral, index, collateralAmount, leverage, isLong, price);
+
+        return orders;
+    }
 
     function quoteGMX(
-        IExchange.OrderType orderType,
         address collateral,
         address index,
         uint256 collateralAmount,
         uint256 leverage,
         bool isLong
     )
-    external
+    public
     view
     returns (
-        // address[] memory, (TODO: route to exchanges by calculating fee)
-        // IExchange.Order[] memory
-        IExchange.Order memory order
+        Order memory order
     ) {
         uint256 sizeUsd = _calculateSizeUsd(
             collateral,
-            index,
             collateralAmount,
             leverage,
             isLong
         );
+        uint256 availableLiquidity = getAvailableLiquidity(index);
 
-        order.orderType = orderType;
-        order.collateral = collateral;
-        order.index = index;
-        order.collateralAmount = collateralAmount;
-        order.size = sizeUsd;
-        order.isLong = isLong;
+        order = Order({
+            feeUsd: (getExecutionFee(isLong) + getPositionFee(sizeUsd)) / 1e12, // 1e30 -> 1e18
+            availableLiquidity: availableLiquidity,
+            order: IExchange.Order({
+                orderType: IExchange.OrderType.IncreasePosition,
+                collateral: collateral,
+                index: index,
+                collateralAmount: collateralAmount,
+                size: sizeUsd,
+                isLong: isLong
+            })
+        });
     }
 
     function quoteMUX(
-        IExchange.OrderType orderType,
         address collateral,
         address index,
         uint256 collateralAmount,
         uint256 leverage,
-        bool isLong
+        bool isLong,
+        uint256 price // 1e18
     )
-    external
+    public
     view
     returns (
-        // address[] memory, (TODO: route to exchanges by calculating fee)
-        // IExchange.Order[] memory
-        IExchange.Order memory order
+        Order memory order
     ) {
         uint256 sizeUsd = _calculateSizeUsd(
             collateral,
-            index,
             collateralAmount,
             leverage,
             isLong
         );
-        uint256 indexPrice =
-            isLong ? IVault(_vault).getMaxPrice(index) : IVault(_vault).getMinPrice(index);
 
         uint8 indexDecimals = IERC20(index).decimals();
+        uint256 indexPrice = getPrice(index, isLong);
         uint256 size = sizeUsd * (10 ** indexDecimals) / indexPrice;
 
-        order.orderType = orderType;
-        order.collateral = collateral;
-        order.index = index;
-        order.collateralAmount = collateralAmount;
-        order.size = size;
-        order.isLong = isLong;
+        order = Order({
+            feeUsd: getPositionFee(price, index, size),
+            availableLiquidity: 0,
+            order: IExchange.Order({
+                orderType: IExchange.OrderType.IncreasePosition,
+                collateral: collateral,
+                index: index,
+                collateralAmount: collateralAmount,
+                size: size,
+                isLong: isLong
+            })
+        });
     }
 
     function _calculateSizeUsd(
         address collateral,
-        address index,
         uint256 collateralAmount,
         uint256 leverage,
         bool isLong
@@ -90,10 +113,9 @@ contract Quoter {
         uint8 collateralDecimals = IERC20(collateral).decimals();
 
         // TODO: if the token is stable token, we just use 1 USD as price.
-        uint256 collateralPrice =
-            isLong ? IVault(_vault).getMaxPrice(collateral) : IVault(_vault).getMinPrice(collateral);
-        uint256 collateralAmountUsd = collateralAmount * collateralPrice / (10 ** collateralDecimals);
-
+        uint256 collateralPrice = getPrice(collateral, isLong);
+        uint256 collateralAmountUsd
+            = collateralAmount * collateralPrice / (10 ** collateralDecimals);
         return collateralAmountUsd * leverage;
     }
 }

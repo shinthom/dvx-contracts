@@ -11,6 +11,7 @@
     "test-gmx-v1": "hardhat test test/adapters/GMXV1.test.js --network local",
     "test-mux": "hardhat test test/adapters/MUX.test.js --network local",
     "test-exchange": "hardhat test test/exchange.test.js",
+    "test-quoter": "hardhat test test/quoter.test.js --network local",
     "unset-automine": "hardhat unset-automine --network local",
     "mine": "hardhat mine --network local"
   },

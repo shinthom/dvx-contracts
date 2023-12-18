@@ -30,6 +30,7 @@ const openAndClosePosition = async (
     gmxV1,
     mux,
     quoter,
+    reader,
     account,
     executeIncreasePosition,
     executeDecreasePosition,
@@ -44,22 +45,16 @@ const openAndClosePosition = async (
 
   await approveAndDeposit(account, collateral);
 
-  const gmxOrder = await quoter.quoteGMX(
-    orderType.increasePosition,
+  const [gmxOrder, muxOrder] = await quoter.quote(
     collateral,
     index,
     collateralAmount,
     leverage,
-    isLong
+    isLong,
+    ethers.parseEther("2000")
   );
-  const muxOrder = await quoter.quoteMUX(
-    orderType.increasePosition,
-    collateral,
-    index,
-    collateralAmount,
-    leverage,
-    isLong
-  );
+  console.log(gmxOrder);
+  console.log(muxOrder);
 
   console.log("\n`deposit`");
   console.log(
@@ -73,20 +68,20 @@ const openAndClosePosition = async (
     [gmxV1.target, mux.target],
     [
       {
-        orderType: gmxOrder.orderType,
-        collateral: gmxOrder.collateral,
-        index: gmxOrder.index,
-        collateralAmount: gmxOrder.collateralAmount,
-        size: gmxOrder.size,
-        isLong: gmxOrder.isLong,
+        orderType: gmxOrder.order.orderType,
+        collateral: gmxOrder.order.collateral,
+        index: gmxOrder.order.index,
+        collateralAmount: gmxOrder.order.collateralAmount,
+        size: gmxOrder.order.size,
+        isLong: gmxOrder.order.isLong,
       },
       {
-        orderType: muxOrder.orderType,
-        collateral: muxOrder.collateral,
-        index: muxOrder.index,
-        collateralAmount: muxOrder.collateralAmount,
-        size: muxOrder.size,
-        isLong: muxOrder.isLong,
+        orderType: muxOrder.order.orderType,
+        collateral: muxOrder.order.collateral,
+        index: muxOrder.order.index,
+        collateralAmount: muxOrder.order.collateralAmount,
+        size: muxOrder.order.size,
+        isLong: muxOrder.order.isLong,
       },
     ],
     {
