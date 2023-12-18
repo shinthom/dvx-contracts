@@ -33,89 +33,126 @@ async function main() {
   console.log("- usdc:", await usdc.balanceOf(user0.address));
   console.log("- wbtc:", await wbtc.balanceOf(user0.address));
 
-  console.log("\n`deposit`");
-  const depositAmount = ethers.parseEther("2");
-  await account.deposit(ethers.ZeroAddress, depositAmount, {
-    value: depositAmount,
-  });
-  console.log(await account.getBalance(ethers.ZeroAddress));
+  const depositAndIncreasePosition = async (
+    collateral,
+    index,
+    collateralAmount,
+    leverage,
+    isLong
+  ) => {
+    console.log("\n`quote`");
+    const gmxOrder = await quoter.quoteGMX(
+      0,
+      collateral,
+      index,
+      collateralAmount,
+      leverage,
+      isLong
+    );
+    const muxOrder = await quoter.quoteMUX(
+      0,
+      collateral,
+      index,
+      collateralAmount,
+      leverage,
+      isLong
+    );
+    console.log(gmxOrder);
+    console.log(muxOrder);
 
-  console.log("\n`quote`");
-  const orderType = {
-    increasePosition: 0,
-    decreasePosition: 1,
-    increaseCollateral: 2,
-    decreaseCollateral: 3,
+    console.log("\n`createOrder`");
+    await account.createOrders(
+      [gmxV1.target, mux.target],
+      [
+        {
+          orderType: gmxOrder.orderType,
+          collateral: gmxOrder.collateral,
+          index: gmxOrder.index,
+          collateralAmount: gmxOrder.collateralAmount,
+          size: gmxOrder.size,
+          isLong: gmxOrder.isLong,
+        },
+        {
+          orderType: muxOrder.orderType,
+          collateral: muxOrder.collateral,
+          index: muxOrder.index,
+          collateralAmount: muxOrder.collateralAmount,
+          size: muxOrder.size,
+          isLong: muxOrder.isLong,
+        },
+      ],
+      {
+        value: BigInt("180000000000000"),
+      }
+    );
+    await executeIncreasePosition();
+    await fillPositionOrder();
+
+    console.log("\n`checkBalance`");
+    const gmxV1Position = await gmxV1.getPosition(
+      account.target,
+      collateral,
+      index,
+      isLong
+    );
+    const muxPosition = await mux.getPosition(
+      account.target,
+      collateral,
+      index,
+      isLong
+    );
+
+    console.log(`- position(gmx-v1): ${gmxV1Position}`);
+    console.log(`- position(mux)   : ${muxPosition}`);
   };
-  const collateral = WETH;
-  const index = WETH;
+
+  // todo: optimization
   const collateralAmount = ethers.parseEther("1");
   const leverage = 10n;
-  const isLong = true;
+  const long = true;
+  const short = false;
 
-  const gmxOrder = await quoter.quoteGMX(
-    orderType.increasePosition,
-    collateral,
-    index,
+  console.log("\n`deposit`");
+  await account.deposit(ethers.ZeroAddress, collateralAmount * 2n, {
+    value: collateralAmount * 2n,
+  });
+  await depositAndIncreasePosition(
+    WETH,
+    WETH,
     collateralAmount,
     leverage,
-    isLong
+    long
   );
-  const muxOrder = await quoter.quoteMUX(
-    orderType.increasePosition,
-    collateral,
-    index,
-    collateralAmount,
+
+  console.log("\n`deposit`");
+  const wbtcAmount = await wbtc.balanceOf(user0.address);
+  await wbtc.approve(account.target, (wbtcAmount / 4n) * 2n);
+  await account.deposit(WBTC, (wbtcAmount / 4n) * 2n);
+  await depositAndIncreasePosition(WBTC, WBTC, wbtcAmount / 4n, leverage, long);
+
+  console.log("\n`deposit`");
+  const usdcAmount = await usdc.balanceOf(user0.address);
+  await usdc.approve(account.target, (usdcAmount / 4n) * 2n);
+  await account.deposit(USDC, (usdcAmount / 4n) * 2n);
+  await depositAndIncreasePosition(
+    USDC,
+    WETH,
+    usdcAmount / 4n,
     leverage,
-    isLong
-  );
-  console.log(gmxOrder);
-  console.log(muxOrder);
-
-  console.log("\n`createOrder`");
-  await account.createOrders(
-    [gmxV1.target, mux.target],
-    [
-      {
-        orderType: gmxOrder.orderType,
-        collateral: gmxOrder.collateral,
-        index: gmxOrder.index,
-        collateralAmount: gmxOrder.collateralAmount,
-        size: gmxOrder.size,
-        isLong: gmxOrder.isLong,
-      },
-      {
-        orderType: muxOrder.orderType,
-        collateral: muxOrder.collateral,
-        index: muxOrder.index,
-        collateralAmount: muxOrder.collateralAmount,
-        size: muxOrder.size,
-        isLong: muxOrder.isLong,
-      },
-    ],
-    {
-      value: BigInt("180000000000000"),
-    }
-  );
-  await executeIncreasePosition();
-  await fillPositionOrder();
-
-  console.log("\n`checkBalance`");
-  const gmxV1Position = await gmxV1.getPosition(
-    account.target,
-    collateral,
-    index,
-    isLong
-  );
-  const muxPosition = await mux.getPosition(
-    account.target,
-    collateral,
-    index,
-    isLong
+    short
   );
 
-  console.log(`- position(gmx-v1): ${gmxV1Position}`);
-  console.log(`- position(mux)   : ${muxPosition}`);
+  console.log("\n`deposit`");
+  const usdcAmount1 = await usdc.balanceOf(user0.address);
+  await usdc.approve(account.target, (usdcAmount1 / 4n) * 2n);
+  await account.deposit(USDC, (usdcAmount1 / 4n) * 2n);
+  await depositAndIncreasePosition(
+    USDC,
+    WBTC,
+    usdcAmount1 / 4n,
+    leverage,
+    short
+  );
 }
 
 // We recommend this pattern to be able to use async/await everywhere
