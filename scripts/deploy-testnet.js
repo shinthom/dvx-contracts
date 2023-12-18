@@ -6,6 +6,7 @@ async function main() {
     user0,
     gmxV1,
     mux,
+    reader,
     quoter,
     account,
     tokens,
@@ -20,6 +21,7 @@ async function main() {
 - user0  : ${user0.address}
 - gmxV1  : ${gmxV1.target}
 - mux    : ${mux.target}
+- reader : ${reader.target}
 - quoter : ${quoter.target}
 - account: ${account.target}
   `);

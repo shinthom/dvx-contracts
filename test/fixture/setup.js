@@ -33,6 +33,7 @@ let orderBook;
 let gmxV1;
 let mux;
 let quoter;
+let reader;
 let account;
 
 const deploy = async () => {
@@ -72,6 +73,7 @@ const deploy = async () => {
   ]);
   mux = await ethers.deployContract("MUX", [OrderBook, LiquidityPool]);
   quoter = await ethers.deployContract("Quoter");
+  reader = await ethers.deployContract("Reader");
   account = await ethers.deployContract("Account", [
     user0.address,
     ethers.ZeroAddress, // exchange
@@ -143,6 +145,7 @@ const deploy = async () => {
     gmxV1,
     mux,
     quoter,
+    reader,
     account,
     tokens: {
       WETH,
