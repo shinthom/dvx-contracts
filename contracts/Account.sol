@@ -20,6 +20,10 @@ contract Account is IAccount {
 
     receive() external payable {}
 
+    function owner() public view returns (address) {
+        return _owner;
+    }
+
     function getPositions(
         address adapter,
         address[] memory collaterals,
