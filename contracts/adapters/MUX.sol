@@ -153,6 +153,7 @@ contract MUX is IAdapter {
             isLong
         );
 
+        IERC20(collateral).approve(_orderBook, collateralAmount);
         IOrderBook(_orderBook).depositCollateral{value: msg.value}(subAccountId, collateralAmount);
     }
 
