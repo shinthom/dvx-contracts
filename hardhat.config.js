@@ -13,7 +13,7 @@ task("unset-automine", "Unset automine").setAction(async (_args, hre) => {
   });
 });
 
-// hardhat execute-order:increase --account 0x988aa44e12c7bce07e449a4156b4a269d6642b3a --network local
+// hardhat execute-order:increase --account 0x6053cA02DCd3D71B0987b4DC2a39b3dDA04647C7 --network local
 task("execute-order:increase", "Execute GMX V1 increase order")
   .addParam("account", "Account address")
   .setAction(async ({ account }, { ethers }) => {
@@ -104,6 +104,39 @@ task("fill-order:decrease", "Execute MUX order").setAction(
     );
   }
 );
+
+// hardhat position-index:increase --account 0x6053cA02DCd3D71B0987b4DC2a39b3dDA04647C7 --network local
+task("position-index:increase", "Get increase position index")
+  .addParam("account", "Account address")
+  .setAction(async ({ account }, { ethers }) => {
+    const PositionRouter = "0xb87a436b93ffe9d75c5cfa7bacfff96430b09868";
+    const positionRouter = await ethers.getContractAt(
+      "IPositionRouter",
+      PositionRouter
+    );
+
+    console.log(await positionRouter.increasePositionsIndex(account));
+  });
+
+// hardhat position-index:decrease --account 0x988aa44e12c7bce07e449a4156b4a269d6642b3a --network local
+task("position-index:decrease", "Get decrease position index")
+  .addParam("account", "Account address")
+  .setAction(async ({ account }, { ethers }) => {
+    const PositionRouter = "0xb87a436b93ffe9d75c5cfa7bacfff96430b09868";
+    const positionRouter = await ethers.getContractAt(
+      "IPositionRouter",
+      PositionRouter
+    );
+
+    console.log(await positionRouter.decreasePositionsIndex(account));
+  });
+
+// hardhat order-id --network local
+task("order-id", "Get next order id").setAction(async (_, { ethers }) => {
+  const OrderBook = "0xa19fD5aB6C8DCffa2A295F78a5Bb4aC543AAF5e3";
+  const orderBook = await ethers.getContractAt("IOrderBook", OrderBook);
+  console.log((await orderBook.nextOrderId()) - 1n);
+});
 
 module.exports = {
   solidity: "0.8.0",
