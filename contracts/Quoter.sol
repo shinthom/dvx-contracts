@@ -18,9 +18,10 @@ contract Quoter {
         IExchange.Order[] memory
     ) {
         IExchange.Order[] memory orders = new IExchange.Order[](2);
-        orders[0] = quoteGMX(collateral, index, collateralAmount, leverage, isLong);
-        orders[1] = quoteMUX(collateral, index, collateralAmount, leverage, isLong);
 
+        // note: collateralAmount / 2
+        orders[0] = quoteGMX(collateral, index, collateralAmount / 2, leverage, isLong);
+        orders[1] = quoteMUX(collateral, index, collateralAmount / 2, leverage, isLong);
         return orders;
     }
 

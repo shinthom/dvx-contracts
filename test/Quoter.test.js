@@ -68,102 +68,18 @@ ${description}
     };
 
     console.log("eth market");
-    await quote(
-      "long: eth -> weth",
-      WETH,
-      WETH,
-      ethers.parseEther("10"),
-      10n,
-      true
-    );
-    await quote(
-      "long: wbtc -> weth",
-      WBTC,
-      WETH,
-      ethers.parseUnits("1", 8),
-      10n,
-      true
-    );
-    await quote(
-      "long: usdc -> weth",
-      USDC,
-      WETH,
-      ethers.parseUnits("100", 6),
-      10n,
-      true
-    );
-    await quote(
-      "short: weth -> weth",
-      WETH,
-      WETH,
-      ethers.parseEther("10"),
-      10n,
-      false
-    );
-    await quote(
-      "short: wbtc -> weth",
-      WBTC,
-      WETH,
-      ethers.parseUnits("1", 8),
-      10n,
-      false
-    );
-    await quote(
-      "short: usdc -> weth",
-      USDC,
-      WETH,
-      ethers.parseUnits("100", 6),
-      10n,
-      false
-    );
+    await quote("long: eth -> weth",   WETH, WETH, ethers.parseEther("10"),     10n, true); // prettier-ignore
+    await quote("long: wbtc -> weth",  WBTC, WETH, ethers.parseUnits("1", 8),    10n, true); // prettier-ignore
+    await quote("long: usdc -> weth",  USDC, WETH, ethers.parseUnits("100", 6),  10n, true); // prettier-ignore
+    await quote("short: weth -> weth", WETH, WETH, ethers.parseEther("10"),     10n, false); // prettier-ignore
+    await quote("short: wbtc -> weth", WBTC, WETH, ethers.parseUnits("1", 8),   10n, false); // prettier-ignore
+    await quote("short: usdc -> weth", USDC, WETH, ethers.parseUnits("100", 6), 10n, false); // prettier-ignore
     console.log("btc market");
-    await quote(
-      "short: weth -> wbtc",
-      WETH,
-      WBTC,
-      ethers.parseEther("10"),
-      10n,
-      false
-    );
-    await quote(
-      "short: wbtc -> wbtc",
-      WBTC,
-      WBTC,
-      ethers.parseUnits("1", 8),
-      10n,
-      false
-    );
-    await quote(
-      "short: usdc -> wbtc",
-      USDC,
-      WBTC,
-      ethers.parseUnits("100", 6),
-      10n,
-      false
-    );
-    await quote(
-      "short: eth -> wbtc",
-      WETH,
-      WBTC,
-      ethers.parseEther("10"),
-      10n,
-      false
-    );
-    await quote(
-      "short: wbtc -> wbtc",
-      WBTC,
-      WBTC,
-      ethers.parseUnits("1", 8),
-      10n,
-      false
-    );
-    await quote(
-      "short: usdc -> wbtc",
-      USDC,
-      WBTC,
-      ethers.parseUnits("100", 6),
-      10n,
-      false
-    );
+    await quote("short: weth -> wbtc", WETH, WBTC, ethers.parseEther("10"),     10n, false); // prettier-ignore
+    await quote("short: wbtc -> wbtc", WBTC, WBTC, ethers.parseUnits("1", 8),   10n, false); // prettier-ignore
+    await quote("short: usdc -> wbtc", USDC, WBTC, ethers.parseUnits("100", 6), 10n, false); // prettier-ignore
+    await quote("short: eth -> wbtc",  WETH, WBTC, ethers.parseEther("10"),     10n, false); // prettier-ignore
+    await quote("short: wbtc -> wbtc", WBTC, WBTC, ethers.parseUnits("1", 8),   10n, false); // prettier-ignore
+    await quote("short: usdc -> wbtc", USDC, WBTC, ethers.parseUnits("100", 6), 10n, false); // prettier-ignore
   });
 });
