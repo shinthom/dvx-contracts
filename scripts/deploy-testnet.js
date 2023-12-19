@@ -56,7 +56,7 @@ async function main() {
     );
 
     if (collateral == WETH) {
-      account.deposit(ethers.ZeroAddress, collateralAmount, {
+      await account.deposit(ethers.ZeroAddress, collateralAmount, {
         value: collateralAmount,
       });
     } else {
@@ -127,6 +127,14 @@ async function main() {
   await depositAndIncreasePosition(WETH, WBTC, ethers.parseEther("10"),     10n, false, "short: weth -> wbtc") // prettier-ignore
   await depositAndIncreasePosition(WBTC, WBTC, ethers.parseUnits("1", 8),   10n, false, "short: wbtc -> wbtc") // prettier-ignore
   await depositAndIncreasePosition(USDC, WBTC, ethers.parseUnits("100", 6), 10n, false, "short: usdc -> wbtc") // prettier-ignore
+
+  const positions = await reader.getPositions(
+    account.target,
+    [gmxV1.target, mux.target],
+    [WETH, WBTC, USDC],
+    [WETH, WBTC]
+  );
+  console.log(`- positions: ${positions}`);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
