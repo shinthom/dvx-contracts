@@ -4,30 +4,22 @@ pragma solidity 0.8.0;
 import "./interfaces/IExchange.sol";
 import "./interfaces/tokens/IERC20.sol";
 import "./interfaces/exchanges/GMXV1/IVault.sol";
-import "./quoters/GMXQuoter.sol";
-import "./quoters/MUXQuoter.sol";
 
-// gmx + mux
-contract Quoter is GMXQuoter, MUXQuoter {
-    struct Order {
-        uint256 feeUsd;
-        uint256 availableLiquidity;
-        IExchange.Order order;
-    }
+contract Quoter {
+    address private _vault = 0x489ee077994B6658eAfA855C308275EAd8097C4A;
 
     function quote(
         address collateral,
         address index,
         uint256 collateralAmount,
         uint256 leverage,
-        bool isLong,
-        uint256 price // 1e18 (mux)
+        bool isLong
     ) external view returns (
-        Order[] memory
+        IExchange.Order[] memory
     ) {
-        Order[] memory orders = new Order[](2);
+        IExchange.Order[] memory orders = new IExchange.Order[](2);
         orders[0] = quoteGMX(collateral, index, collateralAmount, leverage, isLong);
-        orders[1] = quoteMUX(collateral, index, collateralAmount, leverage, isLong, price);
+        orders[1] = quoteMUX(collateral, index, collateralAmount, leverage, isLong);
 
         return orders;
     }
@@ -42,28 +34,22 @@ contract Quoter is GMXQuoter, MUXQuoter {
     public
     view
     returns (
-        Order memory order
+        IExchange.Order memory order
     ) {
         uint256 sizeUsd = _calculateSizeUsd(
             collateral,
+            index,
             collateralAmount,
             leverage,
             isLong
         );
-        uint256 availableLiquidity = getAvailableLiquidity(index);
 
-        order = Order({
-            feeUsd: (getExecutionFee(isLong) + getPositionFee(sizeUsd)) / 1e12, // 1e30 -> 1e18
-            availableLiquidity: availableLiquidity,
-            order: IExchange.Order({
-                orderType: IExchange.OrderType.IncreasePosition,
-                collateral: collateral,
-                index: index,
-                collateralAmount: collateralAmount,
-                size: sizeUsd,
-                isLong: isLong
-            })
-        });
+        order.orderType = IExchange.OrderType.IncreasePosition;
+        order.collateral = collateral;
+        order.index = index;
+        order.collateralAmount = collateralAmount;
+        order.size = sizeUsd;
+        order.isLong = isLong;
     }
 
     function quoteMUX(
@@ -71,41 +57,37 @@ contract Quoter is GMXQuoter, MUXQuoter {
         address index,
         uint256 collateralAmount,
         uint256 leverage,
-        bool isLong,
-        uint256 price // 1e18
+        bool isLong
     )
     public
     view
     returns (
-        Order memory order
+        IExchange.Order memory order
     ) {
         uint256 sizeUsd = _calculateSizeUsd(
             collateral,
+            index,
             collateralAmount,
             leverage,
             isLong
         );
+        uint256 indexPrice =
+            isLong ? IVault(_vault).getMaxPrice(index) : IVault(_vault).getMinPrice(index);
 
         uint8 indexDecimals = IERC20(index).decimals();
-        uint256 indexPrice = getPrice(index, isLong);
         uint256 size = sizeUsd * (10 ** indexDecimals) / indexPrice;
 
-        order = Order({
-            feeUsd: getPositionFee(price, index, size),
-            availableLiquidity: 0,
-            order: IExchange.Order({
-                orderType: IExchange.OrderType.IncreasePosition,
-                collateral: collateral,
-                index: index,
-                collateralAmount: collateralAmount,
-                size: size,
-                isLong: isLong
-            })
-        });
+        order.orderType = IExchange.OrderType.IncreasePosition;
+        order.collateral = collateral;
+        order.index = index;
+        order.collateralAmount = collateralAmount;
+        order.size = size;
+        order.isLong = isLong;
     }
 
     function _calculateSizeUsd(
         address collateral,
+        address index,
         uint256 collateralAmount,
         uint256 leverage,
         bool isLong
@@ -113,9 +95,10 @@ contract Quoter is GMXQuoter, MUXQuoter {
         uint8 collateralDecimals = IERC20(collateral).decimals();
 
         // TODO: if the token is stable token, we just use 1 USD as price.
-        uint256 collateralPrice = getPrice(collateral, isLong);
-        uint256 collateralAmountUsd
-            = collateralAmount * collateralPrice / (10 ** collateralDecimals);
+        uint256 collateralPrice =
+            isLong ? IVault(_vault).getMaxPrice(collateral) : IVault(_vault).getMinPrice(collateral);
+        uint256 collateralAmountUsd = collateralAmount * collateralPrice / (10 ** collateralDecimals);
+
         return collateralAmountUsd * leverage;
     }
 }

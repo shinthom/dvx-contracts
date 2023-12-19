@@ -74,11 +74,50 @@ contract GMXV1 is IAdapter {
         );
     }
 
-    function _getPositionFee(
+    // quote
+    function getPrice(
         address collateral,
+        bool isLong
+    ) public view returns (uint256) {
+        // 1e30
+        return isLong ?
+            IVault(_vault).getMaxPrice(collateral) :
+            IVault(_vault).getMinPrice(collateral);
+    }
+
+    // quote
+    function getOrder(
+        address collateral,
+        address index,
         uint256 collateralAmount,
-        uint256 size
-    ) private view returns (uint256) {
+        uint256 leverage,
+        bool isLong,
+        uint256 collateralPrice,
+        uint256 indexPrice
+    ) public view returns (IExchange.Order memory) {
+        uint256 sizeUsd = _calculateSizeUsd(
+            collateral,
+            collateralAmount,
+            leverage,
+            isLong
+        );
+
+        return IExchange.Order({
+            orderType: IExchange.OrderType.IncreasePosition,
+            collateral: collateral,
+            index: index,
+            collateralAmount: collateralAmount,
+            size: sizeUsd,
+            isLong: isLong
+        });
+    }
+
+    // quote
+    function getPositionFee(
+        uint256 size // 1e30
+    ) public view returns (
+        uint256 // 1e30
+    ) {
         uint256 fee = IVault(_vault).getPositionFee(size);
 
         // bug: fee is not calculated correctly (should use 40 but 10)
@@ -95,77 +134,47 @@ contract GMXV1 is IAdapter {
         return fee;
     }
 
-    function _getDepositFee(
+    // quote
+    function getDepositFee(
         address collateral,
         uint256 collateralAmount
-    ) private view returns (uint256) {
+    ) public view returns (uint256) {
         uint256 collateralDecimals = IERC20(collateral).decimals();
         uint256 minPrice = IVault(_vault).getMinPrice(collateral);
 
         uint256 depositFeeBasisPoints = IPositionRouter(_positionRouter).depositFee();
         uint256 collateralAmountAfterDepositFee = collateralAmount * depositFeeBasisPoints / 10000;
-        console.log("collateralAmountAfterDepositFee: %s", collateralAmountAfterDepositFee); // 10 ** 16
 
         return collateralAmountAfterDepositFee * minPrice / (10 ** collateralDecimals);
     }
 
-    function _getCollateralAmountUsd (
-        address collateral,
-        uint256 collateralAmount,
-        bool isLong
-    ) private view returns (uint256) {
-        if (collateral == USDC) {
-            return collateralAmount;
-        }
-        uint256 collateralDecimals = IERC20(collateral).decimals();
-        uint256 price =
-            isLong ? IVault(_vault).getMinPrice(collateral) : IVault(_vault).getMaxPrice(collateral);
+    // quote
+    function getAvailableLiquidity(address index) public view returns (uint256) {
+        uint256 maxGlobalLongSize = IPositionRouter(_positionRouter).maxGlobalLongSizes(index);
+        uint256 guaranteedUsd = IVault(_vault).guaranteedUsd(index);
 
-        return collateralAmount * price / (10 ** collateralDecimals);
+        return maxGlobalLongSize - guaranteedUsd;
     }
 
-    function getFeeUsd(
-        IExchange.OrderType orderType,
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 size,
-        bool isLong
-    ) external view returns (uint256 feeUsd, uint256 collateralAmountUsd) {
-        // todo: fundingFee
-        if (collateral == USDC) {
-            collateralAmountUsd = collateralAmount * (10 ** 30) / (10 ** 6);
-        } else {
-            collateralAmountUsd = _getCollateralAmountUsd(collateral, collateralAmount, isLong);
-        }
+    // quote
+    function minExcutionFeeUsd() external view returns (uint256) {
+        return IPositionRouter(_positionRouter).minExecutionFee();
+    }
 
-        if (orderType == IExchange.OrderType.IncreasePosition) {
-            if (isLong) {
-                if (collateral == index) {
-                    feeUsd = _getPositionFee(collateral, collateralAmount, size);
-                } else {
-                    // todo: swap fee
-                    feeUsd = _getPositionFee(collateral, collateralAmount, size);
-                }
-            } else {
-                // short
-                if (collateral == USDC) {
-                    feeUsd = _getPositionFee(collateral, collateralAmount, size);
-                } else {
-                    // todo: swapFee
-                    feeUsd = _getPositionFee(collateral, collateralAmount, size);
-                }
-            }
-        } else if (orderType == IExchange.OrderType.DecreasePosition) {
-            // todo: check fee when decrease position
-            feeUsd = size * 10 / 10000;
-        } else if (orderType == IExchange.OrderType.IncreaseCollateral) {
-            if (isLong) {
-                feeUsd = _getDepositFee(collateral, collateralAmount);
-            }
-        } else if (orderType == IExchange.OrderType.DecreaseCollateral) {
-            feeUsd = 0;
-        }
+    // quote
+    function _calculateSizeUsd(
+        address collateral,
+        uint256 collateralAmount,
+        uint256 leverage,
+        bool isLong
+    ) private view returns (uint256) {
+        uint8 collateralDecimals = IERC20(collateral).decimals();
+
+        // TODO: if the token is stable token, we just use 1 USD as price.
+        uint256 collateralPrice = getPrice(collateral, isLong);
+        uint256 collateralAmountUsd
+            = collateralAmount * collateralPrice / (10 ** collateralDecimals);
+        return collateralAmountUsd * leverage;
     }
 
     function getPosition(

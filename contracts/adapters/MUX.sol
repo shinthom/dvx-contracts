@@ -5,6 +5,7 @@ import "../interfaces/exchanges/MUX/ILiquidityPool.sol";
 import "../interfaces/exchanges/MUX/IOrderBook.sol";
 import "../interfaces/tokens/IERC20.sol";
 import "../interfaces/IAdapter.sol";
+import "../interfaces/IExchange.sol";
 
 contract MUX is IAdapter {
     address immutable private _orderBook;
@@ -50,6 +51,31 @@ contract MUX is IAdapter {
         );
     }
 
+    // quote
+    function _getPositionFee(
+        address collateral,
+        uint256 size
+    ) public view returns (uint256) {
+        uint8 collateralId = _getIdFromAsset(collateral);
+
+        uint32 positionFeeRate
+            = (ILiquidityPool(_liquidityPool).getAssetInfo(collateralId)).positionFeeRate;
+        uint256 assetPrice = 1e18;
+
+        return ((assetPrice * positionFeeRate) * size) / 1e5 / 1e18;
+        // note: asset.positionFeeRate
+        // uint256 feeUsd = ((uint256(assetPrice) * uint256(asset.positionFeeRate)) * uint256(amount)) / 1e5 / 1e18;
+        // return feeUsd.safeUint96();
+    }
+
+    // quote
+    function getAvailableLiquidity2(address index) public view returns (uint256) {
+        uint8 indexId = _getIdFromAsset(index);
+        ILiquidityPool.Asset memory asset = ILiquidityPool(_liquidityPool).getAssetInfo(indexId);
+
+        return asset.maxLongPositionSize - asset.totalLongPosition;
+    }
+
     function _getIdFromAsset(address tokenAddress) private view returns (uint8) {
         ILiquidityPool.Asset[] memory assets = ILiquidityPool(_liquidityPool).getAllAssetInfo();
         for (uint256 i = 0; i < assets.length; i++) {
@@ -57,7 +83,7 @@ contract MUX is IAdapter {
                 return assets[i].id;
             }
         }
-        revert("asset not found");
+        revert("NOT_FOUND");
     }
 
     function increasePosition(
