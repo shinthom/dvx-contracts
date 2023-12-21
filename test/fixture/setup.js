@@ -32,6 +32,7 @@ let orderBook;
 
 let gmxV1;
 let mux;
+let exchange;
 let quoter;
 let reader;
 let account;
@@ -72,11 +73,12 @@ const deploy = async () => {
     SwapRouter,
   ]);
   mux = await ethers.deployContract("MUX", [OrderBook, LiquidityPool]);
+  exchange = await ethers.deployContract("Exchange", [SwapRouter]);
   quoter = await ethers.deployContract("Quoter");
   reader = await ethers.deployContract("Reader");
   account = await ethers.deployContract("Account", [
     user0.address,
-    ethers.ZeroAddress, // exchange
+    exchange.target,
   ]);
 
   const swap = async (from, to, fromAmount) => {
@@ -144,6 +146,7 @@ const deploy = async () => {
     wbtc,
     gmxV1,
     mux,
+    exchange,
     quoter,
     reader,
     account,

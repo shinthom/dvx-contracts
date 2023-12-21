@@ -24,4 +24,5 @@ interface IERC20 {
     event Approval(address indexed owner, address indexed spender, uint value);
 
     function deposit() external payable; // test
+    function withdraw(uint256 _amount) external; // test
 }

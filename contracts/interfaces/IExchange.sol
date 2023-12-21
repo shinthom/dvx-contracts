@@ -20,5 +20,5 @@ interface IExchange {
 
     event AccountCreated(address indexed wallet, address indexed account);
 
-    // function getFee(OrderType orderType, Order memory order) external view returns (uint256);
+    function swap(address tokenIn, address tokenOut, uint256 amount) payable external returns (uint256);
 }

@@ -24,6 +24,20 @@ contract Account is IAccount {
         return _owner;
     }
 
+    function swap(
+        address tokenIn,
+        address tokenOut,
+        uint256 amount
+    ) external {
+        if (tokenIn == address(0)) {
+            require(address(this).balance >= amount, "INSUFFICIENT_BALANCE");
+            uint256 amountOut = IExchange(_exchange).swap{value: amount}(tokenIn, tokenOut, amount);
+        } else {
+            IERC20(tokenIn).approve(_exchange, amount);
+            uint256 amountOut = IExchange(_exchange).swap(tokenIn, tokenOut, amount);
+        }
+    }
+
     function getPositions(
         address adapter,
         address[] memory collaterals,
