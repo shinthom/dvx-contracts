@@ -27,7 +27,7 @@ let weth;
 let usdc;
 let wbtc;
 
-let positionRouter;
+let gmxPositionRouter;
 let orderBook;
 
 let gmxV1;
@@ -36,6 +36,7 @@ let exchange;
 let quoter;
 let reader;
 let account;
+let positionRouter;
 
 const deploy = async () => {
   // accounts
@@ -50,15 +51,15 @@ const deploy = async () => {
     "0x988aa44e12c7bce07e449a4156b4a269d6642b3a" // mux broker
   );
 
-  positionRouter = await ethers.getContractAt(
+  gmxPositionRouter = await ethers.getContractAt(
     // gmx position router
     "IPositionRouter",
     PositionRouter
   );
-  await positionRouter
+  await gmxPositionRouter
     .connect(impersonatedAdmin)
     .setPositionKeeper(impersonatedPositionKeeper.address, true); // execution reverted: 403
-  await positionRouter.connect(impersonatedAdmin).setDelayValues(0, 0, 100); // execution reverted: delay
+  await gmxPositionRouter.connect(impersonatedAdmin).setDelayValues(0, 0, 100); // execution reverted: delay
   orderBook = await ethers.getContractAt("IOrderBook", OrderBook); // mux order book
 
   weth = await ethers.getContractAt("IERC20", WETH);
@@ -80,6 +81,9 @@ const deploy = async () => {
     user0.address,
     exchange.target,
   ]);
+  positionRouter = await ethers.deployContract("PositionRouter", [
+    exchange.target,
+  ]);
 
   const swap = async (from, to, fromAmount) => {
     await weth.deposit({ value: fromAmount });
@@ -89,27 +93,25 @@ const deploy = async () => {
   };
 
   const executeIncreasePosition = async () => {
-    const increasePositionsIndex = await positionRouter.increasePositionsIndex(
-      account.target
-    );
-    const requestKey = await positionRouter.getRequestKey(
+    const increasePositionsIndex =
+      await gmxPositionRouter.increasePositionsIndex(account.target);
+    const requestKey = await gmxPositionRouter.getRequestKey(
       account.target,
       increasePositionsIndex
     );
-    await positionRouter
+    await gmxPositionRouter
       .connect(impersonatedPositionKeeper)
       .executeIncreasePosition(requestKey, user0.address);
   };
 
   const executeDecreasePosition = async () => {
-    const decreasePositionsIndex = await positionRouter.decreasePositionsIndex(
-      account.target
-    );
-    const requestKey = await positionRouter.getRequestKey(
+    const decreasePositionsIndex =
+      await gmxPositionRouter.decreasePositionsIndex(account.target);
+    const requestKey = await gmxPositionRouter.getRequestKey(
       account.target,
       decreasePositionsIndex
     );
-    await positionRouter
+    await gmxPositionRouter
       .connect(impersonatedPositionKeeper)
       .executeDecreasePosition(requestKey, user0.address);
   };
@@ -139,7 +141,7 @@ const deploy = async () => {
     impersonatedAdmin,
     impersonatedPositionKeeper,
     impersonatedBroker,
-    positionRouter,
+    gmxPositionRouter,
     orderBook,
     weth,
     usdc,
@@ -150,6 +152,7 @@ const deploy = async () => {
     quoter,
     reader,
     account,
+    positionRouter,
     tokens: {
       WETH,
       USDC,

@@ -12,4 +12,15 @@ interface IAccount {
 
     function deposit(address token, uint256 amount) payable external;
     function withdraw(address token, uint256 amount) external;
+
+    function createOrders(
+        address[] calldata adapters,
+        IExchange.Order[] calldata orders
+    ) payable external;
+
+    function swap(
+        address tokenIn,
+        address tokenOut,
+        uint256 amount
+    ) external returns (uint256 amountOut);
 }

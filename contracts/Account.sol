@@ -28,13 +28,13 @@ contract Account is IAccount {
         address tokenIn,
         address tokenOut,
         uint256 amount
-    ) external {
+    ) override external returns (uint256 amountOut) {
         if (tokenIn == address(0)) {
             require(address(this).balance >= amount, "INSUFFICIENT_BALANCE");
-            uint256 amountOut = IExchange(_exchange).swap{value: amount}(tokenIn, tokenOut, amount);
+            amountOut = IExchange(_exchange).swap{value: amount}(tokenIn, tokenOut, amount);
         } else {
             IERC20(tokenIn).approve(_exchange, amount);
-            uint256 amountOut = IExchange(_exchange).swap(tokenIn, tokenOut, amount);
+            amountOut = IExchange(_exchange).swap(tokenIn, tokenOut, amount);
         }
     }
 
@@ -165,7 +165,7 @@ contract Account is IAccount {
     function createOrders(
         address[] calldata adapters,
         IExchange.Order[] calldata orders
-    ) payable external {
+    ) override payable external {
         for (uint256 i = 0; i < adapters.length; i++) {
             (bool success, bytes memory data) = _createOrder(
                 adapters[i],

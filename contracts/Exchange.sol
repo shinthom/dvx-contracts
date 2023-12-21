@@ -81,7 +81,7 @@ contract Exchange is IExchange {
         return amountOut;
     }
 
-    function account(address wallet) public view returns (address) {
+    function account(address wallet) override public view returns (address) {
         return _accounts[wallet];
     }
 
