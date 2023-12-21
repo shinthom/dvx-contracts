@@ -8,6 +8,8 @@ import "./interfaces/exchanges/GMXV1/IVault.sol";
 contract Quoter {
     address private _vault = 0x489ee077994B6658eAfA855C308275EAd8097C4A;
 
+    // todo: quoter only calculate fee and OI, not create order.
+
     function quote(
         address collateral,
         address index,

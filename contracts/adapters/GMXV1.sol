@@ -20,6 +20,9 @@ contract GMXV1 is IAdapter {
     address constant private WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
     address constant private USDC = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
 
+    // todo: use mux price (currently using gmx vault price)
+    uint256 constant private USD = 1e30;
+
     constructor(
         address positionRouter,
         address router,
@@ -74,33 +77,34 @@ contract GMXV1 is IAdapter {
         );
     }
 
-    // quote
-    function getPrice(
+    function _calculateSizeUsd(
         address collateral,
+        uint256 collateralAmount,
+        uint256 leverage,
         bool isLong
-    ) public view returns (uint256) {
-        // 1e30
-        return isLong ?
-            IVault(_vault).getMaxPrice(collateral) :
-            IVault(_vault).getMinPrice(collateral);
+    ) private view returns (uint256) {
+        uint8 collateralDecimals = IERC20(collateral).decimals();
+
+        // todo: if the token is stable token, we just use 1 USD as price.
+
+        uint256 collateralPrice
+            = collateral == USDC ? USD :
+            (isLong ?
+                IVault(_vault).getMaxPrice(collateral) :
+                IVault(_vault).getMinPrice(collateral));
+        uint256 collateralAmountUsd
+            = collateralAmount * collateralPrice / (10 ** collateralDecimals);
+        return collateralAmountUsd * leverage;
     }
 
-    // quote
-    function getOrder(
+    function makeOrder(
         address collateral,
         address index,
         uint256 collateralAmount,
         uint256 leverage,
-        bool isLong,
-        uint256 collateralPrice,
-        uint256 indexPrice
+        bool isLong
     ) public view returns (IExchange.Order memory) {
-        uint256 sizeUsd = _calculateSizeUsd(
-            collateral,
-            collateralAmount,
-            leverage,
-            isLong
-        );
+        uint256 sizeUsd = _calculateSizeUsd(collateral, collateralAmount, leverage, isLong);
 
         return IExchange.Order({
             orderType: IExchange.OrderType.IncreasePosition,
@@ -159,22 +163,6 @@ contract GMXV1 is IAdapter {
     // quote
     function minExcutionFeeUsd() external view returns (uint256) {
         return IPositionRouter(_positionRouter).minExecutionFee();
-    }
-
-    // quote
-    function _calculateSizeUsd(
-        address collateral,
-        uint256 collateralAmount,
-        uint256 leverage,
-        bool isLong
-    ) private view returns (uint256) {
-        uint8 collateralDecimals = IERC20(collateral).decimals();
-
-        // TODO: if the token is stable token, we just use 1 USD as price.
-        uint256 collateralPrice = getPrice(collateral, isLong);
-        uint256 collateralAmountUsd
-            = collateralAmount * collateralPrice / (10 ** collateralDecimals);
-        return collateralAmountUsd * leverage;
     }
 
     function getPosition(

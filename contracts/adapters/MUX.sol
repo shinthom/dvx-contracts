@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.0;
 
+import "../interfaces/exchanges/GMXV1/IVault.sol"; // todo: use mux price
 import "../interfaces/exchanges/MUX/ILiquidityPool.sol";
 import "../interfaces/exchanges/MUX/IOrderBook.sol";
 import "../interfaces/tokens/IERC20.sol";
@@ -8,8 +9,15 @@ import "../interfaces/IAdapter.sol";
 import "../interfaces/IExchange.sol";
 
 contract MUX is IAdapter {
+    address constant private USDC = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
+
     address immutable private _orderBook;
     address immutable private _liquidityPool;
+
+    // todo: use mux price (currently using gmx vault price)
+    address constant private _vault = 0x489ee077994B6658eAfA855C308275EAd8097C4A;
+    // todo: use mux price (currently using gmx vault price)
+    uint256 constant private USD = 1e30;
 
     receive() external payable {}
 
@@ -74,6 +82,51 @@ contract MUX is IAdapter {
         ILiquidityPool.Asset memory asset = ILiquidityPool(_liquidityPool).getAssetInfo(indexId);
 
         return asset.maxLongPositionSize - asset.totalLongPosition;
+    }
+
+    // todo: use mux price (currently using gmx vault price)
+    function _calculateSizeUsd(
+        address collateral,
+        uint256 collateralAmount,
+        uint256 leverage,
+        bool isLong
+    ) private view returns (uint256) {
+        uint8 collateralDecimals = IERC20(collateral).decimals();
+
+        // todo: if the token is stable token, we just use 1 USD as price.
+        uint256 collateralPrice
+            = collateral == USDC ? USD :
+            (isLong ?
+                IVault(_vault).getMaxPrice(collateral) :
+                IVault(_vault).getMinPrice(collateral));
+        uint256 collateralAmountUsd
+            = collateralAmount * collateralPrice / (10 ** collateralDecimals);
+        return collateralAmountUsd * leverage;
+    }
+
+    function makeOrder(
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        uint256 leverage,
+        bool isLong
+    ) public view returns (IExchange.Order memory) {
+        uint256 sizeUsd = _calculateSizeUsd(collateral, collateralAmount, leverage, isLong);
+
+        // todo: use mux price (currently using gmx vault price)
+        uint256 indexPrice =
+            isLong ? IVault(_vault).getMaxPrice(index) : IVault(_vault).getMinPrice(index);
+        uint8 indexDecimals = IERC20(index).decimals();
+        uint256 size = sizeUsd * (10 ** indexDecimals) / indexPrice;
+
+        return IExchange.Order({
+            orderType: IExchange.OrderType.IncreasePosition,
+            collateral: collateral,
+            index: index,
+            collateralAmount: collateralAmount,
+            size: size,
+            isLong: isLong
+        });
     }
 
     function _getIdFromAsset(address tokenAddress) private view returns (uint8) {

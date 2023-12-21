@@ -8,6 +8,7 @@ describe("MUX", () => {
   // token contracts
   const WETH = "0x82af49447d8a07e3bd95bd0d56f35241523fbab1";
   const USDC = "0xaf88d065e77c8cc2239327c5edb3a432268e5831";
+  const WBTC = "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f";
 
   // signers
   let user0;
@@ -49,6 +50,74 @@ describe("MUX", () => {
 
   beforeEach(async () => {
     mux = await ethers.deployContract("MUX", [OrderBook, LiquidityPool]);
+  });
+
+  describe("make order", () => {
+    it("eth -> eth", async () => {
+      const order = await mux.makeOrder(
+        WETH,
+        WETH,
+        ethers.parseEther("1"),
+        10n,
+        true
+      );
+      console.log(order);
+    });
+
+    it("usdc -> eth", async () => {
+      const order = await mux.makeOrder(
+        USDC,
+        WETH,
+        ethers.parseUnits("100", 6),
+        10n,
+        true
+      );
+      console.log(order);
+    });
+
+    it("wbtc -> eth", async () => {
+      const order = await mux.makeOrder(
+        WBTC,
+        WETH,
+        ethers.parseUnits("1", 8),
+        10n,
+        true
+      );
+      console.log(order);
+    });
+
+    it("eth -> wbtc", async () => {
+      const order = await mux.makeOrder(
+        WETH,
+        WBTC,
+        ethers.parseEther("1"),
+        10n,
+        true
+      );
+      console.log(order);
+    });
+
+    it("usdc -> wbtc", async () => {
+      const order = await mux.makeOrder(
+        USDC,
+        WBTC,
+        ethers.parseUnits("100", 6),
+        10n,
+        true
+      );
+      console.log(order);
+    });
+
+    it("wbtc -> wbtc", async () => {
+      const order = await mux.makeOrder(
+        WBTC,
+        WBTC,
+        ethers.parseUnits("1", 8),
+        10n,
+        true
+      );
+      console.log(order);
+    });
   });
 
   describe("long", () => {

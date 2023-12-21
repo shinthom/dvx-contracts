@@ -74,6 +74,74 @@ describe("GMXV1", () => {
     ]);
   });
 
+  describe("make order", () => {
+    it("eth -> eth", async () => {
+      const order = await gmxV1.makeOrder(
+        WETH,
+        WETH,
+        ethers.parseEther("1"),
+        10n,
+        true
+      );
+      console.log(order);
+    });
+
+    it("usdc -> eth", async () => {
+      const order = await gmxV1.makeOrder(
+        USDC,
+        WETH,
+        ethers.parseUnits("100", 6),
+        10n,
+        true
+      );
+      console.log(order);
+    });
+
+    it("wbtc -> eth", async () => {
+      const order = await gmxV1.makeOrder(
+        WBTC,
+        WETH,
+        ethers.parseUnits("1", 8),
+        10n,
+        true
+      );
+      console.log(order);
+    });
+
+    it("eth -> wbtc", async () => {
+      const order = await gmxV1.makeOrder(
+        WETH,
+        WBTC,
+        ethers.parseEther("1"),
+        10n,
+        true
+      );
+      console.log(order);
+    });
+
+    it("usdc -> wbtc", async () => {
+      const order = await gmxV1.makeOrder(
+        USDC,
+        WBTC,
+        ethers.parseUnits("100", 6),
+        10n,
+        true
+      );
+      console.log(order);
+    });
+
+    it("wbtc -> wbtc", async () => {
+      const order = await gmxV1.makeOrder(
+        WBTC,
+        WETH,
+        ethers.parseUnits("1", 8),
+        10n,
+        true
+      );
+      console.log(order);
+    });
+  });
+
   describe("long", () => {
     const long = true;
 

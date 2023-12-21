@@ -49,10 +49,17 @@ async function main() {
     isLong,
     description
   ) => {
-    const [gmxOrder, muxOrder] = await quoter.quote(
+    const gmxOrder = await gmxV1.makeOrder(
       collateral,
       index,
-      collateralAmount,
+      collateralAmount / 2n,
+      leverage,
+      isLong
+    );
+    const muxOrder = await mux.makeOrder(
+      collateral,
+      index,
+      collateralAmount / 2n,
       leverage,
       isLong
     );
