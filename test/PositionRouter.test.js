@@ -8,50 +8,79 @@ const WETH = "0x82af49447d8a07e3bd95bd0d56f35241523fbab1";
 const USDC = "0xaf88d065e77c8cc2239327c5edb3a432268e5831";
 const WBTC = "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f";
 
-describe("PositionRouter", () => {
-  it("increase collateral", async () => {
-    const {
-      user0,
-      account,
-      positionRouter,
-      quoter,
-      gmxV1,
-      executeIncreasePosition,
-    } = await loadFixture(deploy);
+const orderType = {
+  increasePosition: 0,
+  decreasePosition: 1,
+  increaseCollateral: 2,
+  decreaseCollateral: 3,
+};
 
-    await account.deposit(ethers.ZeroAddress, ethers.parseEther("1"), {
-      value: ethers.parseEther("1"),
+describe("PositionRouter", () => {
+  const fee = BigInt("180000000000000");
+
+  it("increase position", async () => {
+    const { account, positionRouter, gmxV1, executeIncreasePosition } =
+      await loadFixture(deploy);
+
+    const collateralAmount = ethers.parseEther("1");
+    await account.deposit(ethers.ZeroAddress, collateralAmount, {
+      value: collateralAmount,
     });
-    const [gmxOrder] = await quoter.quote(
+
+    await positionRouter.increasePosition(
+      gmxV1.target,
       WETH,
       WETH,
-      ethers.parseEther("1"),
-      10n,
-      true
+      collateralAmount,
+      ethers.parseUnits("6000", 30),
+      true,
+      {
+        value: BigInt("180000000000000"),
+      }
     );
-    await account.createOrders(
-      [gmxV1.target],
-      [
-        {
-          orderType: gmxOrder.orderType,
-          collateral: gmxOrder.collateral,
-          index: gmxOrder.index,
-          collateralAmount: gmxOrder.collateralAmount,
-          size: gmxOrder.size,
-          isLong: gmxOrder.isLong,
-        },
-      ]
+    await executeIncreasePosition();
+    console.log(await account.getPosition(gmxV1.target, WETH, WETH, true));
+  });
+
+  it("increase collateral", async () => {
+    const { account, positionRouter, gmxV1, executeIncreasePosition } =
+      await loadFixture(deploy);
+
+    const collateralAmount = ethers.parseEther("1");
+    await account.deposit(ethers.ZeroAddress, collateralAmount, {
+      value: collateralAmount,
+    });
+
+    await positionRouter.increasePosition(
+      gmxV1.target,
+      WETH,
+      WETH,
+      collateralAmount,
+      ethers.parseUnits("6000", 30),
+      true,
+      {
+        value: BigInt("180000000000000"),
+      }
     );
     await executeIncreasePosition();
     console.log(await account.getPosition(gmxV1.target, WETH, WETH, true));
 
+    await account.deposit(ethers.ZeroAddress, collateralAmount, {
+      value: collateralAmount,
+    });
+
     await positionRouter.increaseCollateral(
       gmxV1.target,
-      WETH, // collateral
-      WETH, // index
-      WETH, // tokenIn
-      ethers.parseEther("0.1"), // amountIn
-      true
+      WETH,
+      WETH,
+      WETH,
+      collateralAmount,
+      true,
+      {
+        value: BigInt("180000000000000"),
+      }
     );
+    await executeIncreasePosition();
+    console.log(await account.getPosition(gmxV1.target, WETH, WETH, true));
   });
 });

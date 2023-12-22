@@ -77,13 +77,15 @@ const deploy = async () => {
   exchange = await ethers.deployContract("Exchange", [SwapRouter]);
   quoter = await ethers.deployContract("Quoter");
   reader = await ethers.deployContract("Reader");
-  account = await ethers.deployContract("Account", [
-    user0.address,
-    exchange.target,
-  ]);
   positionRouter = await ethers.deployContract("PositionRouter", [
     exchange.target,
   ]);
+
+  await exchange.connect(user0).createAccount();
+  account = await ethers.getContractAt(
+    "Account",
+    await exchange.account(user0.address)
+  );
 
   const swap = async (from, to, fromAmount) => {
     await weth.deposit({ value: fromAmount });

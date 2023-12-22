@@ -122,7 +122,6 @@ contract Account is IAccount {
                     "increasePosition(address,address,uint256,uint256,bool)",
                     order.collateral,
                     order.index,
-                    // order.collateralAmount - fee,
                     order.collateralAmount,
                     order.size,
                     order.isLong
@@ -144,7 +143,6 @@ contract Account is IAccount {
                     "increaseCollateral(address,address,uint256,bool)",
                     order.collateral,
                     order.index,
-                    // order.collateralAmount - fee,
                     order.collateralAmount,
                     order.isLong
                 )
