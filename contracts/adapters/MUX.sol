@@ -105,6 +105,22 @@ contract MUX is IAdapter {
         return collateralAmountUsd * leverage;
     }
 
+    function _calculateSize(
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        uint256 leverage,
+        bool isLong
+    ) private view returns (uint256) {
+        uint256 sizeUsd = _calculateSizeUsd(collateral, collateralAmount, leverage, isLong);
+
+        // todo: use mux price (currently using gmx vault price)
+        uint256 indexPrice =
+            isLong ? IVault(_vault).getMaxPrice(index) : IVault(_vault).getMinPrice(index);
+        uint8 indexDecimals = IERC20(index).decimals();
+        return sizeUsd * (10 ** indexDecimals) / indexPrice;
+    }
+
     function makeOrder(
         address collateral,
         address index,
@@ -112,13 +128,7 @@ contract MUX is IAdapter {
         uint256 leverage,
         bool isLong
     ) public view returns (IExchange.Order memory) {
-        uint256 sizeUsd = _calculateSizeUsd(collateral, collateralAmount, leverage, isLong);
-
-        // todo: use mux price (currently using gmx vault price)
-        uint256 indexPrice =
-            isLong ? IVault(_vault).getMaxPrice(index) : IVault(_vault).getMinPrice(index);
-        uint8 indexDecimals = IERC20(index).decimals();
-        uint256 size = sizeUsd * (10 ** indexDecimals) / indexPrice;
+        uint256 size = _calculateSize(collateral, index, collateralAmount, leverage, isLong);
 
         return IExchange.Order({
             orderType: IExchange.OrderType.IncreasePosition,

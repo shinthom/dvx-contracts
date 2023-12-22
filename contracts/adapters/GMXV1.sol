@@ -97,6 +97,15 @@ contract GMXV1 is IAdapter {
         return collateralAmountUsd * leverage;
     }
 
+    function _calculateSize(
+        address collateral,
+        uint256 collateralAmount,
+        uint256 leverage,
+        bool isLong
+    ) private view returns (uint256) {
+        return _calculateSizeUsd(collateral, collateralAmount, leverage, isLong);
+    }
+
     function makeOrder(
         address collateral,
         address index,
@@ -104,39 +113,43 @@ contract GMXV1 is IAdapter {
         uint256 leverage,
         bool isLong
     ) public view returns (IExchange.Order memory) {
-        uint256 sizeUsd = _calculateSizeUsd(collateral, collateralAmount, leverage, isLong);
+        uint256 size = _calculateSize(collateral, collateralAmount, leverage, isLong);
 
         return IExchange.Order({
             orderType: IExchange.OrderType.IncreasePosition,
             collateral: collateral,
             index: index,
             collateralAmount: collateralAmount,
-            size: sizeUsd,
+            size: size,
             isLong: isLong
         });
     }
 
     // quote
-    function getPositionFee(
-        uint256 size // 1e30
-    ) public view returns (
-        uint256 // 1e30
-    ) {
-        uint256 fee = IVault(_vault).getPositionFee(size);
+    // function getPositionFee(
+    //     address collateral,
+    //     address index,
+    //     uint256 collateralAmount,
+    //     uint256 leverage,
+    //     bool isLong
+    // ) override public view returns (
+    //     uint256 // 1e30
+    // ) {
+    //     uint256 size = calculateSize(collateral, collateralAmount, leverage, isLong);
 
-        // bug: fee is not calculated correctly (should use 40 but 10)
-        {
-            uint256 marginFeeBasisPoints = IVault(_vault).marginFeeBasisPoints();
-            console.log("marginFeeBasisPoints: %s", marginFeeBasisPoints); // 40
+    //     // bug: fee is not calculated correctly (should use 40 but 10)
+    //     {
+    //         uint256 marginFeeBasisPoints = IVault(_vault).marginFeeBasisPoints();
+    //         console.log("marginFeeBasisPoints: %s", marginFeeBasisPoints); // 40
 
-            uint256 fee0 = size * marginFeeBasisPoints / 10000; // 40
-            uint256 fee1 = size * 10 / 10000; // 10
-            console.log("fee0(40): %s", fee0);
-            console.log("fee1(10): %s", fee1);
-        }
+    //         uint256 fee0 = size * marginFeeBasisPoints / 10000; // 40
+    //         uint256 fee1 = size * 10 / 10000; // 10
+    //         console.log("fee0(40): %s", fee0);
+    //         console.log("fee1(10): %s", fee1);
+    //     }
 
-        return fee;
-    }
+    //     return IVault(_vault).getPositionFee(size);
+    // }
 
     // quote
     function getDepositFee(
