@@ -15,211 +15,74 @@ const orderType = {
   decreaseCollateral: 3,
 };
 
-const openAndClosePosition = async (
-  collateral,
-  index,
-  collateralAmount,
-  leverage,
-  isLong,
-  approveAndDeposit
-) => {
-  let gmxV1Position;
-  let muxPosition;
+describe("Account", async () => {
+  describe("deposit", () => {
+    it("eth", async () => {
+      const { account } = await loadFixture(deploy);
 
-  const {
-    gmxV1,
-    mux,
-    quoter,
-    reader,
-    account,
-    executeIncreasePosition,
-    executeDecreasePosition,
-    fillPositionOrder,
-    swap,
-  } = await loadFixture(deploy);
-
-  if (collateral != WETH) {
-    // swap eth to sufficient collateral
-    await swap(WETH, collateral, ethers.parseEther("10"));
-  }
-
-  await approveAndDeposit(account, collateral);
-
-  const [gmxOrder, muxOrder] = await quoter.quote(
-    collateral,
-    index,
-    collateralAmount,
-    leverage,
-    isLong,
-    ethers.parseEther("2000")
-  );
-  console.log(gmxOrder);
-  console.log(muxOrder);
-
-  console.log("\n`deposit`");
-  console.log(
-    `- balance(eth)    : ${await account.getBalance(ethers.ZeroAddress)}`
-  );
-  console.log(`- balance(usdc)   : ${await account.getBalance(USDC)}`);
-  console.log(`- balance(wbtc)   : ${await account.getBalance(WBTC)}`);
-
-  console.log("\n`increase position` - gmxV1, mux");
-  await account.createOrders(
-    [gmxV1.target, mux.target],
-    [
-      {
-        orderType: gmxOrder.order.orderType,
-        collateral: gmxOrder.order.collateral,
-        index: gmxOrder.order.index,
-        collateralAmount: gmxOrder.order.collateralAmount,
-        size: gmxOrder.order.size,
-        isLong: gmxOrder.order.isLong,
-      },
-      {
-        orderType: muxOrder.order.orderType,
-        collateral: muxOrder.order.collateral,
-        index: muxOrder.order.index,
-        collateralAmount: muxOrder.order.collateralAmount,
-        size: muxOrder.order.size,
-        isLong: muxOrder.order.isLong,
-      },
-    ],
-    {
-      value: BigInt("180000000000000"),
-    }
-  );
-  await executeIncreasePosition();
-  await fillPositionOrder();
-
-  {
-    const collateral = isLong ? index : USDC;
-    gmxV1Position = await account.getPosition(
-      gmxV1.target,
-      collateral,
-      index,
-      isLong
-    );
-  }
-  muxPosition = await account.getPosition(
-    mux.target,
-    collateral,
-    index,
-    isLong
-  );
-  console.log(
-    `- balance(eth)    : ${await account.getBalance(ethers.ZeroAddress)}`
-  );
-  console.log(`- balance(usdc)   : ${await account.getBalance(USDC)}`);
-  console.log(`- position(gmx-v1): ${gmxV1Position}`);
-  console.log(`- position(mux)   : ${muxPosition}`);
-
-  {
-    console.log("\n`decrease position` - gmxV1");
-    const collateral = isLong ? index : USDC;
-    await account.createOrders(
-      [gmxV1.target],
-      [
-        {
-          orderType: orderType.decreasePosition,
-          collateral: collateral,
-          index: index,
-          collateralAmount: 0,
-          size: gmxV1Position.size,
-          isLong: isLong,
-        },
-      ],
-      {
-        value: BigInt("180000000000000"),
-      }
-    );
-    await executeDecreasePosition();
-
-    {
-      const collateral = isLong ? index : USDC;
-      gmxV1Position = await account.getPosition(
-        gmxV1.target,
-        collateral,
-        index,
-        isLong
-      );
-    }
-    console.log(
-      `- balance(eth)    : ${await account.getBalance(ethers.ZeroAddress)}`
-    );
-    console.log(`- balance(usdc)   : ${await account.getBalance(USDC)}`);
-    console.log(`- position(gmx-v1): ${gmxV1Position}`);
-  }
-
-  console.log("\n`decrease position` - mux");
-  await account.createOrders(
-    [mux.target],
-    [
-      {
-        orderType: orderType.decreasePosition,
-        collateral: collateral,
-        index: index,
-        collateralAmount: 0,
-        size: muxPosition.size,
-        isLong: isLong,
-      },
-    ]
-  );
-  await fillPositionOrder();
-  muxPosition = await account.getPosition(
-    mux.target,
-    collateral,
-    index,
-    isLong
-  );
-  console.log(
-    `- balance(eth)    : ${await account.getBalance(ethers.ZeroAddress)}`
-  );
-  console.log(`- balance(usdc)   : ${await account.getBalance(USDC)}`);
-  console.log(`- balance(wbtc)   : ${await account.getBalance(WBTC)}`);
-  console.log(`- position(mux)   : ${muxPosition}`);
-};
-
-describe("Account", () => {
-  describe("swap", () => {
-    it("eth -> wbtc", async () => {
-      const { user0, account, wbtc } = await loadFixture(deploy);
-
+      console.log(await account.getBalance(ethers.ZeroAddress));
       await account.deposit(ethers.ZeroAddress, ethers.parseEther("1"), {
         value: ethers.parseEther("1"),
       });
-      const beforeBalance = await account.getBalance(wbtc.target);
+      console.log(await account.getBalance(ethers.ZeroAddress));
+    });
 
+    it("wbtc", async () => {
+      const { user0, account, wbtc, faucet } = await loadFixture(deploy);
+      await faucet(WBTC, ethers.parseEther("1"));
+
+      console.log(await wbtc.balanceOf(account.target));
+      await wbtc.approve(account.target, await wbtc.balanceOf(user0.address));
+      await account.deposit(WBTC, await wbtc.balanceOf(user0.address));
+      console.log(await wbtc.balanceOf(account.target));
+    });
+
+    it("usdc", async () => {
+      const { user0, account, usdc, faucet } = await loadFixture(deploy);
+      await faucet(USDC, ethers.parseEther("1"));
+
+      console.log(await usdc.balanceOf(account.target));
+      await usdc.approve(account.target, await usdc.balanceOf(user0.address));
+      await account.deposit(USDC, await usdc.balanceOf(user0.address));
+      console.log(await usdc.balanceOf(account.target));
+    });
+  });
+
+  describe("swap", () => {
+    it("eth -> wbtc", async () => {
+      const { user0, account, wbtc } = await loadFixture(deploy);
+      await account.deposit(ethers.ZeroAddress, ethers.parseEther("1"), {
+        value: ethers.parseEther("1"),
+      });
+
+      const beforeBalance = await account.getBalance(wbtc.target);
       await account
         .connect(user0)
         .swap(ethers.ZeroAddress, WBTC, ethers.parseEther("1"));
       const afterBalance = await account.getBalance(wbtc.target);
-
       console.log(beforeBalance);
       console.log(afterBalance);
     });
 
     it("eth -> usdc", async () => {
       const { user0, account, usdc } = await loadFixture(deploy);
-
       await account.deposit(ethers.ZeroAddress, ethers.parseEther("1"), {
         value: ethers.parseEther("1"),
       });
-      const beforeBalance = await account.getBalance(usdc.target);
 
+      const beforeBalance = await account.getBalance(usdc.target);
       await account
         .connect(user0)
         .swap(ethers.ZeroAddress, USDC, ethers.parseEther("1"));
       const afterBalance = await account.getBalance(usdc.target);
-
       console.log(beforeBalance);
       console.log(afterBalance);
     });
 
     it("wbtc -> eth", async () => {
-      const { user0, account, wbtc, swap } = await loadFixture(deploy);
-      await swap(WETH, WBTC, ethers.parseEther("1"));
+      const { user0, account, wbtc, faucet } = await loadFixture(deploy);
+      await faucet(WBTC, ethers.parseEther("1"));
       const wbtcBalance = await wbtc.balanceOf(user0.address);
-
       await wbtc.approve(account.target, wbtcBalance);
       await account.deposit(WBTC, wbtcBalance);
 
@@ -231,10 +94,9 @@ describe("Account", () => {
     });
 
     it("usdc -> eth", async () => {
-      const { user0, account, usdc, swap } = await loadFixture(deploy);
-      await swap(WETH, USDC, ethers.parseEther("1"));
+      const { user0, account, usdc, faucet } = await loadFixture(deploy);
+      await faucet(USDC, ethers.parseEther("1"));
       const usdcBalance = await usdc.balanceOf(user0.address);
-
       await usdc.approve(account.target, usdcBalance);
       await account.deposit(USDC, usdcBalance);
 
@@ -246,267 +108,197 @@ describe("Account", () => {
     });
   });
 
-  // it("long: col(ETH) -> idx(ETH)", async () => {
-  //   const collateral = WETH;
-  //   const index = WETH;
+  describe("order", () => {
+    it("gmx-v1", async () => {
+      const {
+        account,
+        gmxV1,
+        executeIncreasePosition,
+        executeDecreasePosition,
+      } = await loadFixture(deploy);
 
-  //   const collateralAmount = ethers.parseEther("1");
-  //   const leverage = 10n;
-  //   const long = true;
+      const collateralAmount = ethers.parseEther("1");
+      await account.deposit(ethers.ZeroAddress, collateralAmount, {
+        value: collateralAmount,
+      });
+      console.log(await account.getBalance(ethers.ZeroAddress));
 
-  //   const approveAndDeposit = async (account) => {
-  //     await account.deposit(ethers.ZeroAddress, collateralAmount * 2n, {
-  //       value: collateralAmount * 2n,
-  //     });
-  //   };
+      const gmxOrder = await gmxV1.makeOrder(
+        WETH,
+        WETH,
+        collateralAmount,
+        10n,
+        true
+      );
+      await account.createOrders(
+        [gmxV1.target],
+        [
+          {
+            orderType: gmxOrder.orderType,
+            collateral: gmxOrder.collateral,
+            index: gmxOrder.index,
+            collateralAmount: gmxOrder.collateralAmount,
+            size: gmxOrder.size,
+            isLong: gmxOrder.isLong,
+          },
+        ],
+        {
+          value: BigInt("180000000000000"),
+        }
+      );
+      await executeIncreasePosition();
+      console.log(await account.getPosition(gmxV1.target, WETH, WETH, true));
 
-  //   await openAndClosePosition(
-  //     collateral,
-  //     index,
-  //     collateralAmount,
-  //     leverage,
-  //     long,
-  //     approveAndDeposit
-  //   );
-  // });
+      await account.deposit(ethers.ZeroAddress, collateralAmount, {
+        value: collateralAmount,
+      });
+      await account.createOrders(
+        [gmxV1.target],
+        [
+          {
+            orderType: orderType.increaseCollateral,
+            collateral: WETH,
+            index: WETH,
+            collateralAmount: collateralAmount,
+            size: 0,
+            isLong: true,
+          },
+        ],
+        {
+          value: BigInt("180000000000000"),
+        }
+      );
+      await executeIncreasePosition();
+      console.log(await account.getPosition(gmxV1.target, WETH, WETH, true));
 
-  // it("long: col(USDC) -> idx(ETH)", async () => {
-  //   const collateral = USDC;
-  //   const index = WETH;
+      await account.createOrders(
+        [gmxV1.target],
+        [
+          {
+            orderType: orderType.decreaseCollateral,
+            collateral: WETH,
+            index: WETH,
+            collateralAmount: ethers.parseUnits("1000", 30),
+            size: 0,
+            isLong: true,
+          },
+        ],
+        {
+          value: BigInt("180000000000000"),
+        }
+      );
+      await executeDecreasePosition();
+      console.log(await account.getPosition(gmxV1.target, WETH, WETH, true));
 
-  //   const collateralAmount = ethers.parseUnits("600", 6);
-  //   const leverage = 10n;
-  //   const long = true;
+      const position = await account.getPosition(
+        gmxV1.target,
+        WETH,
+        WETH,
+        true
+      );
+      await account.createOrders(
+        [gmxV1.target],
+        [
+          {
+            orderType: orderType.decreasePosition,
+            collateral: WETH,
+            index: WETH,
+            collateralAmount: 0,
+            size: position.size,
+            isLong: true,
+          },
+        ],
+        {
+          value: BigInt("180000000000000"),
+        }
+      );
+      await executeDecreasePosition();
+      console.log(await account.getPosition(gmxV1.target, WETH, WETH, true));
+    });
 
-  //   const approveAndDeposit = async (account, collateral) => {
-  //     const token = await ethers.getContractAt("IERC20", collateral);
-  //     await token.approve(account.target, collateralAmount * 2n);
-  //     await account.deposit(USDC, collateralAmount * 2n);
-  //   };
+    it("mux", async () => {
+      const { account, mux, fillPositionOrder, fillWithdrawalOrder } =
+        await loadFixture(deploy);
 
-  //   await openAndClosePosition(
-  //     collateral,
-  //     index,
-  //     collateralAmount,
-  //     leverage,
-  //     long,
-  //     approveAndDeposit
-  //   );
-  // });
+      const collateralAmount = ethers.parseEther("1");
+      await account.deposit(ethers.ZeroAddress, collateralAmount, {
+        value: collateralAmount,
+      });
+      console.log(await account.getBalance(ethers.ZeroAddress));
 
-  // it("long: col(BTC) -> idx(ETH)", async () => {
-  //   const collateral = WBTC;
-  //   const index = WETH;
+      const muxOrder = await mux.makeOrder(
+        WETH,
+        WETH,
+        collateralAmount,
+        10n,
+        true
+      );
+      await account.createOrders(
+        [mux.target],
+        [
+          {
+            orderType: muxOrder.orderType,
+            collateral: muxOrder.collateral,
+            index: muxOrder.index,
+            collateralAmount: muxOrder.collateralAmount,
+            size: muxOrder.size,
+            isLong: muxOrder.isLong,
+          },
+        ]
+      );
+      await fillPositionOrder();
+      console.log(await account.getPosition(mux.target, WETH, WETH, true));
 
-  //   const collateralAmount = ethers.parseUnits("0.01", 8);
-  //   const leverage = 10n;
-  //   const long = true;
+      await account.deposit(ethers.ZeroAddress, collateralAmount, {
+        value: collateralAmount,
+      });
+      await account.createOrders(
+        [mux.target],
+        [
+          {
+            orderType: orderType.increaseCollateral,
+            collateral: WETH,
+            index: WETH,
+            collateralAmount: collateralAmount,
+            size: 0,
+            isLong: true,
+          },
+        ]
+      );
+      console.log(await account.getPosition(mux.target, WETH, WETH, true));
 
-  //   const approveAndDeposit = async (account, collateral) => {
-  //     const token = await ethers.getContractAt("IERC20", collateral);
-  //     await token.approve(account.target, collateralAmount * 2n);
-  //     await account.deposit(collateral, collateralAmount * 2n);
-  //   };
+      await account.createOrders(
+        [mux.target],
+        [
+          {
+            orderType: orderType.decreaseCollateral,
+            collateral: WETH,
+            index: WETH,
+            collateralAmount: collateralAmount,
+            size: 0,
+            isLong: true,
+          },
+        ]
+      );
+      await fillWithdrawalOrder();
+      console.log(await account.getPosition(mux.target, WETH, WETH, true));
 
-  //   await openAndClosePosition(
-  //     collateral,
-  //     index,
-  //     collateralAmount,
-  //     leverage,
-  //     long,
-  //     approveAndDeposit
-  //   );
-  // });
-
-  // it("long: col(ETH) -> idx(BTC)", async () => {
-  //   const collateral = WETH;
-  //   const index = WBTC;
-
-  //   const collateralAmount = ethers.parseEther("1");
-  //   const leverage = 10n;
-  //   const long = true;
-
-  //   const approveAndDeposit = async (account) => {
-  //     await account.deposit(ethers.ZeroAddress, collateralAmount * 2n, {
-  //       value: collateralAmount * 2n,
-  //     });
-  //   };
-
-  //   await openAndClosePosition(
-  //     collateral,
-  //     index,
-  //     collateralAmount,
-  //     leverage,
-  //     long,
-  //     approveAndDeposit
-  //   );
-  // });
-
-  // it("long: col(USDC) -> idx(BTC)", async () => {
-  //   const collateral = USDC;
-  //   const index = WBTC;
-
-  //   const collateralAmount = ethers.parseUnits("600", 6);
-  //   const leverage = 10n;
-  //   const long = true;
-
-  //   const approveAndDeposit = async (account, collateral) => {
-  //     const token = await ethers.getContractAt("IERC20", collateral);
-  //     await token.approve(account.target, collateralAmount * 2n);
-  //     await account.deposit(USDC, collateralAmount * 2n);
-  //   };
-
-  //   await openAndClosePosition(
-  //     collateral,
-  //     index,
-  //     collateralAmount,
-  //     leverage,
-  //     long,
-  //     approveAndDeposit
-  //   );
-  // });
-
-  // it("long: col(BTC) -> idx(BTC)", async () => {
-  //   const collateral = WBTC;
-  //   const index = WBTC;
-
-  //   const collateralAmount = ethers.parseUnits("0.01", 8);
-  //   const leverage = 10n;
-  //   const long = true;
-
-  //   const approveAndDeposit = async (account, collateral) => {
-  //     const token = await ethers.getContractAt("IERC20", collateral);
-  //     await token.approve(account.target, collateralAmount * 2n);
-  //     await account.deposit(collateral, collateralAmount * 2n);
-  //   };
-
-  //   await openAndClosePosition(
-  //     collateral,
-  //     index,
-  //     collateralAmount,
-  //     leverage,
-  //     long,
-  //     approveAndDeposit
-  //   );
-  // });
-
-  // it("short: col(USDC) -> idx(ETH)", async () => {
-  //   const collateral = USDC;
-  //   const index = WETH;
-
-  //   const collateralAmount = ethers.parseUnits("600", 6);
-  //   const leverage = 10n;
-  //   const short = false;
-
-  //   const approveAndDeposit = async (account, collateral) => {
-  //     const token = await ethers.getContractAt("IERC20", collateral);
-  //     await token.approve(account.target, collateralAmount * 2n);
-  //     await account.deposit(USDC, collateralAmount * 2n);
-  //   };
-
-  //   await openAndClosePosition(
-  //     collateral,
-  //     index,
-  //     collateralAmount,
-  //     leverage,
-  //     short,
-  //     approveAndDeposit
-  //   );
-  // });
-
-  // it("short: col(BTC) -> idx(ETH)", async () => {
-  //   const collateral = WBTC;
-  //   const index = WETH;
-
-  //   const collateralAmount = ethers.parseUnits("0.01", 8);
-  //   const leverage = 10n;
-  //   const short = true;
-
-  //   const approveAndDeposit = async (account, collateral) => {
-  //     const token = await ethers.getContractAt("IERC20", collateral);
-  //     await token.approve(account.target, collateralAmount * 2n);
-  //     await account.deposit(collateral, collateralAmount * 2n);
-  //   };
-
-  //   await openAndClosePosition(
-  //     collateral,
-  //     index,
-  //     collateralAmount,
-  //     leverage,
-  //     short,
-  //     approveAndDeposit
-  //   );
-  // });
-
-  // it("short: col(ETH) -> idx(BTC)", async () => {
-  //   const collateral = WETH;
-  //   const index = WBTC;
-
-  //   const collateralAmount = ethers.parseEther("1");
-  //   const leverage = 10n;
-  //   const short = false;
-
-  //   const approveAndDeposit = async (account) => {
-  //     await account.deposit(ethers.ZeroAddress, collateralAmount * 2n, {
-  //       value: collateralAmount * 2n,
-  //     });
-  //   };
-
-  //   await openAndClosePosition(
-  //     collateral,
-  //     index,
-  //     collateralAmount,
-  //     leverage,
-  //     short,
-  //     approveAndDeposit
-  //   );
-  // });
-
-  // it("short: col(USDC) -> idx(BTC)", async () => {
-  //   const collateral = USDC;
-  //   const index = WBTC;
-
-  //   const collateralAmount = ethers.parseUnits("600", 6);
-  //   const leverage = 10n;
-  //   const short = false;
-
-  //   const approveAndDeposit = async (account, collateral) => {
-  //     const token = await ethers.getContractAt("IERC20", collateral);
-  //     await token.approve(account.target, collateralAmount * 2n);
-  //     await account.deposit(USDC, collateralAmount * 2n);
-  //   };
-
-  //   await openAndClosePosition(
-  //     collateral,
-  //     index,
-  //     collateralAmount,
-  //     leverage,
-  //     short,
-  //     approveAndDeposit
-  //   );
-  // });
-
-  // it("short: col(BTC) -> idx(BTC)", async () => {
-  //   const collateral = WBTC;
-  //   const index = WBTC;
-
-  //   const collateralAmount = ethers.parseUnits("0.01", 8);
-  //   const leverage = 10n;
-  //   const short = false;
-
-  //   const approveAndDeposit = async (account, collateral) => {
-  //     const token = await ethers.getContractAt("IERC20", collateral);
-  //     await token.approve(account.target, collateralAmount * 2n);
-  //     await account.deposit(collateral, collateralAmount * 2n);
-  //   };
-
-  //   await openAndClosePosition(
-  //     collateral,
-  //     index,
-  //     collateralAmount,
-  //     leverage,
-  //     short,
-  //     approveAndDeposit
-  //   );
-  // });
+      const position = await account.getPosition(mux.target, WETH, WETH, true);
+      await account.createOrders(
+        [mux.target],
+        [
+          {
+            orderType: orderType.decreasePosition,
+            collateral: WETH,
+            index: WETH,
+            collateralAmount: 0,
+            size: position.size,
+            isLong: true,
+          },
+        ]
+      );
+      await fillPositionOrder();
+      console.log(await account.getPosition(mux.target, WETH, WETH, true));
+    });
+  });
 });

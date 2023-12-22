@@ -4,13 +4,13 @@ pragma solidity 0.8.0;
 import "./Account.sol";
 import "./interfaces/tokens/IERC20.sol";
 import "./interfaces/IExchange.sol";
-import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol"; // test
+import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 
 contract Exchange is IExchange {
     address constant private weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
 
     address private _owner;
-    address private _swapRouter;
+    address private _swapRouter; // uniswap
 
     uint256 private _totalAccount;
     mapping(address => address) private _accounts; // wallet => account

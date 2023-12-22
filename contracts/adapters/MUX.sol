@@ -9,6 +9,7 @@ import "../interfaces/IAdapter.sol";
 import "../interfaces/IExchange.sol";
 
 contract MUX is IAdapter {
+    address constant private WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
     address constant private USDC = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
 
     address immutable private _orderBook;
@@ -232,8 +233,12 @@ contract MUX is IAdapter {
             isLong
         );
 
-        IERC20(collateral).approve(_orderBook, collateralAmount);
-        IOrderBook(_orderBook).depositCollateral{value: msg.value}(subAccountId, collateralAmount);
+        if (collateral == WETH) {
+            IOrderBook(_orderBook).depositCollateral{value: collateralAmount}(subAccountId, collateralAmount);
+        } else {
+            IERC20(collateral).approve(_orderBook, collateralAmount);
+            IOrderBook(_orderBook).depositCollateral(subAccountId, collateralAmount);
+        }
     }
 
     function decreaseCollateral(

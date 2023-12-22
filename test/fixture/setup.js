@@ -87,6 +87,12 @@ const deploy = async () => {
     await exchange.account(user0.address)
   );
 
+  const faucet = async (tokenAddress, tokenIn) => {
+    await exchange.swap(ethers.ZeroAddress, tokenAddress, tokenIn, {
+      value: tokenIn,
+    });
+  };
+
   const swap = async (from, to, fromAmount) => {
     await weth.deposit({ value: fromAmount });
     await weth.transfer(gmxV1.target, fromAmount);
@@ -160,6 +166,7 @@ const deploy = async () => {
       USDC,
       WBTC,
     },
+    faucet,
     swap,
     executeIncreasePosition,
     executeDecreasePosition,

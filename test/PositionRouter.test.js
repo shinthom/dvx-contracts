@@ -35,7 +35,7 @@ describe("PositionRouter", () => {
       ethers.parseUnits("6000", 30),
       true,
       {
-        value: BigInt("180000000000000"),
+        value: fee,
       }
     );
     await executeIncreasePosition();
@@ -59,7 +59,7 @@ describe("PositionRouter", () => {
       ethers.parseUnits("6000", 30),
       true,
       {
-        value: BigInt("180000000000000"),
+        value: fee,
       }
     );
     await executeIncreasePosition();
@@ -77,7 +77,7 @@ describe("PositionRouter", () => {
       collateralAmount,
       true,
       {
-        value: BigInt("180000000000000"),
+        value: fee,
       }
     );
     await executeIncreasePosition();
