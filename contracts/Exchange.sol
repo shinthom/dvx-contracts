@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.0;
+pragma solidity ^0.8.0;
 
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "./Account.sol";
 import "./interfaces/tokens/IERC20.sol";
 import "./interfaces/IExchange.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 
-contract Exchange is IExchange {
-    address constant private weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
+contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
+    address private constant weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
 
     address private _owner;
     address private _swapRouter; // uniswap
@@ -18,14 +21,25 @@ contract Exchange is IExchange {
     mapping(address => bool) private _registeredTokens;
     mapping(address => bool) private _registeredAdapters;
 
-    uint256 private _positionFeeBasisPoints;
+    uint256 public constant BASIS_POINTS_DIVISOR = 10000;
 
-    constructor(address swapRouter) {
+    uint256 public depositFeeBasisPoints;
+    uint256 public withdrawFeeBasisPoints;
+    uint256 public swapFeeBasisPoints;
+    uint256 public positionFeeBasisPoints;
+    uint256 public marginFeeBasisPoints;
+    uint256 public marginAdjustmentBasisPoints;
+
+    function initialize(address swapRouter) external virtual initializer {
         _owner = msg.sender;
         _swapRouter = swapRouter;
+
+        __Ownable_init();
     }
 
     receive() external payable {}
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     function swap(
         address tokenIn,
@@ -36,7 +50,6 @@ contract Exchange is IExchange {
         if (tokenIn == address(0)) {
             require(msg.value == amount, "INVALID_AMOUNT");
             IERC20(weth).deposit{value: msg.value}();
-
             IERC20(weth).approve(_swapRouter, amount);
 
             amountOut = ISwapRouter(_swapRouter).exactInputSingle(
@@ -53,7 +66,6 @@ contract Exchange is IExchange {
             );
         } else {
             IERC20(tokenIn).transferFrom(msg.sender, address(this), amount);
-
             IERC20(tokenIn).approve(_swapRouter, amount);
 
             amountOut = ISwapRouter(_swapRouter).exactInputSingle(

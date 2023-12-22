@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.0;
+pragma solidity ^0.8.0;
 
+import "./interfaces/IAdapter.sol";
 import "./interfaces/IExchange.sol";
 import "./interfaces/tokens/IERC20.sol";
 import "./interfaces/exchanges/GMXV1/IVault.sol";

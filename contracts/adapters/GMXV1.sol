@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.0;
+pragma solidity ^0.8.0;
 
 import "../interfaces/exchanges/GMXV1/IPositionRouter.sol";
 import "../interfaces/exchanges/GMXV1/IRouter.sol";

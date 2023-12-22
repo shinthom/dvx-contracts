@@ -1,5 +1,5 @@
 const { expect } = require("chai");
-const { ethers } = require("hardhat");
+const { ethers, upgrades } = require("hardhat");
 
 describe("Exchange", () => {
   // token contracts
@@ -25,7 +25,13 @@ describe("Exchange", () => {
   });
 
   beforeEach(async () => {
-    exchange = await ethers.deployContract("Exchange", [SwapRouter]);
+    const exchangeImpl = await ethers.deployContract("Exchange");
+    const proxy = await ethers.deployContract("ERC1967Proxy", [
+      exchangeImpl.target,
+      "0x",
+    ]);
+    exchange = await ethers.getContractAt("Exchange", proxy.target);
+    await exchange.initialize(SwapRouter);
   });
 
   describe("swap", () => {
@@ -135,6 +141,26 @@ describe("Exchange", () => {
       expect(await account.getBalance(ethers.ZeroAddress)).to.equal(
         depositAmount
       );
+    });
+  });
+
+  describe("upgradeTo", () => {
+    it("sets new implementation to upgrade", async () => {
+      const uups = await ethers.deployContract("Exchange");
+      await uups.initialize(SwapRouter);
+      await exchange.upgradeTo(uups.target);
+    });
+
+    it("reverts when new implementation is not uups", async () => {
+      const notUUPS = await ethers.deployContract("Reader");
+      await expect(exchange.upgradeTo(notUUPS.target)).to.be.revertedWith(
+        "ERC1967Upgrade: new implementation is not UUPS"
+      );
+    });
+
+    it("reverts when new implementation is not contract", async () => {
+      const newContract = "0x000000000000000000000000000000000000dEaD";
+      await expect(exchange.upgradeTo(newContract)).to.be.reverted;
     });
   });
 });

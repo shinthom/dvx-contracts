@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.0;
+pragma solidity ^0.8.0;
 
 import "./interfaces/tokens/IERC20.sol";
 import "./interfaces/IAccount.sol";
@@ -22,20 +22,6 @@ contract Account is IAccount {
 
     function owner() public view returns (address) {
         return _owner;
-    }
-
-    function swap(
-        address tokenIn,
-        address tokenOut,
-        uint256 amount
-    ) override external returns (uint256 amountOut) {
-        if (tokenIn == address(0)) {
-            require(address(this).balance >= amount, "INSUFFICIENT_BALANCE");
-            amountOut = IExchange(_exchange).swap{value: amount}(tokenIn, tokenOut, amount);
-        } else {
-            IERC20(tokenIn).approve(_exchange, amount);
-            amountOut = IExchange(_exchange).swap(tokenIn, tokenOut, amount);
-        }
     }
 
     function getPositions(
@@ -99,6 +85,20 @@ contract Account is IAccount {
             IERC20(token).transfer(msg.sender, amount);
         }
         emit Withdrawn(msg.sender, token, amount);
+    }
+
+    function swap(
+        address tokenIn,
+        address tokenOut,
+        uint256 amount
+    ) override external returns (uint256 amountOut) {
+        if (tokenIn == address(0)) {
+            require(address(this).balance >= amount, "INSUFFICIENT_BALANCE");
+            amountOut = IExchange(_exchange).swap{value: amount}(tokenIn, tokenOut, amount);
+        } else {
+            IERC20(tokenIn).approve(_exchange, amount);
+            amountOut = IExchange(_exchange).swap(tokenIn, tokenOut, amount);
+        }
     }
 
     function _createOrder(
@@ -175,9 +175,6 @@ contract Account is IAccount {
         }
     }
 
-    // called by decentralized admin(or executor)
+    // todo
     // function manageMargins() onlyExchange;
-
-    // function getPositions();
-    // TODO: consider using variable for multiple position
 }
