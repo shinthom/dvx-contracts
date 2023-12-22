@@ -74,13 +74,20 @@ const deploy = async () => {
     SwapRouter,
   ]);
   mux = await ethers.deployContract("MUX", [OrderBook, LiquidityPool]);
-  exchange = await ethers.deployContract("Exchange", [SwapRouter]);
-  quoter = await ethers.deployContract("Quoter");
+  quoter = await ethers.deployContract("Quoter", [[gmxV1.target, mux.target]]);
   reader = await ethers.deployContract("Reader");
+
+  const exchangeImpl = await ethers.deployContract("Exchange");
+  const proxy = await ethers.deployContract("ERC1967Proxy", [
+    exchangeImpl.target,
+    "0x",
+  ]);
+  exchange = await ethers.getContractAt("Exchange", proxy.target);
+  await exchange.initialize(SwapRouter);
+
   positionRouter = await ethers.deployContract("PositionRouter", [
     exchange.target,
   ]);
-
   await exchange.connect(user0).createAccount();
   account = await ethers.getContractAt(
     "Account",
