@@ -18,7 +18,8 @@ contract MUX is IAdapter {
     // todo: use mux price (currently using gmx vault price)
     address constant private _vault = 0x489ee077994B6658eAfA855C308275EAd8097C4A;
     // todo: use mux price (currently using gmx vault price)
-    uint256 constant private USD = 1e30;
+    uint256 constant public PRICE_DECIMAL = 0;
+    uint256 constant public USD = 1 * (10 ** PRICE_DECIMAL);
 
     receive() external payable {}
 
@@ -60,21 +61,22 @@ contract MUX is IAdapter {
         );
     }
 
-    // quote
-    function _getPositionFee(
-        address collateral,
+    function getPrice(address, uint256 price, bool) public pure returns (uint256) {
+        return price;
+    }
+
+    function getPositionFee(
+        address,
+        address index,
+        uint256 indexPrice,
         uint256 size
-    ) public view returns (uint256) {
-        uint8 collateralId = _getIdFromAsset(collateral);
-
+    ) override public view returns (uint256) {
+        uint8 indexId = _getIdFromAsset(index);
         uint32 positionFeeRate
-            = (ILiquidityPool(_liquidityPool).getAssetInfo(collateralId)).positionFeeRate;
-        uint256 assetPrice = 1e18;
+            = (ILiquidityPool(_liquidityPool).getAssetInfo(indexId)).positionFeeRate;
 
-        return ((assetPrice * positionFeeRate) * size) / 1e5 / 1e18;
-        // note: asset.positionFeeRate
-        // uint256 feeUsd = ((uint256(assetPrice) * uint256(asset.positionFeeRate)) * uint256(amount)) / 1e5 / 1e18;
-        // return feeUsd.safeUint96();
+        uint256 decimals = IERC20(index).decimals();
+        return ((indexPrice * positionFeeRate) * size) / 1e5 / (10 ** decimals);
     }
 
     // quote
@@ -85,50 +87,21 @@ contract MUX is IAdapter {
         return asset.maxLongPositionSize - asset.totalLongPosition;
     }
 
-    // todo: use mux price (currently using gmx vault price)
-    function _calculateSizeUsd(
-        address collateral,
-        uint256 collateralAmount,
-        uint256 leverage,
-        bool isLong
-    ) private view returns (uint256) {
-        uint8 collateralDecimals = IERC20(collateral).decimals();
-
-        // todo: if the token is stable token, we just use 1 USD as price.
-        uint256 collateralPrice
-            = collateral == USDC ? USD :
-            (isLong ?
-                IVault(_vault).getMaxPrice(collateral) :
-                IVault(_vault).getMinPrice(collateral));
-        uint256 collateralAmountUsd
-            = collateralAmount * collateralPrice / (10 ** collateralDecimals);
-        return collateralAmountUsd * leverage;
-    }
-
-    function _calculateSize(
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 leverage,
-        bool isLong
-    ) private view returns (uint256) {
-        uint256 sizeUsd = _calculateSizeUsd(collateral, collateralAmount, leverage, isLong);
-
-        // todo: use mux price (currently using gmx vault price)
-        uint256 indexPrice =
-            isLong ? IVault(_vault).getMaxPrice(index) : IVault(_vault).getMinPrice(index);
-        uint8 indexDecimals = IERC20(index).decimals();
-        return sizeUsd * (10 ** indexDecimals) / indexPrice;
-    }
-
     function makeOrder(
         address collateral,
         address index,
         uint256 collateralAmount,
         uint256 leverage,
-        bool isLong
-    ) public view returns (IExchange.Order memory) {
-        uint256 size = _calculateSize(collateral, index, collateralAmount, leverage, isLong);
+        bool isLong,
+        uint256 collateralPrice,
+        uint256 indexPrice
+    ) override public view returns (IExchange.Order memory) {
+        uint8 collateralDecimals = IERC20(collateral).decimals();
+        uint256 collateralAmountUsd = collateralAmount * collateralPrice / (10 ** collateralDecimals);
+        uint256 sizeUsd = collateralAmountUsd * leverage;
+
+        uint8 indexDecimals = IERC20(index).decimals();
+        uint256 size = sizeUsd * (10 ** indexDecimals) / indexPrice;
 
         return IExchange.Order({
             orderType: IExchange.OrderType.IncreasePosition,

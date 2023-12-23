@@ -81,7 +81,9 @@ describe("GMXV1", () => {
         WETH,
         ethers.parseEther("1"),
         10n,
-        true
+        true,
+        0,
+        0
       );
       console.log(order);
     });
@@ -92,7 +94,9 @@ describe("GMXV1", () => {
         WETH,
         ethers.parseUnits("100", 6),
         10n,
-        true
+        true,
+        0,
+        0
       );
       console.log(order);
     });
@@ -103,7 +107,9 @@ describe("GMXV1", () => {
         WETH,
         ethers.parseUnits("1", 8),
         10n,
-        true
+        true,
+        0,
+        0
       );
       console.log(order);
     });
@@ -114,7 +120,9 @@ describe("GMXV1", () => {
         WBTC,
         ethers.parseEther("1"),
         10n,
-        true
+        true,
+        0,
+        0
       );
       console.log(order);
     });
@@ -125,7 +133,9 @@ describe("GMXV1", () => {
         WBTC,
         ethers.parseUnits("100", 6),
         10n,
-        true
+        true,
+        0,
+        0
       );
       console.log(order);
     });
@@ -136,7 +146,9 @@ describe("GMXV1", () => {
         WETH,
         ethers.parseUnits("1", 8),
         10n,
-        true
+        true,
+        0,
+        0
       );
       console.log(order);
     });

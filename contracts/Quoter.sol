@@ -9,100 +9,76 @@ import "./interfaces/exchanges/GMXV1/IVault.sol";
 contract Quoter {
     address private _vault = 0x489ee077994B6658eAfA855C308275EAd8097C4A;
 
-    // todo: quoter only calculate fee and OI, not create order.
+    address[] private _adapters;
+
+    constructor(address[] memory adapters) {
+        _adapters = adapters;
+    }
+
+    struct OrderRequest {
+        address collateral;
+        address index;
+        uint256 collateralAmount;
+        uint256 leverage;
+        bool isLong;
+    }
 
     function quote(
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 leverage,
-        bool isLong
-    ) external view returns (
-        IExchange.Order[] memory
-    ) {
-        IExchange.Order[] memory orders = new IExchange.Order[](2);
+        OrderRequest calldata orderRequest,
+        IAdapter[] calldata adapters,
+        uint256[] calldata collateralPrices,
+        uint256[] calldata indexPrices
+    ) external view {
+        for (uint256 i = 0; i < adapters.length; i++) {
+            IAdapter adapter = adapters[i];
+            IExchange.Order memory order = adapter.makeOrder(
+                orderRequest.collateral,
+                orderRequest.index,
+                orderRequest.collateralAmount,
+                orderRequest.leverage,
+                orderRequest.isLong,
+                collateralPrices[i],
+                indexPrices[i]
+            );
 
-        // note: collateralAmount / 2
-        orders[0] = quoteGMX(collateral, index, collateralAmount / 2, leverage, isLong);
-        orders[1] = quoteMUX(collateral, index, collateralAmount / 2, leverage, isLong);
-        return orders;
-    }
-
-    function quoteGMX(
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 leverage,
-        bool isLong
-    )
-    public
-    view
-    returns (
-        IExchange.Order memory order
-    ) {
-        uint256 sizeUsd = _calculateSizeUsd(
-            collateral,
-            index,
-            collateralAmount,
-            leverage,
-            isLong
-        );
-
-        order.orderType = IExchange.OrderType.IncreasePosition;
-        order.collateral = collateral;
-        order.index = index;
-        order.collateralAmount = collateralAmount;
-        order.size = sizeUsd;
-        order.isLong = isLong;
-    }
-
-    function quoteMUX(
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 leverage,
-        bool isLong
-    )
-    public
-    view
-    returns (
-        IExchange.Order memory order
-    ) {
-        uint256 sizeUsd = _calculateSizeUsd(
-            collateral,
-            index,
-            collateralAmount,
-            leverage,
-            isLong
-        );
-        uint256 indexPrice =
-            isLong ? IVault(_vault).getMaxPrice(index) : IVault(_vault).getMinPrice(index);
-
-        uint8 indexDecimals = IERC20(index).decimals();
-        uint256 size = sizeUsd * (10 ** indexDecimals) / indexPrice;
-
-        order.orderType = IExchange.OrderType.IncreasePosition;
-        order.collateral = collateral;
-        order.index = index;
-        order.collateralAmount = collateralAmount;
-        order.size = size;
-        order.isLong = isLong;
-    }
-
-    function _calculateSizeUsd(
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 leverage,
-        bool isLong
-    ) private view returns (uint256) {
-        uint8 collateralDecimals = IERC20(collateral).decimals();
-
-        // TODO: if the token is stable token, we just use 1 USD as price.
-        uint256 collateralPrice =
-            isLong ? IVault(_vault).getMaxPrice(collateral) : IVault(_vault).getMinPrice(collateral);
-        uint256 collateralAmountUsd = collateralAmount * collateralPrice / (10 ** collateralDecimals);
-
-        return collateralAmountUsd * leverage;
+            // calculate feeUsd and applied price decimal
+            uint256 positionFee = adapter.getPositionFee(
+                orderRequest.collateral,
+                orderRequest.index,
+                indexPrices[i],
+                order.size
+            );
+            // todo: getPrice decimals makes 2
+        }
     }
 }
+
+// await fetch("https://app.mux.network/api/liquidityAsset", {
+//     method: "GET", // HTTP 요청 메소드 (GET, POST, PUT, DELETE 등)
+//     headers: {
+//       "Content-Type": "application/json",
+//     },
+//   })
+//     .then((response) => {
+//       if (!response.ok) {
+//         throw new Error("Network response was not ok");
+//       }
+//       return response.json();
+//     })
+//     .then((data) => {
+//       apiData = {
+//         assets: data.assets
+//           .filter((asset) => asset.symbol === "ETH")
+//           .map((asset) => ({
+//             symbol: asset.symbol,
+//             isStable: asset.isStable,
+//             price: asset.price,
+//           })),
+//       };
+//     })
+//     .catch((error) => {
+//       console.error(
+//         "There has been a problem with your fetch operation:",
+//         error
+//       );
+//     });

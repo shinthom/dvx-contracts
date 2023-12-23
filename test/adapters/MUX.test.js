@@ -53,68 +53,100 @@ describe("MUX", () => {
   });
 
   describe("make order", () => {
+    const leverage = 10n;
+
     it("eth -> eth", async () => {
+      const collateralPrice = 2000n;
+      const indexPrice = 2000n;
+
       const order = await mux.makeOrder(
         WETH,
         WETH,
         ethers.parseEther("1"),
-        10n,
-        true
+        leverage,
+        true,
+        collateralPrice,
+        indexPrice
       );
       console.log(order);
     });
 
     it("usdc -> eth", async () => {
+      const collateralPrice = 1n;
+      const indexPrice = 2000n;
+
       const order = await mux.makeOrder(
         USDC,
         WETH,
         ethers.parseUnits("100", 6),
-        10n,
-        true
+        leverage,
+        true,
+        collateralPrice,
+        indexPrice
       );
       console.log(order);
     });
 
     it("wbtc -> eth", async () => {
+      const collateralPrice = 40000n;
+      const indexPrice = 2000n;
+
       const order = await mux.makeOrder(
         WBTC,
         WETH,
         ethers.parseUnits("1", 8),
-        10n,
-        true
+        leverage,
+        true,
+        collateralPrice,
+        indexPrice
       );
       console.log(order);
     });
 
     it("eth -> wbtc", async () => {
+      const collateralPrice = 2000n;
+      const indexPrice = 40000n;
+
       const order = await mux.makeOrder(
         WETH,
         WBTC,
         ethers.parseEther("1"),
-        10n,
-        true
+        leverage,
+        true,
+        collateralPrice,
+        indexPrice
       );
       console.log(order);
     });
 
     it("usdc -> wbtc", async () => {
+      const collateralPrice = 1n;
+      const indexPrice = 40000n;
+
       const order = await mux.makeOrder(
         USDC,
         WBTC,
         ethers.parseUnits("100", 6),
-        10n,
-        true
+        leverage,
+        true,
+        collateralPrice,
+        indexPrice
       );
       console.log(order);
     });
 
     it("wbtc -> wbtc", async () => {
+      const collateralPrice = 40000n;
+      const indexPrice = 40000n;
+
       const order = await mux.makeOrder(
         WBTC,
         WBTC,
         ethers.parseUnits("1", 8),
-        10n,
-        true
+        leverage,
+        true,
+        collateralPrice,
+        indexPrice
       );
       console.log(order);
     });

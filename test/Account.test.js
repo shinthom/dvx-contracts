@@ -128,7 +128,9 @@ describe("Account", async () => {
         WETH,
         collateralAmount,
         10n,
-        true
+        true,
+        0,
+        0
       );
       await account.createOrders(
         [gmxV1.target],
@@ -217,6 +219,8 @@ describe("Account", async () => {
     });
 
     it("mux", async () => {
+      const wethPrice = 2000n;
+
       const { account, mux, fillPositionOrder, fillWithdrawalOrder } =
         await loadFixture(deploy);
 
@@ -231,7 +235,9 @@ describe("Account", async () => {
         WETH,
         collateralAmount,
         10n,
-        true
+        true,
+        wethPrice,
+        wethPrice
       );
       await account.createOrders(
         [mux.target],

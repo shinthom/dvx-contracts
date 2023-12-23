@@ -21,7 +21,9 @@ contract GMXV1 is IAdapter {
     address constant private USDC = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
 
     // todo: use mux price (currently using gmx vault price)
-    uint256 constant private USD = 1e30;
+    // uint256 constant private USD = 1e30;
+    uint256 constant public PRICE_DECIMAL = 30;
+    uint256 constant public USD = 1 * (10 ** PRICE_DECIMAL);
 
     constructor(
         address positionRouter,
@@ -77,16 +79,15 @@ contract GMXV1 is IAdapter {
         );
     }
 
-    function _calculateSizeUsd(
+    function makeOrder(
         address collateral,
+        address index,
         uint256 collateralAmount,
         uint256 leverage,
-        bool isLong
-    ) private view returns (uint256) {
+        bool isLong,
+        uint256, uint256
+    ) override public view returns (IExchange.Order memory) {
         uint8 collateralDecimals = IERC20(collateral).decimals();
-
-        // todo: if the token is stable token, we just use 1 USD as price.
-
         uint256 collateralPrice
             = collateral == USDC ? USD :
             (isLong ?
@@ -94,27 +95,8 @@ contract GMXV1 is IAdapter {
                 IVault(_vault).getMinPrice(collateral));
         uint256 collateralAmountUsd
             = collateralAmount * collateralPrice / (10 ** collateralDecimals);
-        return collateralAmountUsd * leverage;
-    }
 
-    function _calculateSize(
-        address collateral,
-        uint256 collateralAmount,
-        uint256 leverage,
-        bool isLong
-    ) private view returns (uint256) {
-        return _calculateSizeUsd(collateral, collateralAmount, leverage, isLong);
-    }
-
-    function makeOrder(
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 leverage,
-        bool isLong
-    ) public view returns (IExchange.Order memory) {
-        uint256 size = _calculateSize(collateral, collateralAmount, leverage, isLong);
-
+        uint256 size = collateralAmountUsd * leverage;
         return IExchange.Order({
             orderType: IExchange.OrderType.IncreasePosition,
             collateral: collateral,
@@ -125,31 +107,32 @@ contract GMXV1 is IAdapter {
         });
     }
 
-    // quote
-    // function getPositionFee(
-    //     address collateral,
-    //     address index,
-    //     uint256 collateralAmount,
-    //     uint256 leverage,
-    //     bool isLong
-    // ) override public view returns (
-    //     uint256 // 1e30
-    // ) {
-    //     uint256 size = calculateSize(collateral, collateralAmount, leverage, isLong);
+    function getPrice(
+        address collateral,
+        uint256,
+        bool isLong
+    ) public view returns (uint256) {
+        uint256 collateralPrice
+            = collateral == USDC ? USD :
+            (isLong ?
+                IVault(_vault).getMaxPrice(collateral) :
+                IVault(_vault).getMinPrice(collateral));
 
-    //     // bug: fee is not calculated correctly (should use 40 but 10)
-    //     {
-    //         uint256 marginFeeBasisPoints = IVault(_vault).marginFeeBasisPoints();
-    //         console.log("marginFeeBasisPoints: %s", marginFeeBasisPoints); // 40
+        return collateralPrice;
+    }
 
-    //         uint256 fee0 = size * marginFeeBasisPoints / 10000; // 40
-    //         uint256 fee1 = size * 10 / 10000; // 10
-    //         console.log("fee0(40): %s", fee0);
-    //         console.log("fee1(10): %s", fee1);
-    //     }
-
-    //     return IVault(_vault).getPositionFee(size);
-    // }
+    function getPositionFee(
+        address,
+        address,
+        uint256,
+        uint256 size
+    ) override public view returns (uint256) {
+        {
+            uint256 marginFeeBasisPoints = IVault(_vault).marginFeeBasisPoints();
+            console.log("marginFeeBasisPoints: %s", marginFeeBasisPoints); // 40
+        }
+        return IVault(_vault).getPositionFee(size);
+    }
 
     // quote
     function getDepositFee(
