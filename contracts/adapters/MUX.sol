@@ -1,31 +1,32 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import "../interfaces/exchanges/GMXV1/IVault.sol"; // todo: use mux price
 import "../interfaces/exchanges/MUX/ILiquidityPool.sol";
 import "../interfaces/exchanges/MUX/IOrderBook.sol";
 import "../interfaces/tokens/IERC20.sol";
 import "../interfaces/IAdapter.sol";
 import "../interfaces/IExchange.sol";
+import "hardhat/console.sol";
 
 contract MUX is IAdapter {
     address constant private WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
     address constant private USDC = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
 
+    uint256 constant public PRICE_DECIMALS = 0;
+    uint256 constant public USD = 1 * (10 ** PRICE_DECIMALS);
+
     address immutable private _orderBook;
     address immutable private _liquidityPool;
-
-    // todo: use mux price (currently using gmx vault price)
-    address constant private _vault = 0x489ee077994B6658eAfA855C308275EAd8097C4A;
-    // todo: use mux price (currently using gmx vault price)
-    uint256 constant public PRICE_DECIMAL = 0;
-    uint256 constant public USD = 1 * (10 ** PRICE_DECIMAL);
 
     receive() external payable {}
 
     constructor(address orderBook, address liquidityPool) {
         _orderBook = orderBook;
         _liquidityPool = liquidityPool;
+    }
+
+    function priceDecimals() override public pure returns (uint256) {
+        return PRICE_DECIMALS;
     }
 
     function getPosition(
@@ -79,12 +80,19 @@ contract MUX is IAdapter {
         return ((indexPrice * positionFeeRate) * size) / 1e5 / (10 ** decimals);
     }
 
-    // quote
-    function getAvailableLiquidity2(address index) public view returns (uint256) {
+    function getAvailableLiquidity(
+        address index,
+        bool isLong
+    ) override public view returns (uint256) {
         uint8 indexId = _getIdFromAsset(index);
         ILiquidityPool.Asset memory asset = ILiquidityPool(_liquidityPool).getAssetInfo(indexId);
 
-        return asset.maxLongPositionSize - asset.totalLongPosition;
+        if (isLong) {
+            // note: asset.maxLongPositionSize?
+            return asset.spotLiquidity - asset.totalLongPosition;
+        } else {
+            return asset.maxShortPositionSize - asset.totalShortPosition;
+        }
     }
 
     function makeOrder(

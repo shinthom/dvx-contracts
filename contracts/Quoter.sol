@@ -48,7 +48,18 @@ contract Quoter {
                 indexPrices[i],
                 order.size
             );
-            // todo: getPrice decimals makes 2
+            uint256 priceDecimals = adapter.priceDecimals();
+            // note: make price 2 decimals
+            if (priceDecimals > 2) {
+                positionFee = positionFee / (10 ** (priceDecimals - 2));
+            } else {
+                positionFee = positionFee * (10 ** (2 - priceDecimals));
+            }
+
+            uint256 availableLiquidity
+                = adapter.getAvailableLiquidity(orderRequest.index, orderRequest.isLong);
+
+            // todo: fundingFee
         }
     }
 }

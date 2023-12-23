@@ -13,12 +13,16 @@ interface IAdapter {
         bool isLong;
     }
 
+    function priceDecimals() external view returns (uint256);
+
     function getPositionFee(
         address collateral,
         address index,
         uint256 indexPrice,
         uint256 size
     ) external view returns (uint256);
+
+    function getAvailableLiquidity(address index, bool isLong) external view returns (uint256);
 
     function makeOrder(
         address collateral,

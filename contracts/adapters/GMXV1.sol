@@ -11,19 +11,17 @@ import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol"; // test
 import "hardhat/console.sol"; // test
 
 contract GMXV1 is IAdapter {
+    address constant private WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
+    address constant private USDC = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
+
+    uint256 constant public PRICE_DECIMALS = 30;
+    uint256 constant public USD = 1 * (10 ** PRICE_DECIMALS);
+
     // gmx contracts
     address immutable private _positionRouter;
     address immutable private _router;
     address immutable private _vault;
     address immutable private _swapRouter; // test
-
-    address constant private WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
-    address constant private USDC = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
-
-    // todo: use mux price (currently using gmx vault price)
-    // uint256 constant private USD = 1e30;
-    uint256 constant public PRICE_DECIMAL = 30;
-    uint256 constant public USD = 1 * (10 ** PRICE_DECIMAL);
 
     constructor(
         address positionRouter,
@@ -35,6 +33,10 @@ contract GMXV1 is IAdapter {
         _router = router;
         _vault = vault;
         _swapRouter = swapRouter; // test
+    }
+
+    function priceDecimals() override public pure returns (uint256) {
+        return PRICE_DECIMALS;
     }
 
     // test
@@ -85,7 +87,8 @@ contract GMXV1 is IAdapter {
         uint256 collateralAmount,
         uint256 leverage,
         bool isLong,
-        uint256, uint256
+        uint256,
+        uint256
     ) override public view returns (IExchange.Order memory) {
         uint8 collateralDecimals = IERC20(collateral).decimals();
         uint256 collateralPrice
@@ -149,11 +152,18 @@ contract GMXV1 is IAdapter {
     }
 
     // quote
-    function getAvailableLiquidity(address index) public view returns (uint256) {
-        uint256 maxGlobalLongSize = IPositionRouter(_positionRouter).maxGlobalLongSizes(index);
-        uint256 guaranteedUsd = IVault(_vault).guaranteedUsd(index);
+    function getAvailableLiquidity(
+        address index,
+        bool isLong
+    ) override public view returns (uint256) {
+        uint256 availableLiquidityUsd = isLong ?
+            IPositionRouter(_positionRouter).maxGlobalLongSizes(index) - IVault(_vault).guaranteedUsd(index) :
+            IPositionRouter(_positionRouter).maxGlobalShortSizes(index) - IVault(_vault).globalShortSizes(index);
 
-        return maxGlobalLongSize - guaranteedUsd;
+        uint8 indexDecimals = IERC20(index).decimals();
+        return isLong ?
+            availableLiquidityUsd / IVault(_vault).getMaxPrice(index) * (10 ** indexDecimals):
+            availableLiquidityUsd / IVault(_vault).getMinPrice(index) * (10 ** indexDecimals);
     }
 
     // quote
