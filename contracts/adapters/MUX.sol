@@ -12,7 +12,7 @@ contract MUX is IAdapter {
     address constant private WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
     address constant private USDC = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
 
-    uint256 constant public PRICE_DECIMALS = 0;
+    uint256 constant public PRICE_DECIMALS = 18;
     uint256 constant public USD = 1 * (10 ** PRICE_DECIMALS);
 
     address immutable private _orderBook;
@@ -62,12 +62,16 @@ contract MUX is IAdapter {
         );
     }
 
-    function getPrice(address, uint256 price, bool) public pure returns (uint256) {
+    function getPrice(
+        address /* collateral */,
+        uint256 price,
+        bool /* isLong */
+    ) public pure returns (uint256) {
         return price;
     }
 
     function getPositionFee(
-        address,
+        address /* collateral */,
         address index,
         uint256 indexPrice,
         uint256 size
@@ -78,6 +82,28 @@ contract MUX is IAdapter {
 
         uint256 decimals = IERC20(index).decimals();
         return ((indexPrice * positionFeeRate) * size) / 1e5 / (10 ** decimals);
+    }
+
+    function getFundingFee(
+        address /* collateral */,
+        address index,
+        uint256 size,
+        uint256 entryFundingRate,
+        bool isLong,
+        uint256 indexPrice
+    ) public view returns (uint256) {
+        uint8 indexId = _getIdFromAsset(index);
+        ILiquidityPool.Asset memory asset = ILiquidityPool(_liquidityPool).getAssetInfo(indexId);
+
+        uint256 cumulativeFunding;
+        if (isLong) {
+            cumulativeFunding = asset.longCumulativeFundingRate - entryFundingRate;
+            cumulativeFunding = cumulativeFunding * indexPrice;
+        } else {
+            cumulativeFunding = asset.shortCumulativeFunding - entryFundingRate;
+        }
+
+        return cumulativeFunding * size;
     }
 
     function getAvailableLiquidity(
@@ -105,18 +131,17 @@ contract MUX is IAdapter {
         uint256 indexPrice
     ) override public view returns (IExchange.Order memory) {
         uint8 collateralDecimals = IERC20(collateral).decimals();
+        uint8 indexDecimals = IERC20(index).decimals();
+
         uint256 collateralAmountUsd = collateralAmount * collateralPrice / (10 ** collateralDecimals);
         uint256 sizeUsd = collateralAmountUsd * leverage;
-
-        uint8 indexDecimals = IERC20(index).decimals();
-        uint256 size = sizeUsd * (10 ** indexDecimals) / indexPrice;
 
         return IExchange.Order({
             orderType: IExchange.OrderType.IncreasePosition,
             collateral: collateral,
             index: index,
             collateralAmount: collateralAmount,
-            size: size,
+            size: sizeUsd * (10 ** indexDecimals) / indexPrice,
             isLong: isLong
         });
     }
@@ -181,7 +206,6 @@ contract MUX is IAdapter {
     function decreasePosition(
         address collateral,
         address index,
-        // uint256 collateralAmount, // TODO: remove collateralAmount (issue 3)
         uint256 size,
         bool isLong
     ) override payable public {
@@ -236,7 +260,6 @@ contract MUX is IAdapter {
         address collateral,
         address index,
         uint256 collateralAmount,
-        // uint256 size,
         bool isLong
     ) override payable public {
         uint8 collateralId = _getIdFromAsset(collateral);

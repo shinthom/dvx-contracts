@@ -87,8 +87,8 @@ contract GMXV1 is IAdapter {
         uint256 collateralAmount,
         uint256 leverage,
         bool isLong,
-        uint256,
-        uint256
+        uint256 /* collateralPrice */,
+        uint256 /* indexPrice */
     ) override public view returns (IExchange.Order memory) {
         uint8 collateralDecimals = IERC20(collateral).decimals();
         uint256 collateralPrice
@@ -99,20 +99,19 @@ contract GMXV1 is IAdapter {
         uint256 collateralAmountUsd
             = collateralAmount * collateralPrice / (10 ** collateralDecimals);
 
-        uint256 size = collateralAmountUsd * leverage;
         return IExchange.Order({
             orderType: IExchange.OrderType.IncreasePosition,
             collateral: collateral,
             index: index,
             collateralAmount: collateralAmount,
-            size: size,
+            size: collateralAmountUsd * leverage,
             isLong: isLong
         });
     }
 
     function getPrice(
         address collateral,
-        uint256,
+        uint256 /* price */,
         bool isLong
     ) public view returns (uint256) {
         uint256 collateralPrice
@@ -124,24 +123,12 @@ contract GMXV1 is IAdapter {
         return collateralPrice;
     }
 
-    function getPositionFee(
-        address,
-        address,
-        uint256,
-        uint256 size
-    ) override public view returns (uint256) {
-        {
-            uint256 marginFeeBasisPoints = IVault(_vault).marginFeeBasisPoints();
-            console.log("marginFeeBasisPoints: %s", marginFeeBasisPoints); // 40
-        }
-        return IVault(_vault).getPositionFee(size);
-    }
-
-    // quote
     function getDepositFee(
         address collateral,
         uint256 collateralAmount
     ) public view returns (uint256) {
+        // todo: compare with original leverage
+
         uint256 collateralDecimals = IERC20(collateral).decimals();
         uint256 minPrice = IVault(_vault).getMinPrice(collateral);
 
@@ -151,7 +138,38 @@ contract GMXV1 is IAdapter {
         return collateralAmountAfterDepositFee * minPrice / (10 ** collateralDecimals);
     }
 
-    // quote
+    function getPositionFee(
+        address /* collateral */,
+        address /* index */,
+        uint256 /* indexPrice */,
+        uint256 size
+    ) override public view returns (uint256) {
+        {
+            uint256 marginFeeBasisPoints = IVault(_vault).marginFeeBasisPoints();
+            console.log("marginFeeBasisPoints: %s", marginFeeBasisPoints); // 40
+        }
+        return IVault(_vault).getPositionFee(size);
+    }
+
+    function getFundingFee(
+        address collateral,
+        address /* index */,
+        uint256 size,
+        uint256 entryFundingRate,
+        bool /* isLong */,
+        uint256 /* indexPrice */
+    ) public view returns (uint256) {
+        if (size == 0) {
+            return 0;
+        }
+
+        return IVault(_vault).getFundingFee(
+            collateral,
+            size,
+            entryFundingRate
+        );
+    }
+
     function getAvailableLiquidity(
         address index,
         bool isLong
@@ -355,7 +373,6 @@ contract GMXV1 is IAdapter {
     function decreasePosition(
         address collateral,
         address index,
-        // uint256 collateralAmount, // TODO: remove collateralAmount (issue 3)
         uint256 size,
         bool isLong
     ) override payable public {
@@ -387,7 +404,6 @@ contract GMXV1 is IAdapter {
         address collateral,
         address index,
         uint256 collateralAmount,
-        // uint256 size,
         bool isLong
     ) override payable public {
         _decrease(
@@ -398,6 +414,4 @@ contract GMXV1 is IAdapter {
             isLong
         );
     }
-
-    // function get_fee() public;
 }

@@ -74,6 +74,51 @@ describe("GMXV1", () => {
     ]);
   });
 
+  describe("values", () => {
+    it("price", async () => {
+      console.log(await gmxV1.getPrice(WETH, 0, true));
+      console.log(await gmxV1.getPrice(WETH, 0, false));
+      console.log(await gmxV1.getPrice(WBTC, 0, true));
+      console.log(await gmxV1.getPrice(WBTC, 0, false));
+      console.log(await gmxV1.getPrice(USDC, 0, true));
+      console.log(await gmxV1.getPrice(USDC, 0, false));
+    });
+
+    it("deposit fee", async () => {
+      const collateralAmount = ethers.parseEther("1");
+      console.log(await gmxV1.getDepositFee(WETH, collateralAmount));
+    });
+
+    it("position fee", async () => {
+      const size = ethers.parseUnits("1000", 30);
+      console.log(
+        await gmxV1.getPositionFee(
+          ethers.ZeroAddress,
+          ethers.ZeroAddress,
+          0,
+          size
+        )
+      );
+    });
+
+    it("funding fee", async () => {
+      // todo: update global funding rate
+
+      const entryFundingRate = 730975n;
+      const size = ethers.parseUnits("1000", 30);
+      console.log(
+        await gmxV1.getFundingFee(
+          WETH,
+          ethers.ZeroAddress,
+          size,
+          entryFundingRate,
+          false,
+          0
+        )
+      );
+    });
+  });
+
   describe("make order", () => {
     it("eth -> eth", async () => {
       const order = await gmxV1.makeOrder(

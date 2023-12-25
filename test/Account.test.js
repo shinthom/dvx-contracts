@@ -219,7 +219,7 @@ describe("Account", async () => {
     });
 
     it("mux", async () => {
-      const wethPrice = 2000n;
+      const wethPrice = ethers.parseUnits("2000", 18);
 
       const { account, mux, fillPositionOrder, fillWithdrawalOrder } =
         await loadFixture(deploy);

@@ -41,6 +41,8 @@ interface IVault {
 
     function getPositionFee(uint256 _sizeDelta) external view returns (uint256);
 
+    function getFundingFee(address _account, address _collateralToken, address _indexToken, bool _isLong, uint256 _size, uint256 _entryFundingRate) external view returns (uint256);
+
     function getFundingFee(address _collateralToken, uint256 _size, uint256 _entryFundingRate) external view returns (uint256);
 
     function marginFeeBasisPoints() external view returns (uint256);

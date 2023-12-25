@@ -52,6 +52,62 @@ describe("MUX", () => {
     mux = await ethers.deployContract("MUX", [OrderBook, LiquidityPool]);
   });
 
+  describe("values", () => {
+    const wethPrice = ethers.parseUnits("2000", 18);
+    const wbtcPrice = ethers.parseUnits("40000", 18);
+    const usdcPrice = ethers.parseUnits("1", 18);
+
+    const collateralAmount = ethers.parseEther("1");
+    const leverage = 10n;
+    const size = collateralAmount * leverage;
+
+    const longEntryFundingRate = 227341250000000000n;
+    const shortEntryFundingRate = 284260836750000000000n;
+
+    it("getPrice", async () => {
+      console.log(await mux.getPrice(WETH, wethPrice, true));
+      console.log(await mux.getPrice(WETH, wethPrice, false));
+      console.log(await mux.getPrice(WBTC, wbtcPrice, true));
+      console.log(await mux.getPrice(WBTC, wbtcPrice, false));
+      console.log(await mux.getPrice(USDC, usdcPrice, true));
+      console.log(await mux.getPrice(USDC, usdcPrice, false));
+    });
+
+    it("position fee", async () => {
+      console.log(
+        await mux.getPositionFee(ethers.ZeroAddress, WETH, wethPrice, size)
+      );
+    });
+
+    it("funding fee", async () => {
+      const long = true;
+      const short = false;
+
+      console.log(
+        "long",
+        await mux.getFundingFee(
+          ethers.ZeroAddress,
+          WETH,
+          size,
+          longEntryFundingRate,
+          long,
+          wethPrice
+        )
+      );
+      console.log(
+        "short",
+        await mux.getFundingFee(
+          ethers.ZeroAddress,
+          WETH,
+          size,
+          shortEntryFundingRate,
+          short,
+          wethPrice
+        )
+      );
+    });
+  });
+
   describe("make order", () => {
     const leverage = 10n;
 
