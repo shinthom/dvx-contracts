@@ -9,9 +9,9 @@ interface IExchange {
         DecreaseCollateral
     }
 
-    struct Order {
+    struct PositionOrder {
         OrderType orderType;
-        address collateral;
+        address[] path;
         address index;
         uint256 collateralAmount;
         uint256 size;

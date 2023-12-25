@@ -103,7 +103,7 @@ contract Account is IAccount {
 
     function _createOrder(
         address exchange,
-        IExchange.Order calldata order
+        IExchange.PositionOrder calldata order
     ) private returns (bool success, bytes memory data) {
         IExchange.OrderType orderType = order.orderType;
 
@@ -119,8 +119,8 @@ contract Account is IAccount {
         if (orderType == IExchange.OrderType.IncreasePosition) {
             return exchange.delegatecall(
                 abi.encodeWithSignature(
-                    "increasePosition(address,address,uint256,uint256,bool)",
-                    order.collateral,
+                    "increasePosition(address[],address,uint256,uint256,bool)",
+                    order.path,
                     order.index,
                     order.collateralAmount,
                     order.size,
@@ -128,10 +128,11 @@ contract Account is IAccount {
                 )
             );
         } else if (orderType == IExchange.OrderType.DecreasePosition) {
+            require(order.path.length == 1, "INVALID_PATH");
             return exchange.delegatecall(
                 abi.encodeWithSignature(
                     "decreasePosition(address,address,uint256,bool)",
-                    order.collateral,
+                    order.path[0],
                     order.index,
                     order.size,
                     order.isLong
@@ -140,18 +141,19 @@ contract Account is IAccount {
         } else if (orderType == IExchange.OrderType.IncreaseCollateral) {
             return exchange.delegatecall(
                 abi.encodeWithSignature(
-                    "increaseCollateral(address,address,uint256,bool)",
-                    order.collateral,
+                    "increaseCollateral(address[],address,uint256,bool)",
+                    order.path,
                     order.index,
                     order.collateralAmount,
                     order.isLong
                 )
             );
         } else if (orderType == IExchange.OrderType.DecreaseCollateral) {
+            require(order.path.length == 1, "INVALID_PATH");
             return exchange.delegatecall(
                 abi.encodeWithSignature(
                     "decreaseCollateral(address,address,uint256,bool)",
-                    order.collateral,
+                    order.path[0],
                     order.index,
                     order.collateralAmount,
                     order.isLong
@@ -162,7 +164,7 @@ contract Account is IAccount {
 
     function createOrders(
         address[] calldata adapters,
-        IExchange.Order[] calldata orders
+        IExchange.PositionOrder[] calldata orders
     ) override payable external {
         for (uint256 i = 0; i < adapters.length; i++) {
             (bool success, bytes memory data) = _createOrder(

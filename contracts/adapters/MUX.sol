@@ -66,12 +66,18 @@ contract MUX is IAdapter {
         address /* collateral */,
         uint256 price,
         bool /* isLong */
-    ) public pure returns (uint256) {
+    ) override public pure returns (uint256) {
         return price;
     }
 
+    // function getDepositFee(
+    //     address /* collateral */,
+    //     uint256 /* collateralAmount */
+    // ) override public pure returns (uint256) {
+    //     return 0;
+    // }
+
     function getPositionFee(
-        address /* collateral */,
         address index,
         uint256 indexPrice,
         uint256 size
@@ -91,7 +97,7 @@ contract MUX is IAdapter {
         uint256 entryFundingRate,
         bool isLong,
         uint256 indexPrice
-    ) public view returns (uint256) {
+    ) override public view returns (uint256) {
         uint8 indexId = _getIdFromAsset(index);
         ILiquidityPool.Asset memory asset = ILiquidityPool(_liquidityPool).getAssetInfo(indexId);
 
@@ -121,7 +127,7 @@ contract MUX is IAdapter {
         }
     }
 
-    function makeOrder(
+    function makePositionOrder(
         address collateral,
         address index,
         uint256 collateralAmount,
@@ -129,16 +135,17 @@ contract MUX is IAdapter {
         bool isLong,
         uint256 collateralPrice,
         uint256 indexPrice
-    ) override public view returns (IExchange.Order memory) {
+    ) override public view returns (IExchange.PositionOrder memory) {
         uint8 collateralDecimals = IERC20(collateral).decimals();
         uint8 indexDecimals = IERC20(index).decimals();
 
         uint256 collateralAmountUsd = collateralAmount * collateralPrice / (10 ** collateralDecimals);
         uint256 sizeUsd = collateralAmountUsd * leverage;
 
-        return IExchange.Order({
+        address[] memory path = new address[](2);
+        return IExchange.PositionOrder({
             orderType: IExchange.OrderType.IncreasePosition,
-            collateral: collateral,
+            path: path,
             index: index,
             collateralAmount: collateralAmount,
             size: sizeUsd * (10 ** indexDecimals) / indexPrice,
@@ -157,12 +164,15 @@ contract MUX is IAdapter {
     }
 
     function increasePosition(
-        address collateral,
+        address[] memory path,
         address index,
         uint256 collateralAmount,
         uint256 size,
         bool isLong
     ) override payable public {
+        require(path.length == 1, "INVALID_PATH");
+        address collateral = path[0];
+
         uint8 collateralId = _getIdFromAsset(collateral);
         uint8 indexId = _getIdFromAsset(index);
 
@@ -188,7 +198,6 @@ contract MUX is IAdapter {
             );
         } else {
             IERC20(collateral).approve(_orderBook, collateralAmount);
-
             IOrderBook(_orderBook).placePositionOrder3(
                 subAccountId,
                 uint96(collateralAmount),
@@ -233,11 +242,14 @@ contract MUX is IAdapter {
     }
 
     function increaseCollateral(
-        address collateral,
+        address[] memory path,
         address index,
         uint256 collateralAmount,
         bool isLong
     ) override payable public {
+        require(path.length == 1, "INVALID_PATH");
+        address collateral = path[0];
+
         uint8 collateralId = _getIdFromAsset(collateral);
         uint8 indexId = _getIdFromAsset(index);
 

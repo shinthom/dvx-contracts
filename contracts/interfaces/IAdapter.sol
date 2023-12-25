@@ -41,10 +41,8 @@ interface IAdapter {
         bool isLong
     ) external view returns (Position memory);
 
-    // function getFee() external;
-
     function increasePosition(
-        address collateral,
+        address[] memory path,
         address index,
         uint256 collateralAmount,
         uint256 size, // TODO: considering using leverage instead of size (it could be more easy to calcualte size from leverage)
@@ -60,10 +58,9 @@ interface IAdapter {
     ) payable external;
 
     function increaseCollateral(
-        address collateral,
+        address[] memory path,
         address index,
         uint256 collateralAmount,
-        // uint256 size,
         bool isLong
     ) payable external;
 
@@ -71,7 +68,6 @@ interface IAdapter {
         address collateral,
         address index,
         uint256 collateralAmount,
-        // uint256 size,
         bool isLong
     ) payable external;
 }

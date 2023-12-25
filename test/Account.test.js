@@ -1,6 +1,6 @@
 const { ethers } = require("hardhat");
+const { expect } = require("chai");
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
-
 const { deploy } = require("./fixture/setup");
 
 // token contracts
@@ -109,115 +109,620 @@ describe("Account", async () => {
   });
 
   describe("order", () => {
-    it("gmx-v1", async () => {
-      const {
-        account,
-        gmxV1,
-        executeIncreasePosition,
-        executeDecreasePosition,
-      } = await loadFixture(deploy);
+    const orderType = {
+      increasePosition: 0,
+      decreasePosition: 1,
+      increaseCollateral: 2,
+      decreaseCollateral: 3,
+    };
+    const depositAmount = ethers.parseEther("1");
+    const leverage = 10n;
 
-      const collateralAmount = ethers.parseEther("1");
-      await account.deposit(ethers.ZeroAddress, collateralAmount, {
-        value: collateralAmount,
+    describe("gmxV1", () => {
+      const minExecutionFee = BigInt("180000000000000");
+
+      it("long: eth -> eth", async () => {
+        const {
+          account,
+          gmxV1,
+          weth,
+          executeIncreasePosition,
+          executeDecreasePosition,
+        } = await loadFixture(deploy);
+
+        {
+          await account.deposit(ethers.ZeroAddress, depositAmount, {
+            value: depositAmount,
+          });
+          const balance = await account.getBalance(ethers.ZeroAddress);
+          expect(await account.getBalance(ethers.ZeroAddress)).to.equal(
+            balance
+          );
+
+          const order = await gmxV1.makePositionOrder(
+            weth.target,
+            weth.target,
+            balance,
+            leverage,
+            true,
+            0,
+            0
+          );
+          expect(order.path[0]).to.equal(weth.target);
+
+          await account.createOrders(
+            [gmxV1.target],
+            [
+              {
+                orderType: order.orderType,
+                path: [order.path[0]],
+                index: order.index,
+                collateralAmount: order.collateralAmount,
+                size: order.size,
+                isLong: order.isLong,
+              },
+            ],
+            {
+              value: minExecutionFee,
+            }
+          );
+          await executeIncreasePosition();
+          const position = await account.getPosition(
+            gmxV1.target,
+            order.path[order.path.length - 1],
+            order.index,
+            order.isLong
+          );
+          expect(position.size).to.equal(order.size);
+          console.log(`position: ${position}`);
+        }
+        {
+          const collateralAmount = ethers.parseEther("0.1");
+          await account.deposit(ethers.ZeroAddress, collateralAmount, {
+            value: collateralAmount,
+          });
+          expect(await account.getBalance(ethers.ZeroAddress)).to.equal(
+            collateralAmount
+          );
+          await account.createOrders(
+            [gmxV1.target],
+            [
+              {
+                orderType: orderType.increaseCollateral,
+                path: [weth.target],
+                index: weth.target,
+                collateralAmount: collateralAmount,
+                size: 0,
+                isLong: true,
+              },
+            ],
+            {
+              value: minExecutionFee,
+            }
+          );
+          await executeIncreasePosition();
+          const position = await account.getPosition(
+            gmxV1.target,
+            weth.target,
+            weth.target,
+            true
+          );
+          console.log(`position: ${position}`);
+        }
+        {
+          const collateralAmount = ethers.parseUnits("1000", 30);
+          await account.createOrders(
+            [gmxV1.target],
+            [
+              {
+                orderType: orderType.decreaseCollateral,
+                path: [weth.target],
+                index: weth.target,
+                collateralAmount: collateralAmount,
+                size: 0,
+                isLong: true,
+              },
+            ],
+            {
+              value: minExecutionFee,
+            }
+          );
+          await executeDecreasePosition();
+          const position = await account.getPosition(
+            gmxV1.target,
+            weth.target,
+            weth.target,
+            true
+          );
+          console.log(`position: ${position}`);
+        }
+        {
+          let position = await account.getPosition(
+            gmxV1.target,
+            weth.target,
+            weth.target,
+            true
+          );
+          await account.createOrders(
+            [gmxV1.target],
+            [
+              {
+                orderType: orderType.decreasePosition,
+                path: [weth.target],
+                index: weth.target,
+                collateralAmount: 0,
+                size: position.size,
+                isLong: true,
+              },
+            ],
+            {
+              value: minExecutionFee,
+            }
+          );
+          await executeDecreasePosition();
+          position = await account.getPosition(
+            gmxV1.target,
+            weth.target,
+            weth.target,
+            true
+          );
+          console.log(`position: ${position}`);
+        }
       });
-      console.log(await account.getBalance(ethers.ZeroAddress));
 
-      const gmxOrder = await gmxV1.makeOrder(
-        WETH,
-        WETH,
-        collateralAmount,
-        10n,
-        true,
-        0,
-        0
-      );
-      await account.createOrders(
-        [gmxV1.target],
-        [
-          {
-            orderType: gmxOrder.orderType,
-            collateral: gmxOrder.collateral,
-            index: gmxOrder.index,
-            collateralAmount: gmxOrder.collateralAmount,
-            size: gmxOrder.size,
-            isLong: gmxOrder.isLong,
-          },
-        ],
+      it("long: wbtc -> eth", async () => {
+        const {
+          user0,
+          account,
+          gmxV1,
+          weth,
+          wbtc,
+          faucet,
+          executeIncreasePosition,
+          executeDecreasePosition,
+        } = await loadFixture(deploy);
+
         {
-          value: BigInt("180000000000000"),
-        }
-      );
-      await executeIncreasePosition();
-      console.log(await account.getPosition(gmxV1.target, WETH, WETH, true));
+          await faucet(wbtc.target, depositAmount);
+          const balance = await wbtc.balanceOf(user0.address);
+          await wbtc.approve(account.target, balance);
+          await account.deposit(wbtc.target, balance);
+          expect(await account.getBalance(wbtc.target)).to.equal(balance);
 
-      await account.deposit(ethers.ZeroAddress, collateralAmount, {
-        value: collateralAmount,
+          const order = await gmxV1.makePositionOrder(
+            wbtc.target,
+            weth.target,
+            balance,
+            leverage,
+            true,
+            0,
+            0
+          );
+          expect(order.path[0]).to.equal(wbtc.target);
+          expect(order.path[1]).to.equal(weth.target);
+
+          await account.createOrders(
+            [gmxV1.target],
+            [
+              {
+                orderType: order.orderType,
+                path: [...order.path],
+                index: order.index,
+                collateralAmount: order.collateralAmount,
+                size: order.size,
+                isLong: order.isLong,
+              },
+            ],
+            {
+              value: minExecutionFee,
+            }
+          );
+          await executeIncreasePosition();
+          const position = await account.getPosition(
+            gmxV1.target,
+            order.path[order.path.length - 1],
+            order.index,
+            order.isLong
+          );
+          expect(position.size).to.equal(order.size);
+          console.log(`position: ${position}`);
+        }
+        {
+          await faucet(wbtc.target, ethers.parseEther("1"));
+          const wbtcBalance = await wbtc.balanceOf(user0.address);
+          await wbtc.approve(account.target, wbtcBalance);
+          await account.deposit(wbtc.target, wbtcBalance);
+          expect(await account.getBalance(wbtc.target)).to.equal(wbtcBalance);
+
+          await account.createOrders(
+            [gmxV1.target],
+            [
+              {
+                orderType: orderType.increaseCollateral,
+                path: [wbtc.target, weth.target],
+                index: weth.target,
+                collateralAmount: wbtcBalance,
+                size: 0,
+                isLong: true,
+              },
+            ],
+            {
+              value: minExecutionFee,
+            }
+          );
+          await executeIncreasePosition();
+          const position = await account.getPosition(
+            gmxV1.target,
+            weth.target,
+            weth.target,
+            true
+          );
+          console.log(`position: ${position}`);
+        }
+        {
+          const collateralAmount = ethers.parseUnits("1000", 30);
+          await account.createOrders(
+            [gmxV1.target],
+            [
+              {
+                orderType: orderType.decreaseCollateral,
+                path: [weth.target],
+                index: weth.target,
+                collateralAmount: collateralAmount,
+                size: 0,
+                isLong: true,
+              },
+            ],
+            {
+              value: minExecutionFee,
+            }
+          );
+          await executeDecreasePosition();
+          const position = await account.getPosition(
+            gmxV1.target,
+            weth.target,
+            weth.target,
+            true
+          );
+          console.log(`position: ${position}`);
+        }
+        {
+          let position = await account.getPosition(
+            gmxV1.target,
+            weth.target,
+            weth.target,
+            true
+          );
+          await account.createOrders(
+            [gmxV1.target],
+            [
+              {
+                orderType: orderType.decreasePosition,
+                path: [weth.target],
+                index: weth.target,
+                collateralAmount: 0,
+                size: position.size,
+                isLong: true,
+              },
+            ],
+            {
+              value: minExecutionFee,
+            }
+          );
+          await executeDecreasePosition();
+          position = await account.getPosition(
+            gmxV1.target,
+            weth.target,
+            weth.target,
+            true
+          );
+          console.log(`position: ${position}`);
+        }
       });
-      await account.createOrders(
-        [gmxV1.target],
-        [
-          {
-            orderType: orderType.increaseCollateral,
-            collateral: WETH,
-            index: WETH,
-            collateralAmount: collateralAmount,
-            size: 0,
-            isLong: true,
-          },
-        ],
-        {
-          value: BigInt("180000000000000"),
-        }
-      );
-      await executeIncreasePosition();
-      console.log(await account.getPosition(gmxV1.target, WETH, WETH, true));
 
-      await account.createOrders(
-        [gmxV1.target],
-        [
-          {
-            orderType: orderType.decreaseCollateral,
-            collateral: WETH,
-            index: WETH,
-            collateralAmount: ethers.parseUnits("1000", 30),
-            size: 0,
-            isLong: true,
-          },
-        ],
-        {
-          value: BigInt("180000000000000"),
-        }
-      );
-      await executeDecreasePosition();
-      console.log(await account.getPosition(gmxV1.target, WETH, WETH, true));
+      it("short: usdc -> eth", async () => {
+        const {
+          user0,
+          account,
+          gmxV1,
+          weth,
+          usdc,
+          faucet,
+          executeIncreasePosition,
+          executeDecreasePosition,
+        } = await loadFixture(deploy);
 
-      const position = await account.getPosition(
-        gmxV1.target,
-        WETH,
-        WETH,
-        true
-      );
-      await account.createOrders(
-        [gmxV1.target],
-        [
-          {
-            orderType: orderType.decreasePosition,
-            collateral: WETH,
-            index: WETH,
-            collateralAmount: 0,
-            size: position.size,
-            isLong: true,
-          },
-        ],
         {
-          value: BigInt("180000000000000"),
+          await faucet(usdc.target, depositAmount);
+          const balance = await usdc.balanceOf(user0.address);
+          await usdc.approve(account.target, balance);
+          await account.deposit(usdc.target, balance);
+          expect(await account.getBalance(usdc.target)).to.equal(balance);
+
+          const order = await gmxV1.makePositionOrder(
+            usdc.target,
+            weth.target,
+            balance,
+            leverage,
+            false,
+            0,
+            0
+          );
+          expect(order.path[0]).to.equal(usdc.target);
+
+          await account.createOrders(
+            [gmxV1.target],
+            [
+              {
+                orderType: order.orderType,
+                path: [...order.path],
+                index: order.index,
+                collateralAmount: order.collateralAmount,
+                size: order.size,
+                isLong: order.isLong,
+              },
+            ],
+            {
+              value: minExecutionFee,
+            }
+          );
+          await executeIncreasePosition();
+          const position = await account.getPosition(
+            gmxV1.target,
+            order.path[order.path.length - 1],
+            order.index,
+            order.isLong
+          );
+          expect(position.size).to.equal(order.size);
+          console.log(`position: ${position}`);
         }
-      );
-      await executeDecreasePosition();
-      console.log(await account.getPosition(gmxV1.target, WETH, WETH, true));
+        {
+          await faucet(usdc.target, depositAmount);
+          const usdcBalance = await usdc.balanceOf(user0.address);
+          await usdc.approve(account.target, usdcBalance);
+          await account.deposit(usdc.target, usdcBalance);
+          expect(await account.getBalance(usdc.target)).to.equal(usdcBalance);
+
+          await account.createOrders(
+            [gmxV1.target],
+            [
+              {
+                orderType: orderType.increaseCollateral,
+                path: [usdc.target],
+                index: weth.target,
+                collateralAmount: usdcBalance,
+                size: 0,
+                isLong: false,
+              },
+            ],
+            {
+              value: minExecutionFee,
+            }
+          );
+          await executeIncreasePosition();
+          const position = await account.getPosition(
+            gmxV1.target,
+            usdc.target,
+            weth.target,
+            false
+          );
+          console.log(`position: ${position}`);
+        }
+        {
+          const collateralAmount = ethers.parseUnits("1000", 30);
+          await account.createOrders(
+            [gmxV1.target],
+            [
+              {
+                orderType: orderType.decreaseCollateral,
+                path: [usdc.target],
+                index: weth.target,
+                collateralAmount: collateralAmount,
+                size: 0,
+                isLong: false,
+              },
+            ],
+            {
+              value: minExecutionFee,
+            }
+          );
+          await executeDecreasePosition();
+          const position = await account.getPosition(
+            gmxV1.target,
+            usdc.target,
+            weth.target,
+            false
+          );
+          console.log(`position: ${position}`);
+        }
+        {
+          let position = await account.getPosition(
+            gmxV1.target,
+            usdc.target,
+            weth.target,
+            false
+          );
+          await account.createOrders(
+            [gmxV1.target],
+            [
+              {
+                orderType: orderType.decreasePosition,
+                path: [usdc.target],
+                index: weth.target,
+                collateralAmount: 0,
+                size: position.size,
+                isLong: false,
+              },
+            ],
+            {
+              value: minExecutionFee,
+            }
+          );
+          await executeDecreasePosition();
+          position = await account.getPosition(
+            gmxV1.target,
+            usdc.target,
+            weth.target,
+            false
+          );
+          console.log(`position: ${position}`);
+        }
+      });
+
+      it("short: wbtc -> eth", async () => {
+        const {
+          user0,
+          account,
+          gmxV1,
+          weth,
+          wbtc,
+          usdc,
+          faucet,
+          executeIncreasePosition,
+          executeDecreasePosition,
+        } = await loadFixture(deploy);
+
+        {
+          await faucet(wbtc.target, depositAmount);
+          const balance = await wbtc.balanceOf(user0.address);
+          await wbtc.approve(account.target, balance);
+          await account.deposit(wbtc.target, balance);
+          expect(await account.getBalance(wbtc.target)).to.equal(balance);
+
+          const order = await gmxV1.makePositionOrder(
+            wbtc.target,
+            weth.target,
+            balance,
+            leverage,
+            false,
+            0,
+            0
+          );
+          expect(order.path[0]).to.equal(wbtc.target);
+          expect(order.path[1]).to.equal(usdc.target);
+
+          await account.createOrders(
+            [gmxV1.target],
+            [
+              {
+                orderType: order.orderType,
+                path: [...order.path],
+                index: order.index,
+                collateralAmount: order.collateralAmount,
+                size: order.size,
+                isLong: order.isLong,
+              },
+            ],
+            {
+              value: minExecutionFee,
+            }
+          );
+          await executeIncreasePosition();
+          const position = await account.getPosition(
+            gmxV1.target,
+            order.path[order.path.length - 1],
+            order.index,
+            order.isLong
+          );
+          expect(position.size).to.equal(order.size);
+          console.log(`position: ${position}`);
+        }
+        {
+          await faucet(wbtc.target, depositAmount);
+          const balance = await wbtc.balanceOf(user0.address);
+          await wbtc.approve(account.target, balance);
+          await account.deposit(wbtc.target, balance);
+          expect(await account.getBalance(wbtc.target)).to.equal(balance);
+
+          await account.createOrders(
+            [gmxV1.target],
+            [
+              {
+                orderType: orderType.increaseCollateral,
+                path: [wbtc.target, usdc.target],
+                index: weth.target,
+                collateralAmount: balance,
+                size: 0,
+                isLong: false,
+              },
+            ],
+            {
+              value: minExecutionFee,
+            }
+          );
+          await executeIncreasePosition();
+          const position = await account.getPosition(
+            gmxV1.target,
+            usdc.target,
+            weth.target,
+            false
+          );
+          console.log(`position: ${position}`);
+        }
+        {
+          const collateralAmount = ethers.parseUnits("1000", 30);
+          await account.createOrders(
+            [gmxV1.target],
+            [
+              {
+                orderType: orderType.decreaseCollateral,
+                path: [usdc.target],
+                index: weth.target,
+                collateralAmount: collateralAmount,
+                size: 0,
+                isLong: false,
+              },
+            ],
+            {
+              value: minExecutionFee,
+            }
+          );
+          await executeDecreasePosition();
+          const position = await account.getPosition(
+            gmxV1.target,
+            usdc.target,
+            weth.target,
+            false
+          );
+          console.log(`position: ${position}`);
+        }
+        {
+          let position = await account.getPosition(
+            gmxV1.target,
+            usdc.target,
+            weth.target,
+            false
+          );
+          await account.createOrders(
+            [gmxV1.target],
+            [
+              {
+                orderType: orderType.decreasePosition,
+                path: [usdc.target],
+                index: weth.target,
+                collateralAmount: 0,
+                size: position.size,
+                isLong: false,
+              },
+            ],
+            {
+              value: minExecutionFee,
+            }
+          );
+          await executeDecreasePosition();
+          position = await account.getPosition(
+            gmxV1.target,
+            usdc.target,
+            weth.target,
+            false
+          );
+          console.log(`position: ${position}`);
+        }
+      });
     });
+  });
 
+  describe("mux", () => {
     it("mux", async () => {
       const wethPrice = ethers.parseUnits("2000", 18);
 
@@ -230,7 +735,7 @@ describe("Account", async () => {
       });
       console.log(await account.getBalance(ethers.ZeroAddress));
 
-      const muxOrder = await mux.makeOrder(
+      const muxOrder = await mux.makePositionOrder(
         WETH,
         WETH,
         collateralAmount,

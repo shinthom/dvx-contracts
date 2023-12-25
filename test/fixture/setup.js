@@ -12,8 +12,8 @@ const OrderBook = "0xa19fD5aB6C8DCffa2A295F78a5Bb4aC543AAF5e3";
 const LiquidityPool = "0x3e0199792ce69dc29a0a36146bfa68bd7c8d6633";
 
 // token contracts
-const WETH = "0x82af49447d8a07e3bd95bd0d56f35241523fbab1";
-const USDC = "0xaf88d065e77c8cc2239327c5edb3a432268e5831";
+const WETH = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1";
+const USDC = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
 const WBTC = "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f";
 
 let user0;
@@ -67,16 +67,6 @@ const deploy = async () => {
   wbtc = await ethers.getContractAt("IERC20", WBTC);
 
   // deploy
-  gmxV1 = await ethers.deployContract("GMXV1", [
-    PositionRouter,
-    Router,
-    Vault,
-    SwapRouter,
-  ]);
-  mux = await ethers.deployContract("MUX", [OrderBook, LiquidityPool]);
-  quoter = await ethers.deployContract("Quoter", [[gmxV1.target, mux.target]]);
-  reader = await ethers.deployContract("Reader");
-
   const exchangeImpl = await ethers.deployContract("Exchange");
   const proxy = await ethers.deployContract("ERC1967Proxy", [
     exchangeImpl.target,
@@ -84,7 +74,16 @@ const deploy = async () => {
   ]);
   exchange = await ethers.getContractAt("Exchange", proxy.target);
   await exchange.initialize(SwapRouter);
-
+  gmxV1 = await ethers.deployContract("GMXV1", [
+    PositionRouter,
+    Router,
+    Vault,
+    SwapRouter,
+    exchange.target,
+  ]);
+  mux = await ethers.deployContract("MUX", [OrderBook, LiquidityPool]);
+  quoter = await ethers.deployContract("Quoter", [[gmxV1.target, mux.target]]);
+  reader = await ethers.deployContract("Reader");
   positionRouter = await ethers.deployContract("PositionRouter", [
     exchange.target,
   ]);
