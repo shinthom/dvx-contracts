@@ -1,4 +1,8 @@
 const { ethers } = require("hardhat");
+const { expect } = require("chai");
+
+const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
+const { deploy } = require("../fixture/setup");
 
 describe("GMXV1", () => {
   // gmx contracts
@@ -121,7 +125,7 @@ describe("GMXV1", () => {
 
   describe("make order", () => {
     it("eth -> eth", async () => {
-      const order = await gmxV1.makeOrder(
+      const order = await gmxV1.makePositionOrder(
         WETH,
         WETH,
         ethers.parseEther("1"),
@@ -134,7 +138,7 @@ describe("GMXV1", () => {
     });
 
     it("usdc -> eth", async () => {
-      const order = await gmxV1.makeOrder(
+      const order = await gmxV1.makePositionOrder(
         USDC,
         WETH,
         ethers.parseUnits("100", 6),
@@ -147,7 +151,7 @@ describe("GMXV1", () => {
     });
 
     it("wbtc -> eth", async () => {
-      const order = await gmxV1.makeOrder(
+      const order = await gmxV1.makePositionOrder(
         WBTC,
         WETH,
         ethers.parseUnits("1", 8),
@@ -160,7 +164,7 @@ describe("GMXV1", () => {
     });
 
     it("eth -> wbtc", async () => {
-      const order = await gmxV1.makeOrder(
+      const order = await gmxV1.makePositionOrder(
         WETH,
         WBTC,
         ethers.parseEther("1"),
@@ -173,7 +177,7 @@ describe("GMXV1", () => {
     });
 
     it("usdc -> wbtc", async () => {
-      const order = await gmxV1.makeOrder(
+      const order = await gmxV1.makePositionOrder(
         USDC,
         WBTC,
         ethers.parseUnits("100", 6),
@@ -186,7 +190,7 @@ describe("GMXV1", () => {
     });
 
     it("wbtc -> wbtc", async () => {
-      const order = await gmxV1.makeOrder(
+      const order = await gmxV1.makePositionOrder(
         WBTC,
         WETH,
         ethers.parseUnits("1", 8),

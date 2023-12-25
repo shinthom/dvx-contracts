@@ -115,7 +115,7 @@ describe("MUX", () => {
       const collateralPrice = 2000n;
       const indexPrice = 2000n;
 
-      const order = await mux.makeOrder(
+      const order = await mux.makePositionOrder(
         WETH,
         WETH,
         ethers.parseEther("1"),
@@ -131,7 +131,7 @@ describe("MUX", () => {
       const collateralPrice = 1n;
       const indexPrice = 2000n;
 
-      const order = await mux.makeOrder(
+      const order = await mux.makePositionOrder(
         USDC,
         WETH,
         ethers.parseUnits("100", 6),
@@ -147,7 +147,7 @@ describe("MUX", () => {
       const collateralPrice = 40000n;
       const indexPrice = 2000n;
 
-      const order = await mux.makeOrder(
+      const order = await mux.makePositionOrder(
         WBTC,
         WETH,
         ethers.parseUnits("1", 8),
@@ -163,7 +163,7 @@ describe("MUX", () => {
       const collateralPrice = 2000n;
       const indexPrice = 40000n;
 
-      const order = await mux.makeOrder(
+      const order = await mux.makePositionOrder(
         WETH,
         WBTC,
         ethers.parseEther("1"),
@@ -179,7 +179,7 @@ describe("MUX", () => {
       const collateralPrice = 1n;
       const indexPrice = 40000n;
 
-      const order = await mux.makeOrder(
+      const order = await mux.makePositionOrder(
         USDC,
         WBTC,
         ethers.parseUnits("100", 6),
@@ -195,7 +195,7 @@ describe("MUX", () => {
       const collateralPrice = 40000n;
       const indexPrice = 40000n;
 
-      const order = await mux.makeOrder(
+      const order = await mux.makePositionOrder(
         WBTC,
         WBTC,
         ethers.parseUnits("1", 8),

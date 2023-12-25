@@ -49,14 +49,14 @@ async function main() {
     isLong,
     description
   ) => {
-    const gmxOrder = await gmxV1.makeOrder(
+    const gmxOrder = await gmxV1.makePositionOrder(
       collateral,
       index,
       collateralAmount / 2n,
       leverage,
       isLong
     );
-    const muxOrder = await mux.makeOrder(
+    const muxOrder = await mux.makePositionOrder(
       collateral,
       index,
       collateralAmount / 2n,

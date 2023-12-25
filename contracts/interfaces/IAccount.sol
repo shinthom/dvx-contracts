@@ -6,7 +6,7 @@ import "./IExchange.sol";
 interface IAccount {
     event Deposited(address indexed account, address indexed token, uint256 amount);
     event Withdrawn(address indexed account, address indexed token, uint256 amount);
-    event OrderCreated(address indexed account, address indexed exchange, IExchange.Order order);
+    event OrderCreated(address indexed account, address indexed exchange, IExchange.PositionOrder order);
 
     function getBalance(address token) external view returns (uint256);
 
@@ -15,7 +15,7 @@ interface IAccount {
 
     function createOrders(
         address[] calldata adapters,
-        IExchange.Order[] calldata orders
+        IExchange.PositionOrder[] calldata orders
     ) payable external;
 
     function swap(
