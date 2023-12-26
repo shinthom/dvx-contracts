@@ -7,6 +7,7 @@
     "compile": "hardhat compile",
     "deploy": "hardhat run scripts/deploy-testnet.js --network local",
     "deposit": "hardhat run scripts/deposit-testnet.js --network local",
+    "open-positions": "hardhat run scripts/open-positions-testnet.js --network local",
     "test": "hardhat test --network local",
     "test-account": "hardhat test test/Account.test.js --network local",
     "test-gmx-v1": "hardhat test test/adapters/GMXV1.test.js --network local",

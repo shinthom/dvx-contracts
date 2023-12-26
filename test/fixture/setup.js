@@ -38,7 +38,7 @@ let quoter;
 let reader;
 let account;
 
-const deploy = async () => {
+const deploy = async (noAccount) => {
   // accounts
   [user0] = await ethers.getSigners();
   impersonatedAdmin = await ethers.getImpersonatedSigner(
@@ -86,11 +86,13 @@ const deploy = async () => {
   quoter = await ethers.deployContract("Quoter");
   reader = await ethers.deployContract("Reader");
 
-  await exchange.connect(user0).createAccount();
-  account = await ethers.getContractAt(
-    "Account",
-    await exchange.account(user0.address)
-  );
+  if (!noAccount) {
+    await exchange.connect(user0).createAccount();
+    account = await ethers.getContractAt(
+      "Account",
+      await exchange.account(user0.address)
+    );
+  }
 
   const faucet = async (tokenAddress, tokenIn) => {
     await exchange.swap(ethers.ZeroAddress, tokenAddress, tokenIn, {
