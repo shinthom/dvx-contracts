@@ -27,7 +27,7 @@ let weth;
 let usdc;
 let wbtc;
 
-let gmxPositionRouter;
+let positionRouter;
 let orderBook;
 
 let gmxV1;
@@ -36,7 +36,6 @@ let exchange;
 let quoter;
 let reader;
 let account;
-let positionRouter;
 
 const deploy = async () => {
   // accounts
@@ -51,15 +50,15 @@ const deploy = async () => {
     "0x988aa44e12c7bce07e449a4156b4a269d6642b3a" // mux broker
   );
 
-  gmxPositionRouter = await ethers.getContractAt(
+  positionRouter = await ethers.getContractAt(
     // gmx position router
     "IPositionRouter",
     PositionRouter
   );
-  await gmxPositionRouter
+  await positionRouter
     .connect(impersonatedAdmin)
     .setPositionKeeper(impersonatedPositionKeeper.address, true); // execution reverted: 403
-  await gmxPositionRouter.connect(impersonatedAdmin).setDelayValues(0, 0, 100); // execution reverted: delay
+  await positionRouter.connect(impersonatedAdmin).setDelayValues(0, 0, 100); // execution reverted: delay
   orderBook = await ethers.getContractAt("IOrderBook", OrderBook); // mux order book
 
   weth = await ethers.getContractAt("IERC20", WETH);
@@ -82,11 +81,9 @@ const deploy = async () => {
     exchange.target,
   ]);
   mux = await ethers.deployContract("MUX", [OrderBook, LiquidityPool]);
-  quoter = await ethers.deployContract("Quoter", [[gmxV1.target, mux.target]]);
+  quoter = await ethers.deployContract("Quoter");
   reader = await ethers.deployContract("Reader");
-  positionRouter = await ethers.deployContract("PositionRouter", [
-    exchange.target,
-  ]);
+
   await exchange.connect(user0).createAccount();
   account = await ethers.getContractAt(
     "Account",
@@ -107,25 +104,27 @@ const deploy = async () => {
   };
 
   const executeIncreasePosition = async () => {
-    const increasePositionsIndex =
-      await gmxPositionRouter.increasePositionsIndex(account.target);
-    const requestKey = await gmxPositionRouter.getRequestKey(
+    const increasePositionsIndex = await positionRouter.increasePositionsIndex(
+      account.target
+    );
+    const requestKey = await positionRouter.getRequestKey(
       account.target,
       increasePositionsIndex
     );
-    await gmxPositionRouter
+    await positionRouter
       .connect(impersonatedPositionKeeper)
       .executeIncreasePosition(requestKey, user0.address);
   };
 
   const executeDecreasePosition = async () => {
-    const decreasePositionsIndex =
-      await gmxPositionRouter.decreasePositionsIndex(account.target);
-    const requestKey = await gmxPositionRouter.getRequestKey(
+    const decreasePositionsIndex = await positionRouter.decreasePositionsIndex(
+      account.target
+    );
+    const requestKey = await positionRouter.getRequestKey(
       account.target,
       decreasePositionsIndex
     );
-    await gmxPositionRouter
+    await positionRouter
       .connect(impersonatedPositionKeeper)
       .executeDecreasePosition(requestKey, user0.address);
   };
@@ -155,7 +154,7 @@ const deploy = async () => {
     impersonatedAdmin,
     impersonatedPositionKeeper,
     impersonatedBroker,
-    gmxPositionRouter,
+    positionRouter,
     orderBook,
     weth,
     usdc,
@@ -166,7 +165,6 @@ const deploy = async () => {
     quoter,
     reader,
     account,
-    positionRouter,
     tokens: {
       WETH,
       USDC,
