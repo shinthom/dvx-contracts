@@ -38,7 +38,7 @@ contract GMXV1 is IAdapter {
         _exchange = exchange;
     }
 
-    function priceDecimals() override public pure returns (uint256) {
+    function getPriceDecimals() override public pure returns (uint256) {
         return PRICE_DECIMALS;
     }
 

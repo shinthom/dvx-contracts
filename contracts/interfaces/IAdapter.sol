@@ -13,7 +13,7 @@ interface IAdapter {
         bool isLong;
     }
 
-    function priceDecimals() external view returns (uint256);
+    function getPriceDecimals() external view returns (uint256);
 
     function getPrice(
         address collateral,

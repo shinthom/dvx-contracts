@@ -5,6 +5,8 @@ import "./interfaces/IAdapter.sol";
 import "./interfaces/IExchange.sol";
 
 contract Quoter {
+    uint256 public constant PRICE_DECIMAL = 2;
+
     struct Order {
         address collateral;
         address index;
@@ -84,6 +86,13 @@ contract Quoter {
 
             // todo: get collateral amount (need to swap)
             // fee += adapter.getDepositFee(collateral, );
+        }
+
+        uint256 priceDecimals = adapter.getPriceDecimals();
+        if (priceDecimals > PRICE_DECIMAL) {
+            fee = fee / (10 ** (priceDecimals - PRICE_DECIMAL));
+        } else {
+            fee = fee * (10 ** (PRICE_DECIMAL - priceDecimals));
         }
     }
 

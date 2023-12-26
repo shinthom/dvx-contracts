@@ -25,7 +25,7 @@ contract MUX is IAdapter {
         _liquidityPool = liquidityPool;
     }
 
-    function priceDecimals() override public pure returns (uint256) {
+    function getPriceDecimals() override public pure returns (uint256) {
         return PRICE_DECIMALS;
     }
 
