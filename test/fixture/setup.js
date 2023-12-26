@@ -27,6 +27,7 @@ let weth;
 let usdc;
 let wbtc;
 
+let vault;
 let positionRouter;
 let orderBook;
 
@@ -50,6 +51,7 @@ const deploy = async () => {
     "0x988aa44e12c7bce07e449a4156b4a269d6642b3a" // mux broker
   );
 
+  vault = await ethers.getContractAt("IVault", Vault);
   positionRouter = await ethers.getContractAt(
     // gmx position router
     "IPositionRouter",
@@ -103,12 +105,12 @@ const deploy = async () => {
     await gmxV1.swap(from, to, fromAmount);
   };
 
-  const executeIncreasePosition = async () => {
+  const executeIncreasePosition = async (account) => {
     const increasePositionsIndex = await positionRouter.increasePositionsIndex(
-      account.target
+      account
     );
     const requestKey = await positionRouter.getRequestKey(
-      account.target,
+      account,
       increasePositionsIndex
     );
     await positionRouter
@@ -116,12 +118,12 @@ const deploy = async () => {
       .executeIncreasePosition(requestKey, user0.address);
   };
 
-  const executeDecreasePosition = async () => {
+  const executeDecreasePosition = async (account) => {
     const decreasePositionsIndex = await positionRouter.decreasePositionsIndex(
-      account.target
+      account
     );
     const requestKey = await positionRouter.getRequestKey(
-      account.target,
+      account,
       decreasePositionsIndex
     );
     await positionRouter
@@ -149,11 +151,52 @@ const deploy = async () => {
     );
   };
 
+  const increaseTime = async (seconds) => {
+    await hre.network.provider.request({
+      method: "evm_increaseTime",
+      params: [seconds],
+    });
+  };
+
+  const updateCumulativeFundingRate = async (collateral) => {
+    const seconds = 60 * 60 * 8; // 8 hours
+    await increaseTime(seconds);
+
+    const beforeFundingRate = await vault.cumulativeFundingRates(collateral);
+    await vault.updateCumulativeFundingRate(collateral);
+    const afterFundingRate = await vault.cumulativeFundingRates(collateral);
+    console.log(`\nfundingRate is updated: ${beforeFundingRate} -> ${afterFundingRate}\n`) // prettier-ignore
+  };
+
+  const updateFundingState = async () => {
+    const seconds = 60 * 60; // 1 hour
+    await increaseTime(seconds);
+
+    // https://arbiscan.io/tx/0xb7247660ad4932af989002906e412b95db834336cd0e10c2aaa39e222ef2eab3
+    await orderBook
+      .connect(impersonatedBroker)
+      .updateFundingState(
+        6669,
+        [3, 4, 5, 6, 7, 9, 10],
+        [25598, 55672, 99861, 1399, 99893, 52691, 86066],
+        [
+          2241900000000000000000n,
+          42781000000000000000000n,
+          46096000000000000000n,
+          272630000000000000000n,
+          541450000000000000n,
+          3272400000000000000n,
+          1333900000000000000n,
+        ]
+      );
+  };
+
   return {
     user0,
     impersonatedAdmin,
     impersonatedPositionKeeper,
     impersonatedBroker,
+    vault,
     positionRouter,
     orderBook,
     weth,
@@ -176,6 +219,8 @@ const deploy = async () => {
     executeDecreasePosition,
     fillPositionOrder,
     fillWithdrawalOrder,
+    updateCumulativeFundingRate,
+    updateFundingState,
   };
 };
 

@@ -6,7 +6,6 @@ import "../interfaces/exchanges/MUX/IOrderBook.sol";
 import "../interfaces/tokens/IERC20.sol";
 import "../interfaces/IAdapter.sol";
 import "../interfaces/IExchange.sol";
-import "hardhat/console.sol";
 
 contract MUX is IAdapter {
     address constant private WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
@@ -94,7 +93,7 @@ contract MUX is IAdapter {
         address /* collateral */,
         address index,
         uint256 size,
-        uint256 entryFundingRate,
+        uint256 fundingRate,
         bool isLong,
         uint256 indexPrice
     ) override public view returns (uint256) {
@@ -103,10 +102,10 @@ contract MUX is IAdapter {
 
         uint256 cumulativeFunding;
         if (isLong) {
-            cumulativeFunding = asset.longCumulativeFundingRate - entryFundingRate;
+            cumulativeFunding = asset.longCumulativeFundingRate - fundingRate;
             cumulativeFunding = cumulativeFunding * indexPrice;
         } else {
-            cumulativeFunding = asset.shortCumulativeFunding - entryFundingRate;
+            cumulativeFunding = asset.shortCumulativeFunding - fundingRate;
         }
 
         return cumulativeFunding * size;

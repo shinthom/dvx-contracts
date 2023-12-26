@@ -50,4 +50,11 @@ interface IOrderBook {
         uint96 assetPrice,
         uint96 profitAssetPrice // only used when !isLong
     ) external;
+
+    function updateFundingState(
+        uint32 stableUtilization, // 1e5
+        uint8[] calldata unstableTokenIds,
+        uint32[] calldata unstableUtilizations, // 1e5
+        uint96[] calldata unstablePrices
+    ) external;
 }

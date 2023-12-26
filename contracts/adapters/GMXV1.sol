@@ -198,7 +198,7 @@ contract GMXV1 is IAdapter {
         address collateral,
         address /* index */,
         uint256 size,
-        uint256 entryFundingRate,
+        uint256 fundingRate,
         bool /* isLong */,
         uint256 /* indexPrice */
     ) override public view returns (uint256) {
@@ -209,7 +209,7 @@ contract GMXV1 is IAdapter {
         return IVault(_vault).getFundingFee(
             collateral,
             size,
-            entryFundingRate
+            fundingRate
         );
     }
 

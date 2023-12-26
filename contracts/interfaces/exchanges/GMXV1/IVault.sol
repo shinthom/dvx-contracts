@@ -48,4 +48,6 @@ interface IVault {
     function marginFeeBasisPoints() external view returns (uint256);
 
     function tokenToUsdMin(address _token, uint256 _tokenAmount) external view returns (uint256);
+
+    function updateCumulativeFundingRate(address _collateralToken) external;
 }

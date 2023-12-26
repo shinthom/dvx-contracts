@@ -121,7 +121,7 @@ async function main() {
         value: collateral == WETH ? muxOrder.collateralAmount : 0,
       }
     );
-    await executeIncreasePosition();
+    await executeIncreasePosition(account.target);
     await fillPositionOrder();
 
     const gmxV1Position = await gmxV1.getPosition(account.target, isLong ? index : USDC, index, isLong); // prettier-ignore

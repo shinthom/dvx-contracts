@@ -1,17 +1,9 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
-
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 const { deploy } = require("../fixture/setup");
 
 describe("GMXV1", () => {
-  // gmx contracts
-  const PositionRouter = "0xb87a436b93ffe9d75c5cfa7bacfff96430b09868";
-  const Router = "0xabbc5f99639c9b6bcb58544ddf04efa6802f4064";
-  const Vault = "0x489ee077994b6658eafa855c308275ead8097c4a";
-  // uniswap
-  const SwapRouter = "0xE592427A0AEce92De3Edee1F18E0157C05861564";
-
   // token contracts
   const WETH = "0x82af49447d8a07e3bd95bd0d56f35241523fbab1";
   const USDC = "0xaf88d065e77c8cc2239327c5edb3a432268e5831";
@@ -19,67 +11,9 @@ describe("GMXV1", () => {
 
   const fee = BigInt("180000000000000");
 
-  // signers
-  let user0;
-  let impersonatedAdmin;
-
-  // contracts
-  let gmxV1;
-  let positionRouter;
-  let weth;
-  let usdc;
-
-  const executeIncreasePosition = async () => {
-    const increasePositionsIndex = await positionRouter.increasePositionsIndex(
-      gmxV1.target
-    );
-    const requestKey = await positionRouter.getRequestKey(
-      gmxV1.target,
-      increasePositionsIndex
-    );
-    await gmxV1.executeIncreasePosition(requestKey, user0.address);
-  };
-
-  const executeDecreasePosition = async () => {
-    const decreasePositionsIndex = await positionRouter.decreasePositionsIndex(
-      gmxV1.target
-    );
-    const requestKey = await positionRouter.getRequestKey(
-      gmxV1.target,
-      decreasePositionsIndex
-    );
-    await gmxV1.executeDecreasePosition(requestKey, user0.address);
-  };
-
-  before(async () => {
-    [user0] = await ethers.getSigners();
-    impersonatedAdmin = await ethers.getImpersonatedSigner(
-      "0xb4d2603b2494103c90b2c607261dd85484b49ef0" // gmx admin
-    );
-
-    positionRouter = await ethers.getContractAt(
-      "IPositionRouter",
-      PositionRouter
-    );
-    // execution reverted: delay
-    await positionRouter.connect(impersonatedAdmin).setDelayValues(0, 0, 100);
-
-    weth = await ethers.getContractAt("IERC20", WETH);
-    usdc = await ethers.getContractAt("IERC20", USDC);
-    wbtc = await ethers.getContractAt("IERC20", WBTC);
-  });
-
-  beforeEach(async () => {
-    gmxV1 = await ethers.deployContract("GMXV1", [
-      PositionRouter,
-      Router,
-      Vault,
-      SwapRouter,
-    ]);
-  });
-
   describe("values", () => {
     it("price", async () => {
+      const { gmxV1 } = await loadFixture(deploy);
       console.log(await gmxV1.getPrice(WETH, 0, true));
       console.log(await gmxV1.getPrice(WETH, 0, false));
       console.log(await gmxV1.getPrice(WBTC, 0, true));
@@ -89,42 +23,248 @@ describe("GMXV1", () => {
     });
 
     it("deposit fee", async () => {
-      const collateralAmount = ethers.parseEther("1");
-      console.log(await gmxV1.getDepositFee(WETH, collateralAmount));
+      const { gmxV1, weth, executeIncreasePosition } = await loadFixture(
+        deploy
+      );
+      const positionOrder = await gmxV1.makePositionOrder(
+        weth.target,
+        weth.target,
+        ethers.parseEther("1"),
+        10n,
+        true,
+        0,
+        0
+      );
+      {
+        expect(
+          await gmxV1.getDepositFee(gmxV1.target, {
+            orderType: positionOrder.orderType,
+            path: [...positionOrder.path],
+            index: positionOrder.index,
+            collateralAmount: positionOrder.collateralAmount,
+            size: positionOrder.size,
+            isLong: positionOrder.isLong,
+          })
+        ).to.be.equal(0);
+      }
+      await gmxV1.increasePosition(
+        [...positionOrder.path],
+        positionOrder.index,
+        positionOrder.collateralAmount,
+        positionOrder.size,
+        positionOrder.isLong,
+        {
+          value: positionOrder.collateralAmount + fee,
+        }
+      );
+      await executeIncreasePosition(gmxV1.target);
+      {
+        expect(
+          await gmxV1.getDepositFee(gmxV1.target, {
+            orderType: positionOrder.orderType,
+            path: [...positionOrder.path],
+            index: positionOrder.index,
+            collateralAmount: positionOrder.collateralAmount,
+            size: positionOrder.size,
+            isLong: positionOrder.isLong,
+          })
+        ).to.be.equal(0);
+      }
+      {
+        const collateralAmount = positionOrder.collateralAmount * 2n;
+        expect(
+          await gmxV1.getDepositFee(gmxV1.target, {
+            orderType: positionOrder.orderType,
+            path: [...positionOrder.path],
+            index: positionOrder.index,
+            collateralAmount: collateralAmount,
+            size: positionOrder.size,
+            isLong: positionOrder.isLong,
+          })
+        ).to.be.gt(0n);
+      }
     });
 
     it("position fee", async () => {
-      const size = ethers.parseUnits("1000", 30);
-      console.log(
-        await gmxV1.getPositionFee(
-          ethers.ZeroAddress,
-          ethers.ZeroAddress,
-          0,
-          size
-        )
+      const { gmxV1, weth, executeIncreasePosition } = await loadFixture(
+        deploy
       );
+      const positionOrder = await gmxV1.makePositionOrder(
+        weth.target,
+        weth.target,
+        ethers.parseEther("1"),
+        10n,
+        true,
+        0,
+        0
+      );
+      await gmxV1.increasePosition(
+        [...positionOrder.path],
+        positionOrder.index,
+        positionOrder.collateralAmount,
+        positionOrder.size,
+        positionOrder.isLong,
+        {
+          value: positionOrder.collateralAmount + fee,
+        }
+      );
+      await executeIncreasePosition(gmxV1.target);
+
+      const position = await gmxV1.getPosition(
+        gmxV1.target,
+        weth.target,
+        weth.target,
+        true
+      );
+
+      const price = await gmxV1.getPrice(weth.target, 0, false);
+      const collateralAmountUsd =
+        (price * positionOrder.collateralAmount) / 10n ** 18n;
+      const positionFee = await gmxV1.getPositionFee(
+        ethers.ZeroAddress,
+        0,
+        positionOrder.size
+      );
+      console.log(`positionOrder.size: ${positionOrder.size}`);
+      console.log(`collateralAmountUsd - position.collateralAmount: ${collateralAmountUsd - position.collateralAmount}`); // prettier-ignore
+      console.log(`positionFee: ${positionFee}`);
     });
 
     it("funding fee", async () => {
-      // todo: update global funding rate
+      const {
+        vault,
+        gmxV1,
+        weth,
+        usdc,
+        faucet,
+        executeIncreasePosition,
+        updateCumulativeFundingRate,
+      } = await loadFixture(deploy);
+      {
+        const beforePoolAmount = await vault.poolAmounts(weth.target);
+        const positionOrder = await gmxV1.makePositionOrder(
+          weth.target,
+          weth.target,
+          ethers.parseEther("1"),
+          5n,
+          true,
+          0,
+          0
+        );
+        await gmxV1.increasePosition(
+          [...positionOrder.path],
+          positionOrder.index,
+          positionOrder.collateralAmount,
+          positionOrder.size,
+          positionOrder.isLong,
+          {
+            value: positionOrder.collateralAmount + fee,
+          }
+        );
+        await executeIncreasePosition(gmxV1.target);
+        const position = await gmxV1.getPosition(
+          gmxV1.target,
+          weth.target,
+          weth.target,
+          true
+        );
+        console.log(`position: ${position}`);
+        const afterPoolAmount = await vault.poolAmounts(weth.target);
+        expect(afterPoolAmount).to.be.gt(beforePoolAmount);
 
-      const entryFundingRate = 730975n;
-      const size = ethers.parseUnits("1000", 30);
-      console.log(
-        await gmxV1.getFundingFee(
-          WETH,
+        expect(
+          await gmxV1.getFundingFee(
+            weth.target,
+            ethers.ZeroAddress,
+            position.size,
+            position.fundingRate,
+            true,
+            0
+          )
+        ).to.be.equal(0n);
+
+        await updateCumulativeFundingRate(weth.target);
+        expect(
+          await gmxV1.getFundingFee(
+            weth.target,
+            ethers.ZeroAddress,
+            position.size,
+            position.fundingRate,
+            true,
+            0
+          )
+        ).to.be.gt(0n);
+      }
+      {
+        await faucet(usdc.target, ethers.parseEther("10"));
+        await usdc.transfer(gmxV1.target, ethers.parseUnits("100", 6));
+        const beforePoolAmount = await vault.poolAmounts(usdc.target);
+        const positionOrder = await gmxV1.makePositionOrder(
+          usdc.target,
+          weth.target,
+          ethers.parseUnits("100", 6),
+          5n,
+          false,
+          0,
+          0
+        );
+        await gmxV1.increasePosition(
+          [...positionOrder.path],
+          positionOrder.index,
+          positionOrder.collateralAmount,
+          positionOrder.size,
+          positionOrder.isLong,
+          {
+            value: fee,
+          }
+        );
+        await executeIncreasePosition(gmxV1.target);
+        const position = await gmxV1.getPosition(
+          gmxV1.target,
+          usdc.target,
+          weth.target,
+          false
+        );
+        console.log(`position: ${position}`);
+        const afterPoolAmount = await vault.poolAmounts(usdc.target);
+        expect(afterPoolAmount).to.be.equal(beforePoolAmount);
+
+        expect(
+          await gmxV1.getFundingFee(
+            usdc.target,
+            ethers.ZeroAddress,
+            position.size,
+            position.fundingRate,
+            false,
+            0
+          )
+        ).to.be.equal(0n);
+        await updateCumulativeFundingRate(usdc.target);
+        const fundingFee = await gmxV1.getFundingFee(
+          usdc.target,
           ethers.ZeroAddress,
-          size,
-          entryFundingRate,
+          position.size,
+          position.fundingRate,
           false,
           0
-        )
-      );
+        );
+        expect(
+          await gmxV1.getFundingFee(
+            usdc.target,
+            ethers.ZeroAddress,
+            position.size,
+            position.fundingRate,
+            false,
+            0
+          )
+        ).to.be.gt(0n);
+      }
     });
   });
 
   describe("make order", () => {
     it("eth -> eth", async () => {
+      const { gmxV1 } = await loadFixture(deploy);
       const order = await gmxV1.makePositionOrder(
         WETH,
         WETH,
@@ -138,6 +278,7 @@ describe("GMXV1", () => {
     });
 
     it("usdc -> eth", async () => {
+      const { gmxV1 } = await loadFixture(deploy);
       const order = await gmxV1.makePositionOrder(
         USDC,
         WETH,
@@ -151,6 +292,7 @@ describe("GMXV1", () => {
     });
 
     it("wbtc -> eth", async () => {
+      const { gmxV1 } = await loadFixture(deploy);
       const order = await gmxV1.makePositionOrder(
         WBTC,
         WETH,
@@ -164,6 +306,7 @@ describe("GMXV1", () => {
     });
 
     it("eth -> wbtc", async () => {
+      const { gmxV1 } = await loadFixture(deploy);
       const order = await gmxV1.makePositionOrder(
         WETH,
         WBTC,
@@ -177,6 +320,7 @@ describe("GMXV1", () => {
     });
 
     it("usdc -> wbtc", async () => {
+      const { gmxV1 } = await loadFixture(deploy);
       const order = await gmxV1.makePositionOrder(
         USDC,
         WBTC,
@@ -190,6 +334,7 @@ describe("GMXV1", () => {
     });
 
     it("wbtc -> wbtc", async () => {
+      const { gmxV1 } = await loadFixture(deploy);
       const order = await gmxV1.makePositionOrder(
         WBTC,
         WETH,
@@ -200,256 +345,6 @@ describe("GMXV1", () => {
         0
       );
       console.log(order);
-    });
-  });
-
-  describe("long", () => {
-    const long = true;
-
-    const collateral = WETH;
-    const index = WETH;
-    const collateralAmount = ethers.parseEther("1");
-    const size = ethers.parseUnits("6000", 30);
-
-    beforeEach(async () => {
-      await weth.deposit({ value: collateralAmount });
-      await weth.transfer(gmxV1.target, collateralAmount);
-    });
-
-    it("increase position", async () => {
-      await gmxV1.increasePosition(
-        collateral,
-        index,
-        collateralAmount,
-        size,
-        long,
-        {
-          value: fee + collateralAmount,
-        }
-      );
-      await executeIncreasePosition();
-
-      const position = await gmxV1.getPosition(gmxV1.target, WETH, WETH, long);
-      console.log(`position: ${position}`);
-    });
-
-    describe("after increase position", () => {
-      beforeEach(async () => {
-        await gmxV1.increasePosition(
-          collateral,
-          index,
-          collateralAmount,
-          size,
-          long,
-          {
-            value: fee + collateralAmount,
-          }
-        );
-        await executeIncreasePosition();
-
-        const position = await gmxV1.getPosition(
-          gmxV1.target,
-          WETH,
-          WETH,
-          long
-        );
-        console.log(`position: ${position}`);
-      });
-
-      it("decrease position (1/2)", async () => {
-        await gmxV1.decreasePosition(collateral, index, size / 2n, long, {
-          value: fee,
-        });
-        await executeDecreasePosition();
-
-        const position = await gmxV1.getPosition(
-          gmxV1.target,
-          WETH,
-          WETH,
-          long
-        );
-        console.log(`position: ${position}`);
-      });
-
-      it("decrease position (2/2)", async () => {
-        await gmxV1.decreasePosition(collateral, index, size, long, {
-          value: fee,
-        });
-        await executeDecreasePosition();
-
-        const position = await gmxV1.getPosition(
-          gmxV1.target,
-          WETH,
-          WETH,
-          long
-        );
-        console.log(`position: ${position}`);
-      });
-
-      it("increase collateral", async () => {
-        await gmxV1.increaseCollateral(
-          collateral,
-          index,
-          collateralAmount,
-          long,
-          {
-            value: fee + collateralAmount,
-          }
-        );
-        await executeIncreasePosition();
-
-        const position = await gmxV1.getPosition(
-          gmxV1.target,
-          WETH,
-          WETH,
-          long
-        );
-        console.log(`position: ${position}`);
-      });
-
-      it("decrease collateral", async () => {
-        const amountUsd = ethers.parseUnits("1000", 30);
-        await gmxV1.decreaseCollateral(collateral, index, amountUsd, long, {
-          value: fee,
-        });
-        await executeDecreasePosition();
-
-        const position = await gmxV1.getPosition(
-          gmxV1.target,
-          WETH,
-          WETH,
-          long
-        );
-        console.log(`position: ${position}`);
-      });
-    });
-  });
-
-  describe("short", () => {
-    const short = false;
-
-    const collateral = USDC;
-    const index = WETH;
-
-    const collateralAmount = ethers.parseUnits("600", 6);
-    const size = ethers.parseUnits("6000", 30);
-
-    beforeEach(async () => {
-      const depositAmount = ethers.parseEther("10");
-      await weth.deposit({ value: depositAmount });
-      await weth.transfer(gmxV1.target, depositAmount);
-
-      await gmxV1.swap(WETH, USDC, depositAmount);
-      await usdc.transfer(gmxV1.target, collateralAmount);
-    });
-
-    it("increase position", async () => {
-      await gmxV1.increasePosition(
-        collateral,
-        index,
-        collateralAmount,
-        size,
-        short,
-        {
-          value: fee,
-        }
-      );
-      await executeIncreasePosition();
-
-      const position = await gmxV1.getPosition(gmxV1.target, USDC, WETH, short);
-      console.log(`position: ${position}`);
-    });
-
-    describe("after increase position", () => {
-      beforeEach(async () => {
-        await gmxV1.increasePosition(
-          collateral,
-          index,
-          collateralAmount,
-          size,
-          short,
-          {
-            value: fee,
-          }
-        );
-        await executeIncreasePosition();
-
-        const position = await gmxV1.getPosition(
-          gmxV1.target,
-          USDC,
-          WETH,
-          short
-        );
-        console.log(`position: ${position}`);
-      });
-
-      it("decrease position (1/2)", async () => {
-        await gmxV1.decreasePosition(collateral, index, size / 2n, short, {
-          value: fee,
-        });
-        await executeDecreasePosition();
-
-        const position = await gmxV1.getPosition(
-          gmxV1.target,
-          USDC,
-          WETH,
-          short
-        );
-        console.log(`position: ${position}`);
-      });
-
-      it("decrease position (2/2)", async () => {
-        await gmxV1.decreasePosition(collateral, index, size, short, {
-          value: fee,
-        });
-        await executeDecreasePosition();
-
-        const position = await gmxV1.getPosition(
-          gmxV1.target,
-          USDC,
-          WETH,
-          short
-        );
-        console.log(`position: ${position}`);
-      });
-
-      it("increase collateral", async () => {
-        await usdc.transfer(gmxV1.target, collateralAmount);
-        await gmxV1.increaseCollateral(
-          collateral,
-          index,
-          collateralAmount,
-          short,
-          {
-            value: fee,
-          }
-        );
-        await executeIncreasePosition();
-
-        const position = await gmxV1.getPosition(
-          gmxV1.target,
-          USDC,
-          WETH,
-          short
-        );
-        console.log(`position: ${position}`);
-      });
-
-      it("decrease collateral", async () => {
-        const amountUsd = ethers.parseUnits("500", 30);
-        await gmxV1.decreaseCollateral(collateral, index, amountUsd, short, {
-          value: fee,
-        });
-        await executeDecreasePosition();
-
-        const position = await gmxV1.getPosition(
-          gmxV1.target,
-          USDC,
-          WETH,
-          short
-        );
-        console.log(`position: ${position}`);
-      });
     });
   });
 });

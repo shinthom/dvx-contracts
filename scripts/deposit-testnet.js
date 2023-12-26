@@ -13,9 +13,6 @@ async function main() {
     tokens,
     usdc,
     wbtc,
-    executeIncreasePosition,
-    executeDecreasePosition,
-    fillPositionOrder,
     swap,
   } = await deploy();
   console.log(`

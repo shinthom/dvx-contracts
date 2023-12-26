@@ -159,7 +159,7 @@ describe("Account", async () => {
               value: minExecutionFee,
             }
           );
-          await executeIncreasePosition();
+          await executeIncreasePosition(account.target);
           const position = await account.getPosition(
             gmxV1.target,
             order.path[order.path.length - 1],
@@ -193,7 +193,7 @@ describe("Account", async () => {
               value: minExecutionFee,
             }
           );
-          await executeIncreasePosition();
+          await executeIncreasePosition(account.target);
           const position = await account.getPosition(
             gmxV1.target,
             weth.target,
@@ -220,7 +220,7 @@ describe("Account", async () => {
               value: minExecutionFee,
             }
           );
-          await executeDecreasePosition();
+          await executeDecreasePosition(account.target);
           const position = await account.getPosition(
             gmxV1.target,
             weth.target,
@@ -252,7 +252,7 @@ describe("Account", async () => {
               value: minExecutionFee,
             }
           );
-          await executeDecreasePosition();
+          await executeDecreasePosition(account.target);
           position = await account.getPosition(
             gmxV1.target,
             weth.target,
@@ -310,7 +310,7 @@ describe("Account", async () => {
               value: minExecutionFee,
             }
           );
-          await executeIncreasePosition();
+          await executeIncreasePosition(account.target);
           const position = await account.getPosition(
             gmxV1.target,
             order.path[order.path.length - 1],
@@ -343,7 +343,7 @@ describe("Account", async () => {
               value: minExecutionFee,
             }
           );
-          await executeIncreasePosition();
+          await executeIncreasePosition(account.target);
           const position = await account.getPosition(
             gmxV1.target,
             weth.target,
@@ -370,7 +370,7 @@ describe("Account", async () => {
               value: minExecutionFee,
             }
           );
-          await executeDecreasePosition();
+          await executeDecreasePosition(account.target);
           const position = await account.getPosition(
             gmxV1.target,
             weth.target,
@@ -402,7 +402,7 @@ describe("Account", async () => {
               value: minExecutionFee,
             }
           );
-          await executeDecreasePosition();
+          await executeDecreasePosition(account.target);
           position = await account.getPosition(
             gmxV1.target,
             weth.target,
@@ -459,7 +459,7 @@ describe("Account", async () => {
               value: minExecutionFee,
             }
           );
-          await executeIncreasePosition();
+          await executeIncreasePosition(account.target);
           const position = await account.getPosition(
             gmxV1.target,
             order.path[order.path.length - 1],
@@ -492,7 +492,7 @@ describe("Account", async () => {
               value: minExecutionFee,
             }
           );
-          await executeIncreasePosition();
+          await executeIncreasePosition(account.target);
           const position = await account.getPosition(
             gmxV1.target,
             usdc.target,
@@ -519,7 +519,7 @@ describe("Account", async () => {
               value: minExecutionFee,
             }
           );
-          await executeDecreasePosition();
+          await executeDecreasePosition(account.target);
           const position = await account.getPosition(
             gmxV1.target,
             usdc.target,
@@ -551,7 +551,7 @@ describe("Account", async () => {
               value: minExecutionFee,
             }
           );
-          await executeDecreasePosition();
+          await executeDecreasePosition(account.target);
           position = await account.getPosition(
             gmxV1.target,
             usdc.target,
@@ -610,7 +610,7 @@ describe("Account", async () => {
               value: minExecutionFee,
             }
           );
-          await executeIncreasePosition();
+          await executeIncreasePosition(account.target);
           const position = await account.getPosition(
             gmxV1.target,
             order.path[order.path.length - 1],
@@ -643,7 +643,7 @@ describe("Account", async () => {
               value: minExecutionFee,
             }
           );
-          await executeIncreasePosition();
+          await executeIncreasePosition(account.target);
           const position = await account.getPosition(
             gmxV1.target,
             usdc.target,
@@ -670,7 +670,7 @@ describe("Account", async () => {
               value: minExecutionFee,
             }
           );
-          await executeDecreasePosition();
+          await executeDecreasePosition(account.target);
           const position = await account.getPosition(
             gmxV1.target,
             usdc.target,
@@ -702,7 +702,7 @@ describe("Account", async () => {
               value: minExecutionFee,
             }
           );
-          await executeDecreasePosition();
+          await executeDecreasePosition(account.target);
           position = await account.getPosition(
             gmxV1.target,
             usdc.target,
