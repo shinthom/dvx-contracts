@@ -5,14 +5,6 @@ import "./interfaces/IAdapter.sol";
 import "./interfaces/IExchange.sol";
 
 contract Quoter {
-    address private constant _vault = 0x489ee077994B6658eAfA855C308275EAd8097C4A;
-
-    address[] private _adapters;
-
-    constructor(address[] memory adapters) {
-        _adapters = adapters;
-    }
-
     struct Order {
         address collateral;
         address index;
@@ -71,7 +63,7 @@ contract Quoter {
             order.collateralPrice,
             order.indexPrice
         );
-        IAdapter.Position memory position = adapter.getPosition(
+        IAdapter.Position memory currentPosition = adapter.getPosition(
             account,
             positionOrder.path[positionOrder.path.length - 1],
             positionOrder.index,
@@ -80,12 +72,12 @@ contract Quoter {
 
         // usd
         fee = adapter.getPositionFee(order.index, order.indexPrice, positionOrder.size);
-        if (position.size > 0) {
+        if (currentPosition.size > 0) {
             fee += adapter.getFundingFee(
                 positionOrder.path[positionOrder.path.length - 1],
                 order.index,
-                positionOrder.size,
-                position.fundingRate,
+                currentPosition.size,
+                currentPosition.fundingRate,
                 order.isLong,
                 order.indexPrice
             );
@@ -102,24 +94,41 @@ contract Quoter {
     ) public view returns (
         uint256[] memory prices,
         uint256[] memory fees,
-        uint256[] memory availableLiquiditys
+        uint256[] memory availableLiquiditys,
+        IExchange.PositionOrder[] memory positionOrders
     ) {
         prices = new uint256[](adapters.length);
         fees = new uint256[](adapters.length);
         availableLiquiditys = new uint256[](adapters.length);
+        positionOrders = new IExchange.PositionOrder[](adapters.length);
 
         for (uint256 i = 0; i < adapters.length; i++) {
-            prices[i] = adapters[i].getPrice(
-                orders[i].index,
-                orders[i].indexPrice,
-                orders[i].isLong
-            );
-            fees[i] = getFee(account, adapters[i], orders[i]);
-            availableLiquiditys[i] = adapters[i].getAvailableLiquidity(
-                orders[i].index,
-                orders[i].isLong
-            );
+            (prices[i], fees[i], availableLiquiditys[i], positionOrders[i])
+                = _get(account, adapters[i], orders[i]);
         }
+    }
+
+    function _get(
+        address account,
+        IAdapter adapter,
+        Order memory order
+    ) private view returns (
+        uint256 price,
+        uint256 fee,
+        uint256 availableLiquidity,
+        IExchange.PositionOrder memory positionOrder
+    ) {
+        price = adapter.getPrice(
+            order.index,
+            order.indexPrice,
+            order.isLong
+        );
+        fee = getFee(account, adapter, order);
+        availableLiquidity = adapter.getAvailableLiquidity(
+            order.index,
+            order.isLong
+        );
+        positionOrder = makePositionOrder(adapter, order);
     }
 
     function quote(
@@ -127,35 +136,38 @@ contract Quoter {
         IAdapter[] memory adapters,
         Order[] memory orders
     ) public view returns (
-        IAdapter,
-        Order memory,
-        IExchange.PositionOrder memory
+        uint256 price,
+        uint256 fee,
+        uint256 availableLiquidity,
+        IExchange.PositionOrder memory positionOrder
     ) {
+        require(
+            adapters.length > 0 && adapters.length == orders.length,
+            "INVALID_LENGTH"
+        );
+
         uint256[] memory fees = new uint256[](adapters.length);
         for (uint256 i = 0; i < adapters.length; i++) {
             fees[i] = getFee(account, adapters[i], orders[i]);
         }
 
         // sort by fee
-        IExchange.PositionOrder[] memory positionOrders = new IExchange.PositionOrder[](adapters.length);
         for (uint256 i = 0; i < adapters.length; i++) {
             for (uint256 j = i + 1; j < adapters.length; j++) {
                 if (fees[i] < fees[j]) {
-                    IAdapter t0 = adapters[i];
+                    IAdapter temp0 = adapters[i];
                     adapters[i] = adapters[j];
-                    adapters[j] = t0;
+                    adapters[j] = temp0;
 
-                    Order memory t1 = orders[i];
+                    Order memory temp1 = orders[i];
                     orders[i] = orders[j];
-                    orders[j] = t1;
-
-                    positionOrders[i] = makePositionOrder(adapters[i], orders[i]);
+                    orders[j] = temp1;
                 }
             }
         }
 
         // todo: split position orders if available liquidity is not enough
-        return (adapters[0], orders[0], positionOrders[0]);
+        return _get(account, adapters[0], orders[0]);
     }
 
     // test
