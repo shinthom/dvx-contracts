@@ -52,7 +52,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             IERC20(weth).deposit{value: msg.value}();
             IERC20(weth).approve(_swapRouter, amount);
 
-            amountOut = ISwapRouter(_swapRouter).exactInputSingle(
+            ISwapRouter.ExactInputSingleParams memory params =
                 ISwapRouter.ExactInputSingleParams({
                     tokenIn: weth, // note: tokenIn is weth
                     tokenOut: tokenOut,
@@ -62,13 +62,13 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
                     amountIn: amount,
                     amountOutMinimum: 0,
                     sqrtPriceLimitX96: 0
-                })
-            );
+                });
+            amountOut = ISwapRouter(_swapRouter).exactInputSingle(params);
         } else {
             IERC20(tokenIn).transferFrom(msg.sender, address(this), amount);
             IERC20(tokenIn).approve(_swapRouter, amount);
 
-            amountOut = ISwapRouter(_swapRouter).exactInputSingle(
+            ISwapRouter.ExactInputSingleParams memory params =
                 ISwapRouter.ExactInputSingleParams({
                     tokenIn: tokenIn,
                     tokenOut: tokenOut,
@@ -78,8 +78,8 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
                     amountIn: amount,
                     amountOutMinimum: 0,
                     sqrtPriceLimitX96: 0
-                })
-            );
+                });
+            amountOut = ISwapRouter(_swapRouter).exactInputSingle(params);
         }
 
         // todo: fee

@@ -110,7 +110,7 @@ contract GMXV1 is IAdapter {
             } else {
                 path = new address[](2);
                 path[0] = collateral;
-                path[1] = WETH;
+                path[1] = index;
             }
         } else {
             if (collateral == USDC) {
@@ -256,13 +256,14 @@ contract GMXV1 is IAdapter {
         if (path.length == 2) {
             require(path[0] != path[1], "INVALID_PATH");
 
-            console.log("before swap");
-            IERC20(path[0]).approve(_exchange, type(uint256).max);
+            if (path[0] == WETH) {
+                IERC20(path[0]).deposit{value: collateralAmount}();
+            }
+            IERC20(path[0]).approve(_exchange, collateralAmount);
             collateralAmount
                 = IExchange(_exchange).swap(path[0], path[1], collateralAmount);
-            console.log("after swap: %s", collateralAmount);
 
-            // note: WETH will be withrawn to this contract as ETH
+            // note: WETH will be withrawn to this contract as ETH from exchange contract.
             // if (path[1] == WETH) {
             //     IERC20(path[1]).withdraw(collateralAmount);
             // }
@@ -273,7 +274,6 @@ contract GMXV1 is IAdapter {
             IVault(_vault).getMaxPrice(index) :
             IVault(_vault).getMinPrice(index);
         uint256 fee = IPositionRouter(_positionRouter).minExecutionFee();
-        console.log(fee);
 
         // initialize path variable
         path = new address[](1);
@@ -281,8 +281,6 @@ contract GMXV1 is IAdapter {
 
         if (isLong) {
             if (collateral == WETH) {
-                console.log("collateralAmount: %s", collateralAmount);
-                console.log("fee: %s", fee);
                 IPositionRouter(_positionRouter).createIncreasePositionETH{value: collateralAmount + fee}(
                     path,
                     index,
