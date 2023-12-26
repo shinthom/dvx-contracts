@@ -136,13 +136,20 @@ contract MUX is IAdapter {
         uint256 collateralPrice,
         uint256 indexPrice
     ) override public view returns (IExchange.PositionOrder memory) {
+        require(
+            collateralPrice != 0 && indexPrice != 0,
+            "EMPTY_PRICE"
+        );
+
         uint8 collateralDecimals = IERC20(collateral).decimals();
         uint8 indexDecimals = IERC20(index).decimals();
 
         uint256 collateralAmountUsd = collateralAmount * collateralPrice / (10 ** collateralDecimals);
         uint256 sizeUsd = collateralAmountUsd * leverage;
 
-        address[] memory path = new address[](2);
+        address[] memory path = new address[](1);
+        path[0] = collateral;
+
         return IExchange.PositionOrder({
             orderType: IExchange.OrderType.IncreasePosition,
             path: path,
