@@ -21,10 +21,10 @@ interface IAdapter {
         bool isLong
     ) external view returns (uint256);
 
-    // function getDepositFee(
-    //     address collateral,
-    //     uint256 collateralAmount
-    // ) external view returns (uint256);
+    function getDepositFee(
+        address account,
+        IExchange.PositionOrder memory positionOrder
+    ) external view returns (uint256);
 
     function getFundingFee(
         address collateral,

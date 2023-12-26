@@ -83,9 +83,7 @@ contract Quoter {
                 order.isLong,
                 order.indexPrice
             );
-
-            // todo: get collateral amount (need to swap)
-            // fee += adapter.getDepositFee(collateral, );
+            fee += adapter.getDepositFee(account, positionOrder);
         }
 
         uint256 priceDecimals = adapter.getPriceDecimals();

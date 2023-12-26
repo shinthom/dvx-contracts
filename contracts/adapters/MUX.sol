@@ -70,12 +70,12 @@ contract MUX is IAdapter {
         return price;
     }
 
-    // function getDepositFee(
-    //     address /* collateral */,
-    //     uint256 /* collateralAmount */
-    // ) override public pure returns (uint256) {
-    //     return 0;
-    // }
+    function getDepositFee(
+        address /* account */,
+        IExchange.PositionOrder memory /* positionOrder */
+    ) override public pure returns (uint256) {
+        return 0;
+    }
 
     function getPositionFee(
         address index,

@@ -14,6 +14,7 @@ contract GMXV1 is IAdapter {
     address constant private WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
     address constant private USDC = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
 
+    uint256 public constant BASIS_POINTS_DIVISOR = 10000;
     uint256 constant public PRICE_DECIMALS = 30;
     uint256 constant public USD = 1 * (10 ** PRICE_DECIMALS);
 
@@ -147,20 +148,39 @@ contract GMXV1 is IAdapter {
         return tokenPrice;
     }
 
-    // function getDepositFee(
-    //     address collateral,
-    //     uint256 collateralAmount
-    // ) override public view returns (uint256) {
-    //     // todo: compare with original leverage
+    function getDepositFee(
+        address account,
+        IExchange.PositionOrder memory positionOrder
+    ) override public view returns (uint256) {
+        address collateral = positionOrder.path[positionOrder.path.length - 1];
+        IAdapter.Position memory position
+            = getPosition(account, collateral, positionOrder.index, positionOrder.isLong);
+        if (position.size == 0) {
+            return 0;
+        }
 
-    //     uint256 collateralDecimals = IERC20(collateral).decimals();
-    //     uint256 minPrice = IVault(_vault).getMinPrice(collateral);
+        uint256 increasePositionBufferBps = IPositionRouter(_positionRouter).increasePositionBufferBps();
+        uint256 collateralAmountUsd = IVault(_vault).tokenToUsdMin(collateral, positionOrder.collateralAmount);
 
-    //     uint256 depositFeeBasisPoints = IPositionRouter(_positionRouter).depositFee();
-    //     uint256 collateralAmountAfterDepositFee = collateralAmount * depositFeeBasisPoints / 10000;
+        uint256 nextSize = position.size + positionOrder.size;
+        uint256 nextCollateralAmount = position.collateralAmount + collateralAmountUsd;
 
-    //     return collateralAmountAfterDepositFee * minPrice / (10 ** collateralDecimals);
-    // }
+        uint256 prevLeverage = position.size * BASIS_POINTS_DIVISOR / position.collateralAmount;
+        uint256 nextLeverage = nextSize * (BASIS_POINTS_DIVISOR + increasePositionBufferBps) / nextCollateralAmount;
+
+        if (nextLeverage > prevLeverage) {
+            return 0;
+        }
+
+        uint256 collateralDecimals = IERC20(collateral).decimals();
+        uint256 minPrice = IVault(_vault).getMinPrice(collateral);
+
+        uint256 depositFeeBasisPoints = IPositionRouter(_positionRouter).depositFee();
+        uint256 collateralAmountAfterDepositFee
+            = positionOrder.collateralAmount * depositFeeBasisPoints / BASIS_POINTS_DIVISOR;
+
+        return collateralAmountAfterDepositFee * minPrice / (10 ** collateralDecimals);
+    }
 
     function getPositionFee(
         address /* index */,
