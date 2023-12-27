@@ -19,6 +19,7 @@ contract Quoter {
     }
 
     struct Answer {
+        address adapter;
         uint256 price;
         uint256 fee;
         uint256 availableLiquidity;
@@ -26,11 +27,11 @@ contract Quoter {
     }
 
     function makePositionOrder(
-        IAdapter adapter,
+        address adapter,
         Order memory order
     ) public view returns (IExchange.PositionOrder memory) {
         IExchange.PositionOrder memory positionOrder
-            = adapter.makePositionOrder(
+            = IAdapter(adapter).makePositionOrder(
                 order.collateral,
                 order.index,
                 order.collateralAmount,
@@ -45,12 +46,12 @@ contract Quoter {
 
     function getPosition(
         address account,
-        IAdapter adapter,
+        address adapter,
         Order memory order
     ) public view returns (IAdapter.Position memory) {
         IExchange.PositionOrder memory positionOrder = makePositionOrder(adapter, order);
 
-        return adapter.getPosition(
+        return IAdapter(adapter).getPosition(
             account,
             positionOrder.path[positionOrder.path.length - 1],
             positionOrder.index,
@@ -60,10 +61,10 @@ contract Quoter {
 
     function getFee(
         address account,
-        IAdapter adapter,
+        address adapter,
         Order memory order
     ) public view returns (uint256 fee) {
-        IExchange.PositionOrder memory positionOrder = adapter.makePositionOrder(
+        IExchange.PositionOrder memory positionOrder = IAdapter(adapter).makePositionOrder(
             order.collateral,
             order.index,
             order.collateralAmount,
@@ -72,7 +73,7 @@ contract Quoter {
             order.collateralPrice,
             order.indexPrice
         );
-        IAdapter.Position memory currentPosition = adapter.getPosition(
+        IAdapter.Position memory currentPosition = IAdapter(adapter).getPosition(
             account,
             positionOrder.path[positionOrder.path.length - 1],
             positionOrder.index,
@@ -80,9 +81,9 @@ contract Quoter {
         );
 
         // usd
-        fee = adapter.getPositionFee(order.index, order.indexPrice, positionOrder.size);
+        fee = IAdapter(adapter).getPositionFee(order.index, order.indexPrice, positionOrder.size);
         if (currentPosition.size > 0) {
-            fee += adapter.getFundingFee(
+            fee += IAdapter(adapter).getFundingFee(
                 positionOrder.path[positionOrder.path.length - 1],
                 order.index,
                 currentPosition.size,
@@ -90,10 +91,10 @@ contract Quoter {
                 order.isLong,
                 order.indexPrice
             );
-            fee += adapter.getDepositFee(account, positionOrder);
+            fee += IAdapter(adapter).getDepositFee(account, positionOrder);
         }
 
-        uint256 priceDecimals = adapter.getPriceDecimals();
+        uint256 priceDecimals = IAdapter(adapter).getPriceDecimals();
         if (priceDecimals > PRICE_DECIMAL) {
             fee = fee / (10 ** (priceDecimals - PRICE_DECIMAL));
         } else {
@@ -103,7 +104,7 @@ contract Quoter {
 
     function get(
         address account,
-        IAdapter[] memory adapters,
+        address[] memory adapters,
         Order[] memory orders
     ) public view returns (Answer[] memory answers) {
         answers = new Answer[](adapters.length);
@@ -114,16 +115,17 @@ contract Quoter {
 
     function _get(
         address account,
-        IAdapter adapter,
+        address adapter,
         Order memory order
     ) private view returns (Answer memory answer) {
-        answer.price = adapter.getPrice(
+        answer.adapter = adapter;
+        answer.price = IAdapter(adapter).getPrice(
             order.index,
             order.indexPrice,
             order.isLong
         );
         answer.fee = getFee(account, adapter, order);
-        answer.availableLiquidity = adapter.getAvailableLiquidity(
+        answer.availableLiquidity = IAdapter(adapter).getAvailableLiquidity(
             order.index,
             order.isLong
         );
@@ -132,7 +134,7 @@ contract Quoter {
 
     function quote(
         address account,
-        IAdapter[] memory adapters,
+        address[] memory adapters,
         Order[] memory orders
     ) public view returns (Answer[] memory answers) {
         require(
@@ -149,7 +151,7 @@ contract Quoter {
         for (uint256 i = 0; i < adapters.length; i++) {
             for (uint256 j = i + 1; j < adapters.length; j++) {
                 if (feeList[i] > feeList[j]) {
-                    IAdapter temp0 = adapters[i];
+                    address temp0 = adapters[i];
                     adapters[i] = adapters[j];
                     adapters[j] = temp0;
 
