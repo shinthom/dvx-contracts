@@ -10,36 +10,42 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 
 contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
-    address private constant weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
+    address private constant WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
+    address private constant SWAP_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564; // uniswap V3
 
-    address private _owner;
-    address private _swapRouter; // uniswap
+    address private _warehouse;
 
     uint256 private _totalAccount;
     mapping(address => address) private _accounts; // wallet => account
 
-    mapping(address => bool) private _registeredTokens;
-    mapping(address => bool) private _registeredAdapters;
+    mapping(address => bool) private marginKeepers;
+    mapping(address => bool) private registeredTokens;
+    mapping(address => bool) private registeredAdapters;
 
-    uint256 public constant BASIS_POINTS_DIVISOR = 10000;
-
-    uint256 public depositFeeBasisPoints;
-    uint256 public withdrawFeeBasisPoints;
-    uint256 public swapFeeBasisPoints;
-    uint256 public positionFeeBasisPoints;
-    uint256 public marginFeeBasisPoints;
-    uint256 public marginAdjustmentBasisPoints;
-
-    function initialize(address swapRouter) external virtual initializer {
-        _owner = msg.sender;
-        _swapRouter = swapRouter;
-
-        __Ownable_init();
-    }
+    // todo: optimization
+    Fee private _fee;
 
     receive() external payable {}
+    function warehouse() public view returns (address) { return _warehouse; }
+    function totalAccount() public view returns (uint256) { return _totalAccount; }
+    function account(address wallet) override public view returns (address) { return _accounts[wallet]; }
+    function isMarginKeeper(address keeper) public view returns (bool) { return marginKeepers[keeper]; }
+    function isRegisteredToken(address token) public view returns (bool) { return registeredTokens[token]; }
+    function isRegisteredAdapter(address adapter) public view returns (bool) { return registeredAdapters[adapter]; }
+    function fee() public view returns (Fee memory) { return _fee; }
+
+    function initialize(address warehouse_) external virtual initializer {
+        _warehouse = warehouse_;
+        __Ownable_init();
+        __UUPSUpgradeable_init();
+    }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+    function setFee(Fee memory newFee) external onlyOwner {
+        _fee = newFee;
+        emit FeeSet(newFee);
+    }
 
     function swap(
         address tokenIn,
@@ -49,12 +55,12 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         uint256 amountOut;
         if (tokenIn == address(0)) {
             require(msg.value == amount, "INVALID_AMOUNT");
-            IERC20(weth).deposit{value: msg.value}();
-            IERC20(weth).approve(_swapRouter, amount);
+            IERC20(WETH).deposit{value: msg.value}();
+            IERC20(WETH).approve(SWAP_ROUTER, amount);
 
             ISwapRouter.ExactInputSingleParams memory params =
                 ISwapRouter.ExactInputSingleParams({
-                    tokenIn: weth, // note: tokenIn is weth
+                    tokenIn: WETH, // note: tokenIn is WETH
                     tokenOut: tokenOut,
                     fee: 3000,
                     recipient: address(this),
@@ -63,10 +69,10 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
                     amountOutMinimum: 0,
                     sqrtPriceLimitX96: 0
                 });
-            amountOut = ISwapRouter(_swapRouter).exactInputSingle(params);
+            amountOut = ISwapRouter(SWAP_ROUTER).exactInputSingle(params);
         } else {
             IERC20(tokenIn).transferFrom(msg.sender, address(this), amount);
-            IERC20(tokenIn).approve(_swapRouter, amount);
+            IERC20(tokenIn).approve(SWAP_ROUTER, amount);
 
             ISwapRouter.ExactInputSingleParams memory params =
                 ISwapRouter.ExactInputSingleParams({
@@ -79,12 +85,12 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
                     amountOutMinimum: 0,
                     sqrtPriceLimitX96: 0
                 });
-            amountOut = ISwapRouter(_swapRouter).exactInputSingle(params);
+            amountOut = ISwapRouter(SWAP_ROUTER).exactInputSingle(params);
         }
 
         // todo: fee
-        if (tokenOut == weth) {
-            IERC20(weth).withdraw(amountOut);
+        if (tokenOut == WETH) {
+            IERC20(WETH).withdraw(amountOut);
             payable(msg.sender).transfer(amountOut);
         } else {
             IERC20(tokenOut).transfer(msg.sender, amountOut);
@@ -93,33 +99,17 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         return amountOut;
     }
 
-    function account(address wallet) override public view returns (address) {
-        return _accounts[wallet];
-    }
+    function _createAccount() private returns (Account newAccount) {
+        newAccount = new Account(msg.sender, address(this));
+        emit AccountCreated(msg.sender, address(newAccount));
 
-    function totalAccount() public view returns (uint256) {
-        return _totalAccount;
-    }
-
-    function isRegisteredAdapter(address adapter) public view returns (bool) {
-        return _registeredAdapters[adapter];
-    }
-
-    function isRegisteredToken(address token) public view returns (bool) {
-        return _registeredTokens[token];
-    }
-
-    function _createAccount() private returns (Account account) {
-        account = new Account(msg.sender, address(this));
-        emit AccountCreated(msg.sender, address(account));
-
-        _accounts[msg.sender] = address(account);
+        _accounts[msg.sender] = address(newAccount);
         _totalAccount++;
     }
 
     function createAccount() external returns (address) {
-        Account account = _createAccount();
-        return address(account);
+        Account newAccount = _createAccount();
+        return address(newAccount);
     }
 
     function createAccountAndDeposit(address token, uint256 amount)
@@ -127,31 +117,35 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         payable
         returns (address)
     {
-        Account account = _createAccount();
-
+        Account newAccount = _createAccount();
         token == address(0) ?
-            account.deposit{value: msg.value}(address(0), amount) :
-            account.deposit(token, amount);
-        return address(account);
+            newAccount.deposit{value: msg.value}(address(0), amount) :
+            newAccount.deposit(token, amount);
+        return address(newAccount);
     }
 
-    function registerAdapter(address adapter) external {
-        require(msg.sender == _owner, "NOT_OWNER");
-        _registeredAdapters[adapter] = true;
+    function registerAdapter(address adapter) external onlyOwner {
+        registeredAdapters[adapter] = true;
+        emit AdapterRegistered(adapter);
     }
 
-    function unregisterAdapter(address adapter) external {
-        require(msg.sender == _owner, "NOT_OWNER");
-        _registeredAdapters[adapter] = false;
+    function unregisterAdapter(address adapter) external onlyOwner {
+        registeredAdapters[adapter] = false;
+        emit AdapterUnregistered(adapter);
     }
 
-    function registerToken(address token) external {
-        require(msg.sender == _owner, "NOT_OWNER");
-        _registeredTokens[token] = true;
+    function registerToken(address token) external onlyOwner {
+        registeredTokens[token] = true;
+        emit TokenRegistered(token);
     }
 
-    function unregisterToken(address token) external {
-        require(msg.sender == _owner, "NOT_OWNER");
-        _registeredTokens[token] = false;
+    function unregisterToken(address token) external onlyOwner {
+        registeredTokens[token] = false;
+        emit TokenUnregistered(token);
+    }
+
+    function setMarginKeeper(address keeper, bool status) external onlyOwner {
+        marginKeepers[keeper] = status;
+        emit MarginKeeperSet(keeper, status);
     }
 }

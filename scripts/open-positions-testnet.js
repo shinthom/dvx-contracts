@@ -86,7 +86,7 @@ async function main() {
       await account.deposit(collateral, collateralAmount);
     }
 
-    await account.createOrders(
+    await account.createMarketOrders(
       [gmxV1.target],
       [
         {
@@ -105,7 +105,7 @@ async function main() {
             : BigInt("180000000000000"),
       }
     );
-    await account.createOrders(
+    await account.createMarketOrders(
       [mux.target],
       [
         {

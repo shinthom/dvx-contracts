@@ -9,6 +9,14 @@ interface IExchange {
         DecreaseCollateral
     }
 
+    struct Fee {
+        uint256 depositFeeBasisPoints;
+        uint256 withdrawFeeBasisPoints;
+        uint256 swapFeeBasisPoints;
+        uint256 positionFeeBasisPoints;
+        uint256 marginFeeBasisPoints;
+        uint256 marginAdjustmentBasisPoints;
+    }
     struct PositionOrder {
         OrderType orderType;
         address[] path;

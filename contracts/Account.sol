@@ -10,19 +10,14 @@ contract Account is IAccount {
     address private _owner;
     address private _exchange;
 
-    constructor(
-        address wallet,
-        address exchange
-    ) {
-        _owner = wallet;
-        _exchange = exchange;
+    constructor(address owner_, address exchange_) {
+        _owner = owner_;
+        _exchange = exchange_;
     }
 
     receive() external payable {}
-
-    function owner() public view returns (address) {
-        return _owner;
-    }
+    function owner() public view returns (address) { return _owner; }
+    function exchange() public view returns (address) { return _exchange; }
 
     function getPositions(
         address adapter,
@@ -101,8 +96,8 @@ contract Account is IAccount {
         }
     }
 
-    function _createOrder(
-        address exchange,
+    function _createMarketOrder(
+        address adapter,
         IExchange.PositionOrder calldata order
     ) private returns (bool success, bytes memory data) {
         IExchange.OrderType orderType = order.orderType;
@@ -117,7 +112,7 @@ contract Account is IAccount {
         // }
 
         if (orderType == IExchange.OrderType.IncreasePosition) {
-            return exchange.delegatecall(
+            return adapter.delegatecall(
                 abi.encodeWithSignature(
                     "increasePosition(address[],address,uint256,uint256,bool)",
                     order.path,
@@ -129,7 +124,7 @@ contract Account is IAccount {
             );
         } else if (orderType == IExchange.OrderType.DecreasePosition) {
             require(order.path.length == 1, "INVALID_PATH");
-            return exchange.delegatecall(
+            return adapter.delegatecall(
                 abi.encodeWithSignature(
                     "decreasePosition(address,address,uint256,bool)",
                     order.path[0],
@@ -139,7 +134,7 @@ contract Account is IAccount {
                 )
             );
         } else if (orderType == IExchange.OrderType.IncreaseCollateral) {
-            return exchange.delegatecall(
+            return adapter.delegatecall(
                 abi.encodeWithSignature(
                     "increaseCollateral(address[],address,uint256,bool)",
                     order.path,
@@ -150,7 +145,7 @@ contract Account is IAccount {
             );
         } else if (orderType == IExchange.OrderType.DecreaseCollateral) {
             require(order.path.length == 1, "INVALID_PATH");
-            return exchange.delegatecall(
+            return adapter.delegatecall(
                 abi.encodeWithSignature(
                     "decreaseCollateral(address,address,uint256,bool)",
                     order.path[0],
@@ -160,19 +155,18 @@ contract Account is IAccount {
                 )
             );
         }
+        emit MarketOrderCreated(address(this), adapter, order);
     }
 
-    function createOrders(
+    function createMarketOrders(
         address[] calldata adapters,
         IExchange.PositionOrder[] calldata orders
     ) override payable external {
         for (uint256 i = 0; i < adapters.length; i++) {
-            (bool success, bytes memory data) = _createOrder(
+            (bool success, bytes memory data) = _createMarketOrder(
                 adapters[i],
                 orders[i]
             );
-            emit OrderCreated(address(this), adapters[i], orders[i]);
-
             require(success, string(data));
         }
     }

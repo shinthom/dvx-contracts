@@ -7,13 +7,14 @@ interface IAccount {
     event Deposited(address indexed account, address indexed token, uint256 amount);
     event Withdrawn(address indexed account, address indexed token, uint256 amount);
     event OrderCreated(address indexed account, address indexed exchange, IExchange.PositionOrder order);
+    event MarketOrderCreated(address indexed account, address indexed exchange, IExchange.PositionOrder order);
 
     function getBalance(address token) external view returns (uint256);
 
     function deposit(address token, uint256 amount) payable external;
     function withdraw(address token, uint256 amount) external;
 
-    function createOrders(
+    function createMarketOrders(address[] calldata adapters, IExchange.PositionOrder[] calldata orders) payable external;
         address[] calldata adapters,
         IExchange.PositionOrder[] calldata orders
     ) payable external;

@@ -143,7 +143,7 @@ describe("Account", async () => {
           );
           expect(order.path[0]).to.equal(weth.target);
 
-          await account.createOrders(
+          await account.createMarketOrders(
             [gmxV1.target],
             [
               {
@@ -177,7 +177,7 @@ describe("Account", async () => {
           expect(await account.getBalance(ethers.ZeroAddress)).to.equal(
             collateralAmount
           );
-          await account.createOrders(
+          await account.createMarketOrders(
             [gmxV1.target],
             [
               {
@@ -204,7 +204,7 @@ describe("Account", async () => {
         }
         {
           const collateralAmount = ethers.parseUnits("1000", 30);
-          await account.createOrders(
+          await account.createMarketOrders(
             [gmxV1.target],
             [
               {
@@ -236,7 +236,7 @@ describe("Account", async () => {
             weth.target,
             true
           );
-          await account.createOrders(
+          await account.createMarketOrders(
             [gmxV1.target],
             [
               {
@@ -294,7 +294,7 @@ describe("Account", async () => {
           expect(order.path[0]).to.equal(wbtc.target);
           expect(order.path[1]).to.equal(weth.target);
 
-          await account.createOrders(
+          await account.createMarketOrders(
             [gmxV1.target],
             [
               {
@@ -327,7 +327,7 @@ describe("Account", async () => {
           await account.deposit(wbtc.target, wbtcBalance);
           expect(await account.getBalance(wbtc.target)).to.equal(wbtcBalance);
 
-          await account.createOrders(
+          await account.createMarketOrders(
             [gmxV1.target],
             [
               {
@@ -354,7 +354,7 @@ describe("Account", async () => {
         }
         {
           const collateralAmount = ethers.parseUnits("1000", 30);
-          await account.createOrders(
+          await account.createMarketOrders(
             [gmxV1.target],
             [
               {
@@ -386,7 +386,7 @@ describe("Account", async () => {
             weth.target,
             true
           );
-          await account.createOrders(
+          await account.createMarketOrders(
             [gmxV1.target],
             [
               {
@@ -443,7 +443,7 @@ describe("Account", async () => {
           );
           expect(order.path[0]).to.equal(usdc.target);
 
-          await account.createOrders(
+          await account.createMarketOrders(
             [gmxV1.target],
             [
               {
@@ -476,7 +476,7 @@ describe("Account", async () => {
           await account.deposit(usdc.target, usdcBalance);
           expect(await account.getBalance(usdc.target)).to.equal(usdcBalance);
 
-          await account.createOrders(
+          await account.createMarketOrders(
             [gmxV1.target],
             [
               {
@@ -503,7 +503,7 @@ describe("Account", async () => {
         }
         {
           const collateralAmount = ethers.parseUnits("1000", 30);
-          await account.createOrders(
+          await account.createMarketOrders(
             [gmxV1.target],
             [
               {
@@ -535,7 +535,7 @@ describe("Account", async () => {
             weth.target,
             false
           );
-          await account.createOrders(
+          await account.createMarketOrders(
             [gmxV1.target],
             [
               {
@@ -594,7 +594,7 @@ describe("Account", async () => {
           expect(order.path[0]).to.equal(wbtc.target);
           expect(order.path[1]).to.equal(usdc.target);
 
-          await account.createOrders(
+          await account.createMarketOrders(
             [gmxV1.target],
             [
               {
@@ -627,7 +627,7 @@ describe("Account", async () => {
           await account.deposit(wbtc.target, balance);
           expect(await account.getBalance(wbtc.target)).to.equal(balance);
 
-          await account.createOrders(
+          await account.createMarketOrders(
             [gmxV1.target],
             [
               {
@@ -654,7 +654,7 @@ describe("Account", async () => {
         }
         {
           const collateralAmount = ethers.parseUnits("1000", 30);
-          await account.createOrders(
+          await account.createMarketOrders(
             [gmxV1.target],
             [
               {
@@ -686,7 +686,7 @@ describe("Account", async () => {
             weth.target,
             false
           );
-          await account.createOrders(
+          await account.createMarketOrders(
             [gmxV1.target],
             [
               {
@@ -743,7 +743,7 @@ describe("Account", async () => {
           );
           expect(positionOrder.path[0]).to.equal(weth.target);
 
-          await account.createOrders(
+          await account.createMarketOrders(
             [mux.target],
             [
               {
@@ -774,7 +774,7 @@ describe("Account", async () => {
           expect(await account.getBalance(ethers.ZeroAddress)).to.equal(
             collateralAmount
           );
-          await account.createOrders(
+          await account.createMarketOrders(
             [mux.target],
             [
               {
@@ -798,7 +798,7 @@ describe("Account", async () => {
         }
         {
           const collateralAmount = ethers.parseEther("0.1");
-          await account.createOrders(
+          await account.createMarketOrders(
             [mux.target],
             [
               {
@@ -827,7 +827,7 @@ describe("Account", async () => {
             weth.target,
             true
           );
-          await account.createOrders(
+          await account.createMarketOrders(
             [mux.target],
             [
               {
@@ -881,7 +881,7 @@ describe("Account", async () => {
           );
           expect(positionOrder.path[0]).to.equal(wbtc.target);
 
-          await account.createOrders(
+          await account.createMarketOrders(
             [mux.target],
             [
               {
@@ -911,7 +911,7 @@ describe("Account", async () => {
           await account.deposit(wbtc.target, wbtcBalance);
           expect(await account.getBalance(wbtc.target)).to.equal(wbtcBalance);
 
-          await account.createOrders(
+          await account.createMarketOrders(
             [mux.target],
             [
               {
@@ -937,7 +937,7 @@ describe("Account", async () => {
           await faucet(wbtc.target, depositAmount);
           const wbtcBalance = await wbtc.balanceOf(user0.address);
 
-          await account.createOrders(
+          await account.createMarketOrders(
             [mux.target],
             [
               {
@@ -966,7 +966,7 @@ describe("Account", async () => {
             weth.target,
             true
           );
-          await account.createOrders(
+          await account.createMarketOrders(
             [mux.target],
             [
               {
@@ -1020,7 +1020,7 @@ describe("Account", async () => {
           );
           expect(positionOrder.path[0]).to.equal(usdc.target);
 
-          await account.createOrders(
+          await account.createMarketOrders(
             [mux.target],
             [
               {
@@ -1050,7 +1050,7 @@ describe("Account", async () => {
           await account.deposit(usdc.target, usdcBalance);
           expect(await account.getBalance(usdc.target)).to.equal(usdcBalance);
 
-          await account.createOrders(
+          await account.createMarketOrders(
             [mux.target],
             [
               {
@@ -1076,7 +1076,7 @@ describe("Account", async () => {
           await faucet(usdc.target, depositAmount);
           const usdcBalance = await usdc.balanceOf(user0.address);
 
-          await account.createOrders(
+          await account.createMarketOrders(
             [mux.target],
             [
               {
@@ -1105,7 +1105,7 @@ describe("Account", async () => {
             weth.target,
             false
           );
-          await account.createOrders(
+          await account.createMarketOrders(
             [mux.target],
             [
               {
@@ -1159,7 +1159,7 @@ describe("Account", async () => {
           );
           expect(positionOrder.path[0]).to.equal(wbtc.target);
 
-          await account.createOrders(
+          await account.createMarketOrders(
             [mux.target],
             [
               {
@@ -1189,7 +1189,7 @@ describe("Account", async () => {
           await account.deposit(wbtc.target, wbtcBalance);
           expect(await account.getBalance(wbtc.target)).to.equal(wbtcBalance);
 
-          await account.createOrders(
+          await account.createMarketOrders(
             [mux.target],
             [
               {
@@ -1215,7 +1215,7 @@ describe("Account", async () => {
           await faucet(wbtc.target, depositAmount);
           const wbtcBalance = await wbtc.balanceOf(user0.address);
 
-          await account.createOrders(
+          await account.createMarketOrders(
             [mux.target],
             [
               {
@@ -1244,7 +1244,7 @@ describe("Account", async () => {
             weth.target,
             false
           );
-          await account.createOrders(
+          await account.createMarketOrders(
             [mux.target],
             [
               {
