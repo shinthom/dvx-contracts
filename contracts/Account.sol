@@ -5,6 +5,7 @@ import "./interfaces/tokens/IERC20.sol";
 import "./interfaces/IAccount.sol";
 import "./interfaces/IAdapter.sol";
 import "./interfaces/IExchange.sol";
+import "./interfaces/IWarehouse.sol";
 
 contract Account is IAccount {
     address private _owner;
@@ -169,6 +170,42 @@ contract Account is IAccount {
             );
             require(success, string(data));
         }
+    }
+
+    function createLimitOrder(
+        address adapter,
+        IExchange.PositionOrder calldata order
+    ) override public {
+        address warehouse = IExchange(_exchange).warehouse();
+        require(msg.sender == warehouse, "NOT_WAREHOUSE");
+
+        (bool success, bytes memory data) = _createMarketOrder(adapter, order);
+        require(success, string(data));
+    }
+
+    function createTriggerOrder(
+        address adapter,
+        IExchange.PositionOrder calldata order
+    ) override public {
+        address warehouse = IExchange(_exchange).warehouse();
+        require(msg.sender == warehouse, "NOT_WAREHOUSE");
+
+        (bool success, bytes memory data) = _createMarketOrder(adapter, order);
+        require(success, string(data));
+    }
+
+    function registerLimitOrder(
+        IExchange.LimitOrder memory order
+    ) public {
+        address warehouse = IExchange(_exchange).warehouse();
+        IWarehouse(warehouse).registerLimitOrder(order);
+    }
+
+    function registerTriggerOrder(
+        IExchange.TriggerOrder memory order
+    ) public {
+        address warehouse = IExchange(_exchange).warehouse();
+        IWarehouse(warehouse).registerTriggerOrder(order);
     }
 
     // todo

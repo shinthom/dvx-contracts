@@ -15,10 +15,11 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
     address private _warehouse;
 
-    uint256 private _totalAccount;
+    uint256 private _totalAccounts;
     mapping(address => address) private _accounts; // wallet => account
 
     mapping(address => bool) private marginKeepers;
+    // todo: make array to get all registered items.
     mapping(address => bool) private registeredTokens;
     mapping(address => bool) private registeredAdapters;
 
@@ -26,8 +27,8 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     Fee private _fee;
 
     receive() external payable {}
-    function warehouse() public view returns (address) { return _warehouse; }
-    function totalAccount() public view returns (uint256) { return _totalAccount; }
+    function warehouse() override public view returns (address) { return _warehouse; }
+    function totalAccount() public view returns (uint256) { return _totalAccounts; }
     function account(address wallet) override public view returns (address) { return _accounts[wallet]; }
     function isMarginKeeper(address keeper) public view returns (bool) { return marginKeepers[keeper]; }
     function isRegisteredToken(address token) public view returns (bool) { return registeredTokens[token]; }
@@ -104,7 +105,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         emit AccountCreated(msg.sender, address(newAccount));
 
         _accounts[msg.sender] = address(newAccount);
-        _totalAccount++;
+        _totalAccounts++;
     }
 
     function createAccount() external returns (address) {

@@ -34,6 +34,7 @@ let orderBook;
 let gmxV1;
 let mux;
 let exchange;
+let warehouse;
 let quoter;
 let reader;
 let account;
@@ -68,13 +69,23 @@ const deploy = async (noAccount) => {
   wbtc = await ethers.getContractAt("IERC20", WBTC);
 
   // deploy
+  quoter = await ethers.deployContract("Quoter");
+
+  const warehouseImpl = await ethers.deployContract("Warehouse");
+  const warehouseProxy = await ethers.deployContract("ERC1967Proxy", [
+    warehouseImpl.target,
+    "0x",
+  ]);
+  warehouse = await ethers.getContractAt("Warehouse", warehouseProxy.target);
+  await warehouse.initialize(quoter.target);
+
   const exchangeImpl = await ethers.deployContract("Exchange");
-  const proxy = await ethers.deployContract("ERC1967Proxy", [
+  const exchangeProxy = await ethers.deployContract("ERC1967Proxy", [
     exchangeImpl.target,
     "0x",
   ]);
-  exchange = await ethers.getContractAt("Exchange", proxy.target);
-  await exchange.initialize(SwapRouter);
+  exchange = await ethers.getContractAt("Exchange", exchangeProxy.target);
+  await exchange.initialize(warehouse.target);
   gmxV1 = await ethers.deployContract("GMXV1", [
     PositionRouter,
     Router,
@@ -83,7 +94,6 @@ const deploy = async (noAccount) => {
     exchange.target,
   ]);
   mux = await ethers.deployContract("MUX", [OrderBook, LiquidityPool]);
-  quoter = await ethers.deployContract("Quoter");
   reader = await ethers.deployContract("Reader");
 
   if (!noAccount) {
@@ -207,6 +217,7 @@ const deploy = async (noAccount) => {
     gmxV1,
     mux,
     exchange,
+    warehouse,
     quoter,
     reader,
     account,

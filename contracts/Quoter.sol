@@ -3,8 +3,9 @@ pragma solidity ^0.8.0;
 
 import "./interfaces/IAdapter.sol";
 import "./interfaces/IExchange.sol";
+import "./interfaces/IQuoter.sol";
 
-contract Quoter {
+contract Quoter is IQuoter {
     uint256 public constant PRICE_DECIMAL = 2;
 
     struct Order {

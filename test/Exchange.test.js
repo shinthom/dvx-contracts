@@ -7,9 +7,6 @@ describe("Exchange", () => {
   const USDC = "0xaf88d065e77c8cc2239327c5edb3a432268e5831";
   const WBTC = "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f";
 
-  // uniswap
-  const SwapRouter = "0xE592427A0AEce92De3Edee1F18E0157C05861564";
-
   let owner;
   let user0;
 
@@ -31,7 +28,7 @@ describe("Exchange", () => {
       "0x",
     ]);
     exchange = await ethers.getContractAt("Exchange", proxy.target);
-    await exchange.initialize(SwapRouter);
+    await exchange.initialize(ethers.ZeroAddress);
   });
 
   describe("swap", () => {
@@ -91,10 +88,10 @@ describe("Exchange", () => {
 
     await expect(
       exchange.connect(user0).registerAdapter(newAdapter)
-    ).to.be.revertedWith("NOT_OWNER");
+    ).to.be.revertedWith("Ownable: caller is not the owner");
     await expect(
       exchange.connect(user0).unregisterAdapter(newAdapter)
-    ).to.be.revertedWith("NOT_OWNER");
+    ).to.be.revertedWith("Ownable: caller is not the owner");
   });
 
   it("(un)register token", async () => {
@@ -112,10 +109,10 @@ describe("Exchange", () => {
 
     await expect(
       exchange.connect(user0).registerToken(newToken)
-    ).to.be.revertedWith("NOT_OWNER");
+    ).to.be.revertedWith("Ownable: caller is not the owner");
     await expect(
       exchange.connect(user0).unregisterToken(newToken)
-    ).to.be.revertedWith("NOT_OWNER");
+    ).to.be.revertedWith("Ownable: caller is not the owner");
   });
 
   describe("account", () => {
@@ -147,7 +144,7 @@ describe("Exchange", () => {
   describe("upgradeTo", () => {
     it("sets new implementation to upgrade", async () => {
       const uups = await ethers.deployContract("Exchange");
-      await uups.initialize(SwapRouter);
+      await uups.initialize(ethers.ZeroAddress);
       await exchange.upgradeTo(uups.target);
     });
 
