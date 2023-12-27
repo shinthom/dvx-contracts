@@ -1,7 +1,7 @@
 const { ethers } = require("hardhat");
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
-
 const { deploy } = require("./fixture/setup");
+const axios = require("axios");
 
 describe("Quoter", () => {
   // token contracts
@@ -10,9 +10,67 @@ describe("Quoter", () => {
   const WBTC = "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f";
 
   // prices
-  const wethPrice = ethers.parseUnits("2000", 18);
-  const wbtcPrice = ethers.parseUnits("40000", 18);
-  const usdcPrice = ethers.parseUnits("1", 18);
+  let wethPrice;
+  let wbtcPrice;
+  let usdcPrice;
+
+  const format = (priceString) => {
+    let [whole, fraction = ""] = priceString.split(".");
+    fraction = fraction.padEnd(18, "0");
+
+    const combined = whole + fraction;
+    return BigInt(combined).toString();
+  };
+
+  before(async () => {
+    const assets
+      = (await axios("https://app.mux.network/api/liquidityAsset")).data.assets; // prettier-ignore
+    const weth = assets.find((asset) => asset.symbol === "ETH");
+    const wbtc = assets.find((asset) => asset.symbol === "BTC");
+    const usdc = assets.find((asset) => asset.symbol === "USDC");
+
+    wethPrice = format(weth.price);
+    wbtcPrice = format(wbtc.price);
+    usdcPrice = format(usdc.price);
+  });
+
+  it("scenario", async () => {
+    const { gmxV1, mux, quoter, account } = await loadFixture(deploy);
+
+    const gmxOrder = {
+      collateral: WETH,
+      index: WETH,
+      collateralAmount: ethers.parseEther("1"),
+      leverage: 10n,
+      isLong: true,
+      collateralPrice: 0,
+      indexPrice: 0,
+    };
+    const muxOrder = {
+      collateral: WETH,
+      index: WETH,
+      collateralAmount: ethers.parseEther("1"),
+      leverage: 10n,
+      isLong: true,
+      collateralPrice: wethPrice,
+      indexPrice: wethPrice,
+    };
+    const orders0 = [gmxOrder, muxOrder];
+    const answer0 = await quoter.quote(
+      account.target,
+      [gmxV1.target, mux.target],
+      orders0
+    );
+    console.log(answer0);
+
+    const orders1 = [muxOrder, gmxOrder];
+    const answer1 = await quoter.quote(
+      account.target,
+      [mux.target, gmxV1.target],
+      orders1
+    );
+    console.log(answer1);
+  });
 
   it("makePositionOrder", async () => {
     const { quoter, gmxV1, mux } = await loadFixture(deploy);

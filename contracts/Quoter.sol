@@ -18,6 +18,13 @@ contract Quoter {
         uint256 indexPrice;
     }
 
+    struct Answer {
+        uint256 price;
+        uint256 fee;
+        uint256 availableLiquidity;
+        IExchange.PositionOrder positionOrder;
+    }
+
     function makePositionOrder(
         IAdapter adapter,
         Order memory order
@@ -98,20 +105,10 @@ contract Quoter {
         address account,
         IAdapter[] memory adapters,
         Order[] memory orders
-    ) public view returns (
-        uint256[] memory prices,
-        uint256[] memory fees,
-        uint256[] memory availableLiquiditys,
-        IExchange.PositionOrder[] memory positionOrders
-    ) {
-        prices = new uint256[](adapters.length);
-        fees = new uint256[](adapters.length);
-        availableLiquiditys = new uint256[](adapters.length);
-        positionOrders = new IExchange.PositionOrder[](adapters.length);
-
+    ) public view returns (Answer[] memory answers) {
+        answers = new Answer[](adapters.length);
         for (uint256 i = 0; i < adapters.length; i++) {
-            (prices[i], fees[i], availableLiquiditys[i], positionOrders[i])
-                = _get(account, adapters[i], orders[i]);
+            answers[i] = _get(account, adapters[i], orders[i]);
         }
     }
 
@@ -119,49 +116,39 @@ contract Quoter {
         address account,
         IAdapter adapter,
         Order memory order
-    ) private view returns (
-        uint256 price,
-        uint256 fee,
-        uint256 availableLiquidity,
-        IExchange.PositionOrder memory positionOrder
-    ) {
-        price = adapter.getPrice(
+    ) private view returns (Answer memory answer) {
+        answer.price = adapter.getPrice(
             order.index,
             order.indexPrice,
             order.isLong
         );
-        fee = getFee(account, adapter, order);
-        availableLiquidity = adapter.getAvailableLiquidity(
+        answer.fee = getFee(account, adapter, order);
+        answer.availableLiquidity = adapter.getAvailableLiquidity(
             order.index,
             order.isLong
         );
-        positionOrder = makePositionOrder(adapter, order);
+        answer.positionOrder = makePositionOrder(adapter, order);
     }
 
     function quote(
         address account,
         IAdapter[] memory adapters,
         Order[] memory orders
-    ) public view returns (
-        uint256 price,
-        uint256 fee,
-        uint256 availableLiquidity,
-        IExchange.PositionOrder memory positionOrder
-    ) {
+    ) public view returns (Answer[] memory answers) {
         require(
             adapters.length > 0 && adapters.length == orders.length,
             "INVALID_LENGTH"
         );
 
-        uint256[] memory fees = new uint256[](adapters.length);
+        uint256[] memory feeList = new uint256[](adapters.length);
         for (uint256 i = 0; i < adapters.length; i++) {
-            fees[i] = getFee(account, adapters[i], orders[i]);
+            feeList[i] = getFee(account, adapters[i], orders[i]);
         }
 
         // sort by fee
         for (uint256 i = 0; i < adapters.length; i++) {
             for (uint256 j = i + 1; j < adapters.length; j++) {
-                if (fees[i] < fees[j]) {
+                if (feeList[i] > feeList[j]) {
                     IAdapter temp0 = adapters[i];
                     adapters[i] = adapters[j];
                     adapters[j] = temp0;
@@ -172,16 +159,14 @@ contract Quoter {
                 }
             }
         }
-
-        // todo: split position orders if available liquidity is not enough
-        return _get(account, adapters[0], orders[0]);
+        answers = get(account, adapters, orders);
     }
 
     // test
     function sort(uint256[] memory arr) public pure returns (uint256[] memory) {
         for (uint256 i = 0; i < arr.length; i++) {
             for (uint256 j = i + 1; j < arr.length; j++) {
-                if (arr[i] < arr[j]) {
+                if (arr[i] > arr[j]) {
                     uint256 temp = arr[i];
                     arr[i] = arr[j];
                     arr[j] = temp;
@@ -192,33 +177,3 @@ contract Quoter {
         return arr;
     }
 }
-
-// await fetch("https://app.mux.network/api/liquidityAsset", {
-//     method: "GET", // HTTP 요청 메소드 (GET, POST, PUT, DELETE 등)
-//     headers: {
-//       "Content-Type": "application/json",
-//     },
-//   })
-//     .then((response) => {
-//       if (!response.ok) {
-//         throw new Error("Network response was not ok");
-//       }
-//       return response.json();
-//     })
-//     .then((data) => {
-//       apiData = {
-//         assets: data.assets
-//           .filter((asset) => asset.symbol === "ETH")
-//           .map((asset) => ({
-//             symbol: asset.symbol,
-//             isStable: asset.isStable,
-//             price: asset.price,
-//           })),
-//       };
-//     })
-//     .catch((error) => {
-//       console.error(
-//         "There has been a problem with your fetch operation:",
-//         error
-//       );
-//     });
