@@ -170,7 +170,7 @@ contract Quoter {
         address account,
         address[] memory adapters,
         Order[] memory orders
-    ) public view returns (Answer memory answer) {
+    ) public view returns (Answer[] memory answers) {
         require(
             adapters.length > 0 && adapters.length == orders.length,
             "INVALID_LENGTH"
@@ -198,7 +198,8 @@ contract Quoter {
             }
         }
         // todo: split answers following available liquditiy.
-        answer = _get(account, adapters[0], orders[0]);
+        answers = new Answer[](1);
+        answers[0] = _get(account, adapters[0], orders[0]);
     }
 
     // test
