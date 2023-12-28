@@ -20,7 +20,8 @@ contract Quoter {
 
     struct Answer {
         address adapter;
-        uint256 price;
+        uint256 collateralPrice;
+        uint256 indexPrice;
         uint256 fee;
         uint256 availableLiquidity;
         IExchange.PositionOrder positionOrder;
@@ -102,7 +103,25 @@ contract Quoter {
         }
     }
 
-    function getPrice(
+    function getCollateralPrice(
+        address adapter,
+        Order memory order
+    ) public view returns (uint256 price) {
+        price = IAdapter(adapter).getPrice(
+            order.collateral,
+            order.collateralPrice,
+            order.isLong
+        );
+
+        uint256 priceDecimals = IAdapter(adapter).getPriceDecimals();
+        if (priceDecimals > PRICE_DECIMAL) {
+            price = price / (10 ** (priceDecimals - PRICE_DECIMAL));
+        } else {
+            price = price * (10 ** (PRICE_DECIMAL - priceDecimals));
+        }
+    }
+
+    function getIndexPrice(
         address adapter,
         Order memory order
     ) public view returns (uint256 price) {
@@ -137,7 +156,8 @@ contract Quoter {
         Order memory order
     ) private view returns (Answer memory answer) {
         answer.adapter = adapter;
-        answer.price = getPrice(adapter, order);
+        answer.collateralPrice = getCollateralPrice(adapter, order);
+        answer.indexPrice = getIndexPrice(adapter, order);
         answer.fee = getFee(account, adapter, order);
         answer.availableLiquidity = IAdapter(adapter).getAvailableLiquidity(
             order.index,

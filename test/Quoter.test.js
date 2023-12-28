@@ -95,25 +95,30 @@ describe("Quoter", () => {
       );
       const answer1 = await quoter.quote(account.target, [mux.target], orders1);
 
-      // price
-      console.log(`\nprice (${tokenStr(order.collateral)}:${tokenStr(order.index)} - ${isLongStr(order.isLong)})`); // prettier-ignore
+      // collateralPrice
+      console.log(`\ncollateralPrice (${tokenStr(order.collateral)}:${tokenStr(order.index)} - ${isLongStr(order.isLong)})`); // prettier-ignore
       console.log(`- gmx: ${answer0[1]}`);
       console.log(`- mux: ${answer1[1]}`);
 
-      // fee
-      console.log(`\nfee (${tokenStr(order.collateral)}:${tokenStr(order.index)} - ${isLongStr(order.isLong)})`); // prettier-ignore
+      // indexPrice
+      console.log(`\nindexPrice (${tokenStr(order.collateral)}:${tokenStr(order.index)} - ${isLongStr(order.isLong)})`); // prettier-ignore
       console.log(`- gmx: ${answer0[2]}`);
       console.log(`- mux: ${answer1[2]}`);
 
-      // liquidity available
-      console.log(`\nliquidity available (${tokenStr(order.collateral)}:${tokenStr(order.index)} - ${isLongStr(order.isLong)})`); // prettier-ignore
+      // fee
+      console.log(`\nfee (${tokenStr(order.collateral)}:${tokenStr(order.index)} - ${isLongStr(order.isLong)})`); // prettier-ignore
       console.log(`- gmx: ${answer0[3]}`);
       console.log(`- mux: ${answer1[3]}`);
 
-      // position order
-      console.log(`\nposition order (${tokenStr(order.collateral)}:${tokenStr(order.index)} - ${isLongStr(order.isLong)})`); // prettier-ignore
+      // liquidity available
+      console.log(`\nliquidity available (${tokenStr(order.collateral)}:${tokenStr(order.index)} - ${isLongStr(order.isLong)})`); // prettier-ignore
       console.log(`- gmx: ${answer0[4]}`);
       console.log(`- mux: ${answer1[4]}`);
+
+      // position order
+      console.log(`\nposition order (${tokenStr(order.collateral)}:${tokenStr(order.index)} - ${isLongStr(order.isLong)})`); // prettier-ignore
+      console.log(`- gmx: ${answer0[5]}`);
+      console.log(`- mux: ${answer1[5]}`);
     }
   });
 
