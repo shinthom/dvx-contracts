@@ -191,7 +191,8 @@ contract GMXV1 is IAdapter {
             uint256 marginFeeBasisPoints = IVault(_vault).marginFeeBasisPoints();
             console.log("marginFeeBasisPoints: %s", marginFeeBasisPoints); // 40
         }
-        return IVault(_vault).getPositionFee(size);
+        // return IVault(_vault).getPositionFee(size);
+        return size * 10 / BASIS_POINTS_DIVISOR;
     }
 
     function getFundingFee(
