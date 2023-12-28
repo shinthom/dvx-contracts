@@ -2,17 +2,17 @@ const { deploy } = require("../test/fixture/setup");
 
 async function main() {
   const noAccount = true;
-  const { user0, gmxV1, mux, exchange, reader, quoter, account } = await deploy(
-    noAccount
-  );
+  const { user0, gmxV1, mux, exchange, warehouse, reader, quoter, account } =
+    await deploy(noAccount);
   console.log(`
-- user0   : ${user0.address}
-- gmxV1   : ${gmxV1.target}
-- mux     : ${mux.target}
-- exchange: ${exchange.target}
-- reader  : ${reader.target}
-- quoter  : ${quoter.target}
-- account : ${noAccount ? "null" : account.target}
+- user0    : ${user0.address}
+- gmxV1    : ${gmxV1.target}
+- mux      : ${mux.target}
+- exchange : ${exchange.target}
+- warehouse: ${warehouse.target}
+- reader   : ${reader.target}
+- quoter   : ${quoter.target}
+- account  : ${noAccount ? "null" : account.target}
   `);
 }
 

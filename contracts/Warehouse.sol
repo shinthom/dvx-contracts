@@ -52,8 +52,6 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
     function createLimitOrder(
         IExchange.LimitOrder memory order
     ) override public returns (uint256 orderId) {
-        // todo: only allow account which is registered by exchange
-
         WarehouseLimitOrder memory limitOrder = WarehouseLimitOrder({
             owner: _msgSender(),
             status: ORDER_STATE_ACTIVE,

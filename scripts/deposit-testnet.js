@@ -7,6 +7,7 @@ async function main() {
     gmxV1,
     mux,
     exchange,
+    warehouse,
     reader,
     quoter,
     account,
@@ -16,13 +17,14 @@ async function main() {
     swap,
   } = await deploy();
   console.log(`
-- user0   : ${user0.address}
-- gmxV1   : ${gmxV1.target}
-- mux     : ${mux.target}
-- exchange: ${exchange.target}
-- reader  : ${reader.target}
-- quoter  : ${quoter.target}
-- account : ${account.target}
+- user0    : ${user0.address}
+- gmxV1    : ${gmxV1.target}
+- mux      : ${mux.target}
+- exchange : ${exchange.target}
+- warehouse: ${warehouse.target}
+- reader   : ${reader.target}
+- quoter   : ${quoter.target}
+- account  : ${account.target}
   `);
 
   const { WETH, USDC, WBTC } = tokens;

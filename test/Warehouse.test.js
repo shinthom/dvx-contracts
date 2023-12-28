@@ -81,27 +81,30 @@ describe("warehouse", () => {
         [gmxV1.target, mux.target],
         orders
       );
-      // todo: fix answers
-      // await warehouse.executeLimitOrder(account.target, orderId, answers);
+      const positionOrder = await mux.makePositionOrder(
+        ...Object.values(muxOrder)
+      );
 
-      // const toObj = async (answer) => {
-      //   console.log(answer[0]);
-      //   return {
-      //     adapter: answer[0],
-      //     collateralPrice: answer[1],
-      //     indexPrice: answer[2],
-      //     fee: answer[3],
-      //     availableLiquidity: answer[4],
-      //     positionOrder: {
-      //       orderType: answer[5][0],
-      //       path: [answer[5][1][0]],
-      //       index: answer[5][2],
-      //       collateralAmount: answer[5][3],
-      //       size: answer[5][4],
-      //       isLong: answer[5][5],
-      //     },
-      //   };
-      // };
+      // todo: fix (use typescript?)
+      const toObj = (answer) => {
+        return {
+          adapter: answer[0],
+          collateralPrice: answer[1],
+          indexPrice: answer[2],
+          fee: answer[3],
+          availableLiquidity: answer[4],
+          positionOrder: {
+            orderType: answer[5][0],
+            path: [...answer[5][1]],
+            index: answer[5][2],
+            collateralAmount: answer[5][3],
+            size: answer[5][4],
+            isLong: answer[5][5],
+          },
+        };
+      };
+      const answer = toObj(answers[0]);
+      await warehouse.executeLimitOrder(account.target, 0, [answer]);
 
       expect(await warehouse.totalLimitOrders()).to.be.equal(1);
       await account.createLimitOrder(limitOrder);
