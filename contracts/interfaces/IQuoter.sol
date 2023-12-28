@@ -16,7 +16,8 @@ interface IQuoter {
 
     struct Answer {
         address adapter;
-        uint256 price;
+        uint256 collateralPrice;
+        uint256 indexPrice;
         uint256 fee;
         uint256 availableLiquidity;
         IExchange.PositionOrder positionOrder;

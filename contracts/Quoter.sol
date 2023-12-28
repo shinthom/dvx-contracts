@@ -8,26 +8,6 @@ import "./interfaces/IQuoter.sol";
 contract Quoter is IQuoter {
     uint256 public constant PRICE_DECIMAL = 2;
 
-    struct Order {
-        address collateral;
-        address index;
-        uint256 collateralAmount;
-        uint256 leverage;
-        bool isLong;
-        // prices
-        uint256 collateralPrice;
-        uint256 indexPrice;
-    }
-
-    struct Answer {
-        address adapter;
-        uint256 collateralPrice;
-        uint256 indexPrice;
-        uint256 fee;
-        uint256 availableLiquidity;
-        IExchange.PositionOrder positionOrder;
-    }
-
     function makePositionOrder(
         address adapter,
         Order memory order
@@ -171,7 +151,7 @@ contract Quoter is IQuoter {
         address account,
         address[] memory adapters,
         Order[] memory orders
-    ) public view returns (Answer[] memory answers) {
+    ) override public view returns (Answer[] memory answers) {
         require(
             adapters.length > 0 && adapters.length == orders.length,
             "INVALID_LENGTH"

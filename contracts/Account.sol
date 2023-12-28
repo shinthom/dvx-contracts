@@ -173,39 +173,54 @@ contract Account is IAccount {
     }
 
     function createLimitOrder(
-        address adapter,
-        IExchange.PositionOrder calldata order
-    ) override public {
-        address warehouse = IExchange(_exchange).warehouse();
-        require(msg.sender == warehouse, "NOT_WAREHOUSE");
-
-        (bool success, bytes memory data) = _createMarketOrder(adapter, order);
-        require(success, string(data));
-    }
-
-    function createTriggerOrder(
-        address adapter,
-        IExchange.PositionOrder calldata order
-    ) override public {
-        address warehouse = IExchange(_exchange).warehouse();
-        require(msg.sender == warehouse, "NOT_WAREHOUSE");
-
-        (bool success, bytes memory data) = _createMarketOrder(adapter, order);
-        require(success, string(data));
-    }
-
-    function registerLimitOrder(
         IExchange.LimitOrder memory order
     ) public {
         address warehouse = IExchange(_exchange).warehouse();
-        IWarehouse(warehouse).registerLimitOrder(order);
+        IWarehouse(warehouse).createLimitOrder(order);
     }
 
-    function registerTriggerOrder(
+    function createTriggerOrder(
         IExchange.TriggerOrder memory order
     ) public {
         address warehouse = IExchange(_exchange).warehouse();
-        IWarehouse(warehouse).registerTriggerOrder(order);
+        IWarehouse(warehouse).createTriggerOrder(order);
+    }
+
+    function cancelLimitOrder(uint256 id) public {
+        address warehouse = IExchange(_exchange).warehouse();
+        IWarehouse(warehouse).cancelLimitOrder(id);
+    }
+
+    function cancelTriggerOrder(uint256 id) public {
+        address warehouse = IExchange(_exchange).warehouse();
+        IWarehouse(warehouse).cancelTriggerOrder(id);
+    }
+
+    function executeLimitOrder(
+        address[] calldata adapters,
+        IExchange.PositionOrder[] calldata orders
+    ) override payable public {
+        address warehouse = IExchange(_exchange).warehouse();
+        require(msg.sender == warehouse, "NOT_WAREHOUSE");
+
+        for (uint256 i = 0; i < adapters.length; i++) {
+            (bool success, bytes memory data) = _createMarketOrder(
+                adapters[i],
+                orders[i]
+            );
+            require(success, string(data));
+        }
+    }
+
+    function executeTriggerOrder(
+        address adapter,
+        IExchange.PositionOrder calldata order
+    ) override payable public {
+        address warehouse = IExchange(_exchange).warehouse();
+        require(msg.sender == warehouse, "NOT_WAREHOUSE");
+
+        (bool success, bytes memory data) = _createMarketOrder(adapter, order);
+        require(success, string(data));
     }
 
     // todo

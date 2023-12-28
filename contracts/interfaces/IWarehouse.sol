@@ -21,10 +21,12 @@ interface IWarehouse {
     event TriggerOrderRegistered(address indexed owner, uint256 triggerOrderId, uint256 pairId, uint256 triggerPrice, bool isLongPosition, uint256 size);
     event TriggerOrderCanceled(address indexed owner, uint256 triggerOrderId);
     event TriggerOrderExecuted(address indexed keeper, address indexed owner, uint256 triggerOrderId);
-    event OrderKeeperAdministration(address indexed keeper, bool isWhitelisted);
+    event OrderKeeperSet(address indexed orderKeeper, bool status);
 
-    function registerLimitOrder(IExchange.LimitOrder memory) external returns (uint256);
-    function registerTriggerOrder(IExchange.TriggerOrder memory) external returns (uint256);
+    function createLimitOrder(IExchange.LimitOrder memory) external returns (uint256);
+    function createTriggerOrder(IExchange.TriggerOrder memory) external returns (uint256);
+    function cancelLimitOrder(uint256 id) external;
+    function cancelTriggerOrder(uint256 id) external;
     // function createLimitOrder(IExchange.LimitOrder memory) external returns (uint256);
     // function createTriggerOrder(IExchange.TriggerOrder memory) external returns (uint256);
     // function cancelLimitOrder(uint256 limitOrderId) external;

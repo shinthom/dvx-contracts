@@ -33,8 +33,8 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
     // todo: get limit order id by account
     function totalLimitOrders() public view returns (uint256) { return limitOrders.length; }
     function totalTriggerOrders() public view returns (uint256) { return triggerOrders.length; }
-    function getLimitOrder(uint256 orderId) public view returns (WarehouseLimitOrder memory) { return limitOrders[orderId]; }
-    function getTriggerOrder(uint256 orderId) public view returns (WarehouseTriggerOrder memory) { return triggerOrders[orderId]; }
+    function getLimitOrder(uint256 orderId) public view returns (IExchange.LimitOrder memory) { return limitOrders[orderId].limitOrder; }
+    function getTriggerOrder(uint256 orderId) public view returns (IExchange.TriggerOrder memory) { return triggerOrders[orderId].triggerOrder; }
 
     function initialize(address _quoter) public initializer {
         quoter = _quoter;
@@ -44,8 +44,13 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
-    function registerLimitOrder(
-      IExchange.LimitOrder memory order
+    function setOrderKeeper(address keeper, bool status) external onlyOwner {
+        orderKeepers[keeper] = status;
+        emit OrderKeeperSet(keeper, status);
+    }
+
+    function createLimitOrder(
+        IExchange.LimitOrder memory order
     ) override public returns (uint256 orderId) {
         // todo: only allow account which is registered by exchange
 
@@ -60,7 +65,7 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         // todo: emit
     }
 
-    function registerTriggerOrder(
+    function createTriggerOrder(
       IExchange.TriggerOrder memory order
     ) override public returns (uint256 orderId) {
         WarehouseTriggerOrder memory triggerOrder = WarehouseTriggerOrder({
@@ -74,31 +79,62 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         // todo: emit
     }
 
-    function createLimitOrder(
-        address account,
-        uint256 orderId
-    ) external onlyOrderKeeper {
-        IExchange.LimitOrder memory order = limitOrders[orderId].limitOrder;
+    function cancelLimitOrder(uint256 id) override external {
+        WarehouseLimitOrder storage warehouseLimitOrder = limitOrders[id];
+        require(
+            warehouseLimitOrder.status == ORDER_STATE_ACTIVE,
+            "Warehouse: Limit order is not active"
+        );
+        require(
+            _msgSender() == warehouseLimitOrder.owner,
+            "Warehouse: Only owner can cancel limit order"
+        );
 
-        // todo: update quoter contract to get position order
-        // address[] memory adapters; // todo: get adapters
-        // IQuoter.Answer[] memory answers = IQuoter(quoter).quote(
-        //     account,
-        //     adapters,
-        //     orders
-        // );
-
-        // IAccount(account).createLimitOrder(
-        //     answers[0].adapter,
-        //     answers[0].positionOrder
-        // );
+        warehouseLimitOrder.status = ORDER_STATE_CANCELED;
+        emit LimitOrderCanceled(warehouseLimitOrder.owner, id);
     }
 
-    // todo: set onlyOrderKeeper
-    function createTriggerOrder(
+    function cancelTriggerOrder(uint256 id) override external {
+        WarehouseTriggerOrder storage warehouseTriggerOrder = triggerOrders[id];
+        require(
+            warehouseTriggerOrder.status == ORDER_STATE_ACTIVE,
+            "Warehouse: Limit order is not active"
+        );
+        require(
+            _msgSender() == warehouseTriggerOrder.owner,
+            "Warehouse: Only owner can cancel limit order"
+        );
+
+        warehouseTriggerOrder.status = ORDER_STATE_CANCELED;
+        emit LimitOrderCanceled(warehouseTriggerOrder.owner, id);
+    }
+
+    function executeLimitOrder(
+        address account,
+        uint256 orderId,
+        IQuoter.Answer[] memory answers
+    ) payable onlyOrderKeeper external {
+        WarehouseLimitOrder storage warehouseLimitOrder = limitOrders[orderId];
+        warehouseLimitOrder.status = ORDER_STATE_EXECUTED;
+
+        // todo: slippage
+        // warehouseLimitOrder.limitOrder.price
+        // answers[0]
+
+        address[] memory adapters = new address[](answers.length);
+        IExchange.PositionOrder[] memory positionOrders = new IExchange.PositionOrder[](answers.length);
+
+        for (uint256 i = 0; i < answers.length; i++) {
+            adapters[i] = answers[i].adapter;
+            positionOrders[i] = answers[i].positionOrder;
+        }
+        IAccount(account).executeLimitOrder{value: msg.value}(adapters, positionOrders);
+    }
+
+    function executeTriggerOrder(
         address account,
         uint256 orderId
-    ) external {
+    ) payable onlyOrderKeeper external {
         IExchange.TriggerOrder memory order = triggerOrders[orderId].triggerOrder;
 
         IAdapter.Position memory position
@@ -117,36 +153,6 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
                 isLong: order.isLong
             });
 
-        IAccount(account).createTriggerOrder(order.adapter, positionOrder);
+        IAccount(account).executeTriggerOrder{value: msg.value}(order.adapter, positionOrder);
     }
-
-    // function cancelLimitOrder(uint256 limitOrderId) external override {
-    //     WarehouseLimitOrder storage limitOrder = limitOrders[limitOrderId];
-    //     require(_msgSender() == limitOrder.owner, "Warehouse: Only owner can cancel limit order");
-    //     require(limitOrder.state == ORDER_STATE_ACTIVE, "Warehouse: Limit order is not active");
-    //     limitOrder.status = ORDER_STATE_CANCELED;
-    //     emit LimitOrderCanceled(limitOrder.owner, limitOrderId);
-    // }
-
-
-    // function executeLimitOrder(uint256 limitOrderId) external override onlyOrderKeeper {
-    //     WarehouseLimitOrder storage limitOrder = limitOrders[limitOrderId];
-    //     require(limitOrder.state == ORDER_STATE_ACTIVE, "Warehouse: Limit order is not active");
-    //     // TODO: EXECUTE LOGIC
-    //     limitOrder.status = ORDER_STATE_EXECUTED;
-    //     emit LimitOrderExecuted(_msgSender(), limitOrder.owner, limitOrderId);
-    // }
-
-    // function executeTriggerOrder(uint256 triggerOrderId) external override onlyOrderKeeper {
-    //     WarehouseTriggerOrder storage triggerOrder = triggerOrders[triggerOrderId];
-    //     require(triggerOrder.state == ORDER_STATE_ACTIVE, "Warehouse: Trigger order is not active");
-    //     // TODO: EXECUTE LOGIC
-    //     triggerOrder.status = ORDER_STATE_EXECUTED;
-    //     emit LimitOrderExecuted(_msgSender(), triggerOrder.owner, triggerOrderId);
-    // }
-
-    // function manageOrderKeeper(address keeper, bool status) external onlyOwner {
-    //     orderKeepers[keeper] = status;
-    //     emit OrderKeeperAdministration(keeper, status);
-    // }
 }
