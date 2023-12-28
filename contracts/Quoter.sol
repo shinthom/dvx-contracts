@@ -102,6 +102,24 @@ contract Quoter {
         }
     }
 
+    function getPrice(
+        address adapter,
+        Order memory order
+    ) public view returns (uint256 price) {
+        price = IAdapter(adapter).getPrice(
+            order.index,
+            order.indexPrice,
+            order.isLong
+        );
+
+        uint256 priceDecimals = IAdapter(adapter).getPriceDecimals();
+        if (priceDecimals > PRICE_DECIMAL) {
+            price = price / (10 ** (priceDecimals - PRICE_DECIMAL));
+        } else {
+            price = price * (10 ** (PRICE_DECIMAL - priceDecimals));
+        }
+    }
+
     function get(
         address account,
         address[] memory adapters,
@@ -119,11 +137,7 @@ contract Quoter {
         Order memory order
     ) private view returns (Answer memory answer) {
         answer.adapter = adapter;
-        answer.price = IAdapter(adapter).getPrice(
-            order.index,
-            order.indexPrice,
-            order.isLong
-        );
+        answer.price = getPrice(adapter, order);
         answer.fee = getFee(account, adapter, order);
         answer.availableLiquidity = IAdapter(adapter).getAvailableLiquidity(
             order.index,
@@ -133,6 +147,42 @@ contract Quoter {
     }
 
     function quote(
+        address account,
+        address[] memory adapters,
+        Order[] memory orders
+    ) public view returns (Answer memory answer) {
+        require(
+            adapters.length > 0 && adapters.length == orders.length,
+            "INVALID_LENGTH"
+        );
+
+        uint256[] memory feeList = new uint256[](adapters.length);
+        for (uint256 i = 0; i < adapters.length; i++) {
+            feeList[i] = getFee(account, adapters[i], orders[i]);
+        }
+
+        // sort by fee
+        if (adapters.length > 1) {
+            for (uint256 i = 0; i < adapters.length; i++) {
+                for (uint256 j = i + 1; j < adapters.length; j++) {
+                    if (feeList[i] > feeList[j]) {
+                        address temp0 = adapters[i];
+                        adapters[i] = adapters[j];
+                        adapters[j] = temp0;
+
+                        Order memory temp1 = orders[i];
+                        orders[i] = orders[j];
+                        orders[j] = temp1;
+                    }
+                }
+            }
+        }
+        // todo: split answers following available liquditiy.
+        answer = _get(account, adapters[0], orders[0]);
+    }
+
+    // test
+    function quote2(
         address account,
         address[] memory adapters,
         Order[] memory orders

@@ -118,12 +118,16 @@ contract MUX is IAdapter {
         uint8 indexId = _getIdFromAsset(index);
         ILiquidityPool.Asset memory asset = ILiquidityPool(_liquidityPool).getAssetInfo(indexId);
 
+        uint256 availableLiquidity;
         if (isLong) {
             // note: asset.maxLongPositionSize?
-            return asset.spotLiquidity - asset.totalLongPosition;
+            availableLiquidity = asset.spotLiquidity - asset.totalLongPosition;
         } else {
-            return asset.maxShortPositionSize - asset.totalShortPosition;
+            availableLiquidity = asset.maxShortPositionSize - asset.totalShortPosition;
         }
+
+        uint8 indexDecimals = IERC20(index).decimals();
+        return availableLiquidity / (10 ** (PRICE_DECIMALS - indexDecimals));
     }
 
     function makePositionOrder(
