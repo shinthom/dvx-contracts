@@ -12,6 +12,7 @@ import "hardhat/console.sol"; // test
 
 contract GMXV1 is IAdapter {
     address constant private WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
+    address constant private WBTC = 0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f;
     address constant private USDC = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
 
     uint256 public constant BASIS_POINTS_DIVISOR = 10000;
@@ -356,27 +357,21 @@ contract GMXV1 is IAdapter {
             isLong ? IVault(_vault).getMinPrice(index) : IVault(_vault).getMaxPrice(index);
         uint256 fee = IPositionRouter(_positionRouter).minExecutionFee();
 
-        address[] memory path;
-        if (collateral == WETH) {
-            path = new address[](1);
-            path[0] = collateral;
-        } else {
-            path = new address[](2);
-            path[0] = collateral;
-            path[1] = WETH;
-        }
+        address[] memory path = new address[](1);
+        path[0] = collateral;
 
+        bool withdrawETH = collateral == WETH ? true : false;
         IPositionRouter(_positionRouter).createDecreasePosition{value: fee}(
             path,
             index,
             collateralAmount,
             size,
             isLong,
-            address(this), // receiver
+            address(this),
             price,
             0,
             fee,
-            true, // withdrawETH
+            withdrawETH,
             address(0)
         );
     }
