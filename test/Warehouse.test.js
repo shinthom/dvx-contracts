@@ -39,11 +39,11 @@ describe("warehouse", () => {
 
   describe("limit order", () => {
     it("scenario", async () => {
-      const { account, warehouse, quoter, gmxV1, mux } = await loadFixture(
-        deploy
-      );
+      const { account, warehouse, quoter, gmxV1, mux, fillPositionOrder } =
+        await loadFixture(deploy);
 
       expect(await warehouse.totalLimitOrders()).to.be.equal(0);
+
       const limitOrder = {
         collateral: WETH,
         index: WETH,
@@ -57,6 +57,7 @@ describe("warehouse", () => {
 
       const orderId = 0;
       const createdLimitOrder = await warehouse.getLimitOrder(orderId);
+
       const gmxOrder = {
         collateral: createdLimitOrder.collateral,
         index: createdLimitOrder.index,
@@ -76,13 +77,11 @@ describe("warehouse", () => {
         indexPrice: wethPrice,
       };
       const orders = [gmxOrder, muxOrder];
+
       const answers = await quoter.quote(
         account.target,
         [gmxV1.target, mux.target],
         orders
-      );
-      const positionOrder = await mux.makePositionOrder(
-        ...Object.values(muxOrder)
       );
 
       // todo: fix (use typescript?)
@@ -104,7 +103,11 @@ describe("warehouse", () => {
         };
       };
       const answer = toObj(answers[0]);
+      await account.deposit(ethers.ZeroAddress, createdLimitOrder.collateralAmount, { value: createdLimitOrder.collateralAmount }); // prettier-ignore
       await warehouse.executeLimitOrder(account.target, 0, [answer]);
+      await fillPositionOrder();
+      const position = await account.getPosition(mux.target, WETH, WETH, true);
+      console.log(`position: ${position}`);
 
       expect(await warehouse.totalLimitOrders()).to.be.equal(1);
       await account.createLimitOrder(limitOrder);
@@ -115,75 +118,75 @@ describe("warehouse", () => {
     });
   });
 
-  // describe("trigger order", () => {
-  //   it("scenario", async () => {
-  //     const {
-  //       account,
-  //       gmxV1,
-  //       weth,
-  //       warehouse,
-  //       executeIncreasePosition,
-  //       executeDecreasePosition,
-  //     } = await loadFixture(deploy);
+  describe("trigger order", () => {
+    it("scenario", async () => {
+      const {
+        account,
+        gmxV1,
+        weth,
+        warehouse,
+        executeIncreasePosition,
+        executeDecreasePosition,
+      } = await loadFixture(deploy);
 
-  //     const depositAmount = ethers.parseEther("1");
-  //     const leverage = 10n;
-  //     await account.deposit(ethers.ZeroAddress, depositAmount, {
-  //       value: depositAmount,
-  //     });
-  //     const balance = await account.getBalance(ethers.ZeroAddress);
-  //     const order = await gmxV1.makePositionOrder(weth.target, weth.target, balance, leverage, true, 0, 0); // prettier-ignore
-  //     await account.createMarketOrders(
-  //       [gmxV1.target],
-  //       [
-  //         {
-  //           orderType: order.orderType,
-  //           path: [order.path[0]],
-  //           index: order.index,
-  //           collateralAmount: order.collateralAmount,
-  //           size: order.size,
-  //           isLong: order.isLong,
-  //         },
-  //       ],
-  //       {
-  //         value: minExecutionFee,
-  //       }
-  //     );
-  //     await executeIncreasePosition(account.target);
+      const depositAmount = ethers.parseEther("1");
+      const leverage = 10n;
+      await account.deposit(ethers.ZeroAddress, depositAmount, {
+        value: depositAmount,
+      });
+      const balance = await account.getBalance(ethers.ZeroAddress);
+      const order = await gmxV1.makePositionOrder(weth.target, weth.target, balance, leverage, true, 0, 0); // prettier-ignore
+      await account.createMarketOrders(
+        [gmxV1.target],
+        [
+          {
+            orderType: order.orderType,
+            path: [order.path[0]],
+            index: order.index,
+            collateralAmount: order.collateralAmount,
+            size: order.size,
+            isLong: order.isLong,
+          },
+        ],
+        {
+          value: minExecutionFee,
+        }
+      );
+      await executeIncreasePosition(account.target);
 
-  //     expect(await warehouse.totalTriggerOrders()).to.be.equal(0);
-  //     const triggerOrder = {
-  //       account: account.target,
-  //       adapter: gmxV1.target,
-  //       collateral: WETH,
-  //       index: WETH,
-  //       isLong: true,
-  //       price: ethers.parseUnits("2000", 18),
-  //     };
-  //     await account.createTriggerOrder(triggerOrder);
-  //     expect(await warehouse.totalTriggerOrders()).to.be.equal(1);
+      expect(await warehouse.totalTriggerOrders()).to.be.equal(0);
+      const triggerOrder = {
+        account: account.target,
+        adapter: gmxV1.target,
+        collateral: WETH,
+        index: WETH,
+        isLong: true,
+        price: ethers.parseUnits("2000", 18),
+      };
+      await account.createTriggerOrder(triggerOrder);
+      expect(await warehouse.totalTriggerOrders()).to.be.equal(1);
 
-  //     const registeredTriggerOrder = (await warehouse.getTriggerOrder(0))[2];
-  //     console.log(registeredTriggerOrder);
+      const registeredTriggerOrder = (await warehouse.getTriggerOrder(0))[2];
+      const beforePosition = await account.getPosition(gmxV1.target, order.path[order.path.length - 1], order.index, order.isLong); // prettier-ignore
+      console.log(`position: ${beforePosition}`);
+      await warehouse.executeTriggerOrder(account.target, 0, {
+        value: minExecutionFee,
+      });
+      await executeDecreasePosition(account.target);
+      const afterPosition = await account.getPosition(
+        gmxV1.target,
+        order.path[order.path.length - 1],
+        order.index,
+        order.isLong
+      );
+      console.log(`position: ${afterPosition}`);
 
-  //     const beforePosition = await account.getPosition(
-  //       gmxV1.target,
-  //       order.path[order.path.length - 1],
-  //       order.index,
-  //       order.isLong
-  //     );
-  //     console.log(`position: ${beforePosition}`);
-  //     await warehouse.executeTriggerOrder(account.target, 0, {
-  //       value: minExecutionFee,
-  //     });
-  //     await executeDecreasePosition(account.target);
-  //     const afterPosition = await account.getPosition(
-  //       gmxV1.target,
-  //       order.path[order.path.length - 1],
-  //       order.index,
-  //       order.isLong
-  //     );
-  //     console.log(`position: ${afterPosition}`);
-  //   });
-  // });
+      expect(await warehouse.totalTriggerOrders()).to.be.equal(1);
+      await account.createTriggerOrder(triggerOrder);
+      expect(await warehouse.totalTriggerOrders()).to.be.equal(2);
+      expect((await warehouse.triggerOrders(1)).status).to.be.equal(orderState.ACTIVE); // prettier-ignore
+      await account.cancelTriggerOrder(1);
+      expect((await warehouse.triggerOrders(1)).status).to.be.equal(orderState.CANCELED); // prettier-ignore
+    });
+  });
 });
