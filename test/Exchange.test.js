@@ -75,16 +75,17 @@ describe("Exchange", () => {
 
   it("(un)register exchange", async () => {
     const newAdapter = "0x" + "1".repeat(40);
+    expect((await exchange.getAllRegisteredAdapters()).length).to.equal(0);
 
     await exchange.connect(owner).registerAdapter(newAdapter);
+    expect((await exchange.getAllRegisteredAdapters()).length).to.equal(1);
     expect(await exchange.isRegisteredAdapter(newAdapter)).to.equal(true);
+    expect(await exchange.getAllRegisteredAdapters()).to.eql([newAdapter]);
 
     await exchange.connect(owner).unregisterAdapter(newAdapter);
+    expect((await exchange.getAllRegisteredAdapters()).length).to.equal(0);
     expect(await exchange.isRegisteredAdapter(newAdapter)).to.equal(false);
-  });
-
-  it("reverts when non-owner (un)register exchange", async () => {
-    const newAdapter = "0x" + "1".repeat(40);
+    expect(await exchange.getAllRegisteredAdapters()).to.eql([]);
 
     await expect(
       exchange.connect(user0).registerAdapter(newAdapter)
@@ -95,17 +96,18 @@ describe("Exchange", () => {
   });
 
   it("(un)register token", async () => {
-    const newToken = "0x" + "2".repeat(40);
+    const newToken = "0x" + "1".repeat(40);
+    expect((await exchange.getAllRegisteredTokens()).length).to.equal(0);
 
     await exchange.connect(owner).registerToken(newToken);
+    expect((await exchange.getAllRegisteredTokens()).length).to.equal(1);
     expect(await exchange.isRegisteredToken(newToken)).to.equal(true);
+    expect(await exchange.getAllRegisteredTokens()).to.eql([newToken]);
 
     await exchange.connect(owner).unregisterToken(newToken);
+    expect((await exchange.getAllRegisteredTokens()).length).to.equal(0);
     expect(await exchange.isRegisteredToken(newToken)).to.equal(false);
-  });
-
-  it("reverts when non-owner (un)register token", async () => {
-    const newToken = "0x" + "2".repeat(40);
+    expect(await exchange.getAllRegisteredTokens()).to.eql([]);
 
     await expect(
       exchange.connect(user0).registerToken(newToken)

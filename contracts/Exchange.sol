@@ -23,6 +23,9 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     mapping(address => bool) private registeredTokens;
     mapping(address => bool) private registeredAdapters;
 
+    address[] private _registeredTokens;
+    address[] private _registeredAdapters;
+
     // todo: optimization
     Fee private _fee;
 
@@ -31,8 +34,24 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     function totalAccount() public view returns (uint256) { return _totalAccounts; }
     function account(address wallet) override public view returns (address) { return _accounts[wallet]; }
     function isMarginKeeper(address keeper) public view returns (bool) { return marginKeepers[keeper]; }
-    function isRegisteredToken(address token) public view returns (bool) { return registeredTokens[token]; }
-    function isRegisteredAdapter(address adapter) public view returns (bool) { return registeredAdapters[adapter]; }
+    function getAllRegisteredTokens() public view returns (address[] memory) { return _registeredTokens; }
+    function getAllRegisteredAdapters() public view returns (address[] memory) { return _registeredAdapters; }
+    function isRegisteredToken(address token) public view returns (bool) {
+        for (uint256 i = 0; i < _registeredTokens.length; i++) {
+            if (_registeredTokens[i] == token) {
+                return true;
+            }
+        }
+        return false;
+    }
+    function isRegisteredAdapter(address adapter) public view returns (bool) {
+        for (uint256 i = 0; i < _registeredAdapters.length; i++) {
+            if (_registeredAdapters[i] == adapter) {
+                return true;
+            }
+        }
+        return false;
+    }
     function fee() public view returns (Fee memory) { return _fee; }
 
     function initialize(address warehouse_) external virtual initializer {
@@ -125,28 +144,52 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         return address(newAccount);
     }
 
+    function setMarginKeeper(address keeper, bool status) external onlyOwner {
+        marginKeepers[keeper] = status;
+        emit MarginKeeperSet(keeper, status);
+    }
+
     function registerAdapter(address adapter) external onlyOwner {
-        registeredAdapters[adapter] = true;
+        for (uint256 i = 0; i < _registeredAdapters.length; i++) {
+            require(_registeredAdapters[i] != adapter, "ALREADY_REGISTERED");
+        }
+
+        _registeredAdapters.push(adapter);
         emit AdapterRegistered(adapter);
     }
 
     function unregisterAdapter(address adapter) external onlyOwner {
-        registeredAdapters[adapter] = false;
-        emit AdapterUnregistered(adapter);
+        for (uint256 i = 0; i < _registeredAdapters.length; i++) {
+            if (_registeredAdapters[i] == adapter) {
+                _registeredAdapters[i] = _registeredAdapters[_registeredAdapters.length - 1];
+
+                _registeredAdapters.pop();
+                emit AdapterUnregistered(adapter);
+                return;
+            }
+        }
+        revert("NOT_REGISTERED");
     }
 
     function registerToken(address token) external onlyOwner {
-        registeredTokens[token] = true;
+        for (uint256 i = 0; i < _registeredTokens.length; i++) {
+            require(_registeredTokens[i] != token, "ALREADY_REGISTERED");
+        }
+
+        _registeredTokens.push(token);
         emit TokenRegistered(token);
     }
 
     function unregisterToken(address token) external onlyOwner {
-        registeredTokens[token] = false;
-        emit TokenUnregistered(token);
-    }
+        for (uint256 i = 0; i < _registeredTokens.length; i++) {
+            if (_registeredTokens[i] == token) {
+                _registeredTokens[i] = _registeredTokens[_registeredTokens.length - 1];
 
-    function setMarginKeeper(address keeper, bool status) external onlyOwner {
-        marginKeepers[keeper] = status;
-        emit MarginKeeperSet(keeper, status);
+                _registeredTokens.pop();
+                emit TokenUnregistered(token);
+                return;
+            }
+        }
+        revert("NOT_REGISTERED");
     }
 }
