@@ -17,7 +17,9 @@ contract Account is IAccount {
     }
 
     receive() external payable {}
+
     function owner() public view returns (address) { return _owner; }
+
     function exchange() public view returns (address) { return _exchange; }
 
     function getPositions(
@@ -177,23 +179,13 @@ contract Account is IAccount {
     ) public {
         address warehouse = IExchange(_exchange).warehouse();
         IWarehouse(warehouse).createLimitOrder(order);
+
+        // todo: send tokens? or lock tokens?
     }
 
     function cancelLimitOrder(uint256 orderIndex) public {
         address warehouse = IExchange(_exchange).warehouse();
         IWarehouse(warehouse).cancelLimitOrder(orderIndex);
-    }
-
-    function createTriggerOrder(
-        IExchange.TriggerOrder memory order
-    ) public {
-        address warehouse = IExchange(_exchange).warehouse();
-        IWarehouse(warehouse).createTriggerOrder(order);
-    }
-
-    function cancelTriggerOrder(uint256 orderId) public {
-        address warehouse = IExchange(_exchange).warehouse();
-        IWarehouse(warehouse).cancelTriggerOrder(orderId);
     }
 
     function executeLimitOrder(
@@ -210,6 +202,18 @@ contract Account is IAccount {
             );
             require(success, string(data));
         }
+    }
+
+    function createTriggerOrder(
+        IExchange.TriggerOrder memory order
+    ) public {
+        address warehouse = IExchange(_exchange).warehouse();
+        IWarehouse(warehouse).createTriggerOrder(order);
+    }
+
+    function cancelTriggerOrder(uint256 orderId) public {
+        address warehouse = IExchange(_exchange).warehouse();
+        IWarehouse(warehouse).cancelTriggerOrder(orderId);
     }
 
     function executeTriggerOrder(

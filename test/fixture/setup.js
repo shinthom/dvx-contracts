@@ -77,7 +77,7 @@ const deploy = async (noAccount) => {
     "0x",
   ]);
   warehouse = await ethers.getContractAt("Warehouse", warehouseProxy.target);
-  await warehouse.initialize(quoter.target);
+  await warehouse.initialize();
 
   const exchangeImpl = await ethers.deployContract("Exchange");
   const exchangeProxy = await ethers.deployContract("ERC1967Proxy", [

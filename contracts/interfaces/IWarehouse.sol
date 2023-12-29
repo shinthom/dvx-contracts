@@ -15,17 +15,17 @@ interface IWarehouse {
         IExchange.TriggerOrder triggerOrder;
     }
 
-    event LimitOrderRegistered(address indexed owner, uint256 limitOrderId, uint256 pairId, uint256 price, bool isLong, uint256 size);
-    event LimitOrderCanceled(address indexed owner, uint256 limitOrderId);
-    event LimitOrderExecuted(address indexed keeper, address indexed owner, uint256 limitOrderId);
-    event TriggerOrderRegistered(address indexed owner, uint256 triggerOrderId, uint256 pairId, uint256 triggerPrice, bool isLongPosition, uint256 size);
-    event TriggerOrderCanceled(address indexed owner, uint256 triggerOrderId);
-    event TriggerOrderExecuted(address indexed keeper, address indexed owner, uint256 triggerOrderId);
+    event LimitOrderCreated(address indexed account, uint256 indexed orderIndex, IExchange.LimitOrder limitOrder);
+    event LimitOrderCanceled(address indexed account, uint256 indexed orderIndex);
+    event LimitOrderExecuted(address indexed account, uint256 indexed orderIndex);
+    event TriggerOrderCreated(address indexed account, uint256 indexed orderIndex, IExchange.TriggerOrder triggerOrder);
+    event TriggerOrderCanceled(address indexed account, uint256 indexed orderIndex);
+    event TriggerOrderExecuted(address indexed account, uint256 indexed orderIndex);
     event OrderKeeperSet(address indexed orderKeeper, bool status);
 
-    function createLimitOrder(IExchange.LimitOrder memory) external returns (uint256);
+    function createLimitOrder(IExchange.LimitOrder memory) external;
     function cancelLimitOrder(uint256 orderIndex) external;
-    function createTriggerOrder(IExchange.TriggerOrder memory) external returns (uint256);
+    function createTriggerOrder(IExchange.TriggerOrder memory) external;
     function cancelTriggerOrder(uint256 orderIndex) external;
 
     function getLimitOrderIndex(address account) external view returns (uint256);

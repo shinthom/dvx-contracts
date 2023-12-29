@@ -16,12 +16,8 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     address private _warehouse;
 
     uint256 private _totalAccounts;
-    mapping(address => address) private _accounts; // wallet => account
-
-    mapping(address => bool) private marginKeepers;
-    // todo: make array to get all registered items.
-    mapping(address => bool) private registeredTokens;
-    mapping(address => bool) private registeredAdapters;
+    mapping(address => address) private _accounts;
+    mapping(address => bool) private _marginKeepers;
 
     address[] private _registeredTokens;
     address[] private _registeredAdapters;
@@ -30,12 +26,27 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     Fee private _fee;
 
     receive() external payable {}
+
+    function initialize(address warehouse_) external virtual initializer {
+        _warehouse = warehouse_;
+        __Ownable_init();
+        __UUPSUpgradeable_init();
+    }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
     function warehouse() override public view returns (address) { return _warehouse; }
+
     function totalAccount() public view returns (uint256) { return _totalAccounts; }
+
     function account(address wallet) override public view returns (address) { return _accounts[wallet]; }
-    function isMarginKeeper(address keeper) public view returns (bool) { return marginKeepers[keeper]; }
+
+    function isMarginKeeper(address keeper) public view returns (bool) { return _marginKeepers[keeper]; }
+
     function getAllRegisteredTokens() public view returns (address[] memory) { return _registeredTokens; }
+
     function getAllRegisteredAdapters() public view returns (address[] memory) { return _registeredAdapters; }
+
     function isRegisteredToken(address token) public view returns (bool) {
         for (uint256 i = 0; i < _registeredTokens.length; i++) {
             if (_registeredTokens[i] == token) {
@@ -52,15 +63,8 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         }
         return false;
     }
+
     function fee() public view returns (Fee memory) { return _fee; }
-
-    function initialize(address warehouse_) external virtual initializer {
-        _warehouse = warehouse_;
-        __Ownable_init();
-        __UUPSUpgradeable_init();
-    }
-
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     function setFee(Fee memory newFee) external onlyOwner {
         _fee = newFee;
@@ -145,7 +149,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function setMarginKeeper(address keeper, bool status) external onlyOwner {
-        marginKeepers[keeper] = status;
+        _marginKeepers[keeper] = status;
         emit MarginKeeperSet(keeper, status);
     }
 

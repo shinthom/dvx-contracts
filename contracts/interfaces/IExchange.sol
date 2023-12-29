@@ -50,6 +50,7 @@ interface IExchange {
     event TokenRegistered(address indexed adapter);
     event TokenUnregistered(address indexed adapter);
     event MarginKeeperSet(address indexed keeper, bool status);
+    event MarketOrderCreated(address indexed account, address[] adapters, PositionOrder[] orders);
     event FeeSet(Fee fee);
 
     function account(address wallet) external view returns (address);

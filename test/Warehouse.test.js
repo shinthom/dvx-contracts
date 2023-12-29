@@ -69,10 +69,10 @@ describe("warehouse", () => {
     const gmxOrder = { collateral: limitOrder0.collateral, index: limitOrder0.index, collateralAmount: limitOrder0.collateralAmount, leverage: limitOrder0.leverage, isLong: limitOrder0.isLong, collateralPrice: 0, indexPrice: 0 }; // prettier-ignore
     const muxOrder = { collateral: limitOrder0.collateral, index: limitOrder0.index, collateralAmount: limitOrder0.collateralAmount, leverage: limitOrder0.leverage, isLong: limitOrder0.isLong, collateralPrice: wethPrice, indexPrice: wethPrice }; // prettier-ignore
     const orders = [gmxOrder, muxOrder];
-    const answers = await quoter.quote(account.target, [gmxV1.target, mux.target],  orders); // prettier-ignore
+    const answers = await quoter.quote(account.target, [gmxV1.target, mux.target], orders); // prettier-ignore
 
     console.log("\n`execute limit order`");
-    const answer = toObj(answers[0]);
+    const answer = toObj(answers[0]); // note: routes to mux adapter.
     await expect(
       warehouse.executeLimitOrder(account.target, 0, [answer])
     ).to.be.revertedWith("Warehouse: not order keeper");
@@ -93,6 +93,19 @@ describe("warehouse", () => {
     const limitOrderIndex2 = await warehouse.getLimitOrderIndex(account.target); // prettier-ignore
     const limitOrder2 = await warehouse.getLimitOrder(account.target, limitOrderIndex2 - 1n); // prettier-ignore
     console.log(`- limitOrder: ${limitOrder2}`) // prettier-ignore
+
+    console.log("\n`create many limit orders`");
+    await account.createLimitOrder({ ...limitOrderParam });
+    await account.createLimitOrder({ ...limitOrderParam });
+    await account.createLimitOrder({ ...limitOrderParam });
+    await account.createLimitOrder({ ...limitOrderParam });
+    await account.createLimitOrder({ ...limitOrderParam });
+    const index = await warehouse.getLimitOrderIndex(account.target);
+    await account.cancelLimitOrder(index - 1n);
+    await account.cancelLimitOrder(index - 3n);
+    await account.cancelLimitOrder(index - 5n);
+    console.log(`limit orders: ${await warehouse.getLimitOrders(account.target)}`); // prettier-ignore
+    console.log(`limit orders (active): ${(await warehouse.getLimitOrders(account.target)).filter(limitOrder => limitOrder.index != ethers.ZeroAddress)}`); // prettier-ignore
   });
 
   it("trigger order", async () => {
@@ -146,5 +159,41 @@ describe("warehouse", () => {
     const triggerOrderIndex2 = await warehouse.getTriggerOrderIndex(account.target); // prettier-ignore
     const triggerOrder2 = await warehouse.getTriggerOrder(account.target, triggerOrderIndex2 - 1n); // prettier-ignore
     console.log(`- triggerOrder: ${triggerOrder2}`) // prettier-ignore
+
+    console.log("\n`create many trigger orders`");
+    await account.createTriggerOrder(triggerOrderParam);
+    await account.createTriggerOrder(triggerOrderParam);
+    await account.createTriggerOrder(triggerOrderParam);
+    await account.createTriggerOrder(triggerOrderParam);
+    await account.createTriggerOrder(triggerOrderParam);
+    const index = await warehouse.getTriggerOrderIndex(account.target);
+    await account.cancelTriggerOrder(index - 1n);
+    await account.cancelTriggerOrder(index - 3n);
+    await account.cancelTriggerOrder(index - 5n);
+    console.log(`trigger orders: ${await warehouse.getTriggerOrders(account.target)}`); // prettier-ignore
+    console.log(`trigger orders (active): ${(await warehouse.getTriggerOrders(account.target)).filter(limitOrder => limitOrder.index != ethers.ZeroAddress)}`); // prettier-ignore
+  });
+
+  describe("upgradeTo", () => {
+    it("sets new implementation to upgrade", async () => {
+      const { warehouse } = await loadFixture(deploy);
+      const uups = await ethers.deployContract("Warehouse");
+      await uups.initialize();
+      await warehouse.upgradeTo(uups.target);
+    });
+
+    it("reverts when new implementation is not uups", async () => {
+      const { warehouse } = await loadFixture(deploy);
+      const notUUPS = await ethers.deployContract("Reader");
+      await expect(warehouse.upgradeTo(notUUPS.target)).to.be.revertedWith(
+        "ERC1967Upgrade: new implementation is not UUPS"
+      );
+    });
+
+    it("reverts when new implementation is not contract", async () => {
+      const { warehouse } = await loadFixture(deploy);
+      const newContract = "0x000000000000000000000000000000000000dEaD";
+      await expect(warehouse.upgradeTo(newContract)).to.be.reverted;
+    });
   });
 });
