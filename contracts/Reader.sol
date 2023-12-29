@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./interfaces/IAccount.sol";
 import "./interfaces/IAdapter.sol";
+import "./interfaces/IWarehouse.sol";
 import "hardhat/console.sol";
 
 contract Reader {
@@ -13,12 +14,20 @@ contract Reader {
         IAdapter.Position position;
     }
 
+    function getLimitOrders(address warehouse) external view returns (IExchange.LimitOrder[] memory) {
+        return IWarehouse(warehouse).getLimitOrders(msg.sender);
+    }
+
+    function getTriggerOrders(address warehouse) external view returns (IExchange.TriggerOrder[] memory) {
+        return IWarehouse(warehouse).getTriggerOrders(msg.sender);
+    }
+
     function getPositions(
         address account,
         address[] memory adapters,
         address[] memory collaterals,
         address[] memory indexs
-    ) public view returns (Position[] memory) {
+    ) external view returns (Position[] memory) {
         bool[] memory isLongs = new bool[](2);
         isLongs[0] = true;
         isLongs[1] = false;

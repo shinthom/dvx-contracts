@@ -43,25 +43,6 @@ interface IExchange {
         uint256 price; // trigger
         // todo: slippageTolerance
     }
-    // struct LimitOrder {
-    //     uint256 pairId; // TODO: Have to make a system to manage this
-    //     bool isLong;
-    //     uint256 price;
-    //     uint112 slippageTolerance;
-    //     uint256 size;
-    //     address collateral; // TODO: Have to make a system to manage this
-    //     uint256 collateralAmount;
-    // }
-    // struct TriggerOrder {
-    //     uint256 pairId; // TODO: Have to make a system to manage this
-    //     uint256 positionId; // TODO: Have to make a system to manage this
-    //     address adaptorId; // TODO: Have to make a system to manage this
-    //     bool isPositionLong;
-    //     uint256 triggerPrice;
-    //     uint256 size;
-    // }
-
-    // getPosition(account, collaterals[j], indexs[k], isLongs[l]
 
     event AccountCreated(address indexed wallet, address indexed account);
     event AdapterRegistered(address indexed adapter);

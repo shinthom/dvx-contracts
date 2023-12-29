@@ -179,6 +179,11 @@ contract Account is IAccount {
         IWarehouse(warehouse).createLimitOrder(order);
     }
 
+    function cancelLimitOrder(uint256 orderIndex) public {
+        address warehouse = IExchange(_exchange).warehouse();
+        IWarehouse(warehouse).cancelLimitOrder(orderIndex);
+    }
+
     function createTriggerOrder(
         IExchange.TriggerOrder memory order
     ) public {
@@ -186,14 +191,9 @@ contract Account is IAccount {
         IWarehouse(warehouse).createTriggerOrder(order);
     }
 
-    function cancelLimitOrder(uint256 id) public {
+    function cancelTriggerOrder(uint256 orderId) public {
         address warehouse = IExchange(_exchange).warehouse();
-        IWarehouse(warehouse).cancelLimitOrder(id);
-    }
-
-    function cancelTriggerOrder(uint256 id) public {
-        address warehouse = IExchange(_exchange).warehouse();
-        IWarehouse(warehouse).cancelTriggerOrder(id);
+        IWarehouse(warehouse).cancelTriggerOrder(orderId);
     }
 
     function executeLimitOrder(

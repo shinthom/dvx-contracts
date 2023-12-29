@@ -24,14 +24,14 @@ interface IWarehouse {
     event OrderKeeperSet(address indexed orderKeeper, bool status);
 
     function createLimitOrder(IExchange.LimitOrder memory) external returns (uint256);
+    function cancelLimitOrder(uint256 orderIndex) external;
     function createTriggerOrder(IExchange.TriggerOrder memory) external returns (uint256);
-    function cancelLimitOrder(uint256 id) external;
-    function cancelTriggerOrder(uint256 id) external;
-    // function createLimitOrder(IExchange.LimitOrder memory) external returns (uint256);
-    // function createTriggerOrder(IExchange.TriggerOrder memory) external returns (uint256);
-    // function cancelLimitOrder(uint256 limitOrderId) external;
-    // function executeLimitOrder(uint256 limitOrderId) external;
-    // function cancelTriggerOrder(uint256 triggerOrderId) external;
-    // function executeTriggerOrder(uint256 triggerOrderId) external;
-    // function swap(address tokenIn, address tokenOut, uint256 amount) payable external returns (uint256);
+    function cancelTriggerOrder(uint256 orderIndex) external;
+
+    function getLimitOrderIndex(address account) external view returns (uint256);
+    function getLimitOrder(address account, uint256 orderIndex) external view returns (IExchange.LimitOrder memory);
+    function getLimitOrders(address account) external view returns (IExchange.LimitOrder[] memory);
+    function getTriggerOrderIndex(address account) external view returns (uint256);
+    function getTriggerOrder(address account, uint256 orderIndex) external view returns (IExchange.TriggerOrder memory);
+    function getTriggerOrders(address account) external view returns (IExchange.TriggerOrder[] memory);
 }

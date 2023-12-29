@@ -11,11 +11,6 @@ const WBTC = "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f";
 
 describe("warehouse", () => {
   const minExecutionFee = BigInt("180000000000000");
-  const orderState = {
-    ACTIVE: 1,
-    EXECUTED: 2,
-    CANCELED: 3,
-  };
 
   const format = (priceString) => {
     let [whole, fraction = ""] = priceString.split(".");
@@ -23,6 +18,25 @@ describe("warehouse", () => {
 
     const combined = whole + fraction;
     return BigInt(combined).toString();
+  };
+
+  // todo: fix (use typescript?)
+  const toObj = (answer) => {
+    return {
+      adapter: answer[0],
+      collateralPrice: answer[1],
+      indexPrice: answer[2],
+      fee: answer[3],
+      availableLiquidity: answer[4],
+      positionOrder: {
+        orderType: answer[5][0],
+        path: [...answer[5][1]],
+        index: answer[5][2],
+        collateralAmount: answer[5][3],
+        size: answer[5][4],
+        isLong: answer[5][5],
+      },
+    };
   };
 
   before(async () => {
@@ -37,156 +51,100 @@ describe("warehouse", () => {
     usdcPrice = format(usdc.price);
   });
 
-  describe("limit order", () => {
-    it("scenario", async () => {
-      const { account, warehouse, quoter, gmxV1, mux, fillPositionOrder } =
-        await loadFixture(deploy);
+  it("limit order", async () => {
+    const { user0, account, warehouse, quoter, gmxV1, mux, fillPositionOrder } = await loadFixture(deploy); // prettier-ignore
 
-      expect(await warehouse.totalLimitOrders()).to.be.equal(0);
+    console.log("\n`deposit`");
+    const collateralAmount = ethers.parseEther("0.1");
+    await account.deposit(ethers.ZeroAddress, collateralAmount, { value: collateralAmount }); // prettier-ignore
 
-      const limitOrder = {
-        collateral: WETH,
-        index: WETH,
-        collateralAmount: ethers.parseEther("0.1"),
-        leverage: 10n,
-        isLong: true,
-        price: ethers.parseUnits("2000", 18),
-      };
-      await account.createLimitOrder(limitOrder);
-      expect(await warehouse.totalLimitOrders()).to.be.equal(1);
+    console.log("\n`create limit order`");
+    const limitOrderParam = { collateral: WETH, index: WETH, collateralAmount: collateralAmount, leverage: 10n, isLong: true, price: ethers.parseUnits("2000", 18) }; // prettier-ignore
+    await account.createLimitOrder({ ...limitOrderParam }); // prettier-ignore
+    const limitOrderIndex0 = await warehouse.getLimitOrderIndex(account.target); // prettier-ignore
+    const limitOrder0 = await warehouse.getLimitOrder(account.target, limitOrderIndex0 - 1n); // prettier-ignore
+    console.log(`- limitOrder: ${limitOrder0}`) // prettier-ignore
 
-      const orderId = 0;
-      const createdLimitOrder = await warehouse.getLimitOrder(orderId);
+    console.log("\n`quote`");
+    const gmxOrder = { collateral: limitOrder0.collateral, index: limitOrder0.index, collateralAmount: limitOrder0.collateralAmount, leverage: limitOrder0.leverage, isLong: limitOrder0.isLong, collateralPrice: 0, indexPrice: 0 }; // prettier-ignore
+    const muxOrder = { collateral: limitOrder0.collateral, index: limitOrder0.index, collateralAmount: limitOrder0.collateralAmount, leverage: limitOrder0.leverage, isLong: limitOrder0.isLong, collateralPrice: wethPrice, indexPrice: wethPrice }; // prettier-ignore
+    const orders = [gmxOrder, muxOrder];
+    const answers = await quoter.quote(account.target, [gmxV1.target, mux.target],  orders); // prettier-ignore
 
-      const gmxOrder = {
-        collateral: createdLimitOrder.collateral,
-        index: createdLimitOrder.index,
-        collateralAmount: createdLimitOrder.collateralAmount,
-        leverage: createdLimitOrder.leverage,
-        isLong: createdLimitOrder.isLong,
-        collateralPrice: 0,
-        indexPrice: 0,
-      };
-      const muxOrder = {
-        collateral: createdLimitOrder.collateral,
-        index: createdLimitOrder.index,
-        collateralAmount: createdLimitOrder.collateralAmount,
-        leverage: createdLimitOrder.leverage,
-        isLong: createdLimitOrder.isLong,
-        collateralPrice: wethPrice,
-        indexPrice: wethPrice,
-      };
-      const orders = [gmxOrder, muxOrder];
+    console.log("\n`execute limit order`");
+    const answer = toObj(answers[0]);
+    await expect(
+      warehouse.executeLimitOrder(account.target, 0, [answer])
+    ).to.be.revertedWith("Warehouse: not order keeper");
+    await warehouse.setOrderKeeper(user0.address, true);
+    await warehouse.executeLimitOrder(account.target, 0, [answer]);
+    await fillPositionOrder();
+    const position = await account.getPosition(mux.target, WETH, WETH, true);
+    console.log(`- position: ${position}`);
 
-      const answers = await quoter.quote(
-        account.target,
-        [gmxV1.target, mux.target],
-        orders
-      );
+    console.log("\n`create another limit order`");
+    await account.createLimitOrder({ ...limitOrderParam });
+    const limitOrderIndex1 = await warehouse.getLimitOrderIndex(account.target); // prettier-ignore
+    const limitOrder1 = await warehouse.getLimitOrder(account.target, limitOrderIndex1 - 1n); // prettier-ignore
+    console.log(`- limitOrder: ${limitOrder1}`) // prettier-ignore
 
-      // todo: fix (use typescript?)
-      const toObj = (answer) => {
-        return {
-          adapter: answer[0],
-          collateralPrice: answer[1],
-          indexPrice: answer[2],
-          fee: answer[3],
-          availableLiquidity: answer[4],
-          positionOrder: {
-            orderType: answer[5][0],
-            path: [...answer[5][1]],
-            index: answer[5][2],
-            collateralAmount: answer[5][3],
-            size: answer[5][4],
-            isLong: answer[5][5],
-          },
-        };
-      };
-      const answer = toObj(answers[0]);
-      await account.deposit(ethers.ZeroAddress, createdLimitOrder.collateralAmount, { value: createdLimitOrder.collateralAmount }); // prettier-ignore
-      await warehouse.executeLimitOrder(account.target, 0, [answer]);
-      await fillPositionOrder();
-      const position = await account.getPosition(mux.target, WETH, WETH, true);
-      console.log(`position: ${position}`);
-
-      expect(await warehouse.totalLimitOrders()).to.be.equal(1);
-      await account.createLimitOrder(limitOrder);
-      expect(await warehouse.totalLimitOrders()).to.be.equal(2);
-      expect((await warehouse.limitOrders(1)).status).to.be.equal(orderState.ACTIVE); // prettier-ignore
-      await account.cancelLimitOrder(1);
-      expect((await warehouse.limitOrders(1)).status).to.be.equal(orderState.CANCELED); // prettier-ignore
-    });
+    console.log("\n`cancel limit order`");
+    await account.cancelLimitOrder(limitOrderIndex1 - 1n);
+    const limitOrderIndex2 = await warehouse.getLimitOrderIndex(account.target); // prettier-ignore
+    const limitOrder2 = await warehouse.getLimitOrder(account.target, limitOrderIndex2 - 1n); // prettier-ignore
+    console.log(`- limitOrder: ${limitOrder2}`) // prettier-ignore
   });
 
-  describe("trigger order", () => {
-    it("scenario", async () => {
-      const {
-        account,
-        gmxV1,
-        weth,
-        warehouse,
-        executeIncreasePosition,
-        executeDecreasePosition,
-      } = await loadFixture(deploy);
+  it("trigger order", async () => {
+    const { user0, account, gmxV1, weth, warehouse, executeIncreasePosition, executeDecreasePosition } = await loadFixture(deploy); // prettier-ignore
 
-      const depositAmount = ethers.parseEther("1");
-      const leverage = 10n;
-      await account.deposit(ethers.ZeroAddress, depositAmount, {
-        value: depositAmount,
-      });
-      const balance = await account.getBalance(ethers.ZeroAddress);
-      const order = await gmxV1.makePositionOrder(weth.target, weth.target, balance, leverage, true, 0, 0); // prettier-ignore
-      await account.createMarketOrders(
-        [gmxV1.target],
-        [
-          {
-            orderType: order.orderType,
-            path: [order.path[0]],
-            index: order.index,
-            collateralAmount: order.collateralAmount,
-            size: order.size,
-            isLong: order.isLong,
-          },
-        ],
-        {
-          value: minExecutionFee,
-        }
-      );
-      await executeIncreasePosition(account.target);
+    console.log("\n`open position`");
+    const depositAmount = ethers.parseEther("1");
+    const leverage = 10n;
+    await account.deposit(ethers.ZeroAddress, depositAmount, { value: depositAmount }); // prettier-ignore
+    const balance = await account.getBalance(ethers.ZeroAddress);
+    const order = await gmxV1.makePositionOrder(weth.target, weth.target, balance, leverage, true, 0, 0); // prettier-ignore
+    await account.createMarketOrders([gmxV1.target], [ { orderType: order.orderType, path: [order.path[0]], index: order.index, collateralAmount: order.collateralAmount, size: order.size, isLong: order.isLong }], { value: minExecutionFee }); // prettier-ignore
+    await executeIncreasePosition(account.target);
+    const position0 = await account.getPosition(gmxV1.target, order.path[order.path.length - 1], order.index, order.isLong); // prettier-ignore
+    console.log(`- position: ${position0}`);
 
-      expect(await warehouse.totalTriggerOrders()).to.be.equal(0);
-      const triggerOrder = {
-        account: account.target,
-        adapter: gmxV1.target,
-        collateral: WETH,
-        index: WETH,
-        isLong: true,
-        price: ethers.parseUnits("2000", 18),
-      };
-      await account.createTriggerOrder(triggerOrder);
-      expect(await warehouse.totalTriggerOrders()).to.be.equal(1);
+    console.log("\n`create trigger order`");
+    const triggerOrderParam = { account: account.target, adapter: gmxV1.target, collateral: WETH, index: WETH, isLong: true, price: ethers.parseUnits("2000", 18) }; // prettier-ignore
+    await account.createTriggerOrder(triggerOrderParam);
+    const triggerOrderIndex0 = await warehouse.getTriggerOrderIndex(account.target); // prettier-ignore
+    const triggerOrder = await warehouse.getTriggerOrder(account.target, triggerOrderIndex0 - 1n); // prettier-ignore
+    console.log(`- triggerOrder: ${triggerOrder}`) // prettier-ignore
 
-      const registeredTriggerOrder = (await warehouse.getTriggerOrder(0))[2];
-      const beforePosition = await account.getPosition(gmxV1.target, order.path[order.path.length - 1], order.index, order.isLong); // prettier-ignore
-      console.log(`position: ${beforePosition}`);
-      await warehouse.executeTriggerOrder(account.target, 0, {
+    console.log("\n`execute trigger order`");
+    await expect(
+      warehouse.executeTriggerOrder(account.target, triggerOrderIndex0 - 1n, {
         value: minExecutionFee,
-      });
-      await executeDecreasePosition(account.target);
-      const afterPosition = await account.getPosition(
-        gmxV1.target,
-        order.path[order.path.length - 1],
-        order.index,
-        order.isLong
-      );
-      console.log(`position: ${afterPosition}`);
+      })
+    ).to.be.revertedWith("Warehouse: not order keeper");
+    await warehouse.setOrderKeeper(user0.address, true);
+    await warehouse.executeTriggerOrder(account.target, triggerOrderIndex0 - 1n, { value: minExecutionFee }); // prettier-ignore
+    await executeDecreasePosition(account.target);
+    const position1 = await account.getPosition(gmxV1.target, order.path[order.path.length - 1], order.index, order.isLong); // prettier-ignore
+    console.log(`- position: ${position1}`);
 
-      expect(await warehouse.totalTriggerOrders()).to.be.equal(1);
-      await account.createTriggerOrder(triggerOrder);
-      expect(await warehouse.totalTriggerOrders()).to.be.equal(2);
-      expect((await warehouse.triggerOrders(1)).status).to.be.equal(orderState.ACTIVE); // prettier-ignore
-      await account.cancelTriggerOrder(1);
-      expect((await warehouse.triggerOrders(1)).status).to.be.equal(orderState.CANCELED); // prettier-ignore
-    });
+    console.log("\n`open another position`");
+    await account.deposit(ethers.ZeroAddress, depositAmount, { value: depositAmount }); // prettier-ignore
+    await account.createMarketOrders([gmxV1.target], [ { orderType: order.orderType, path: [order.path[0]], index: order.index, collateralAmount: order.collateralAmount, size: order.size, isLong: order.isLong }], { value: minExecutionFee }); // prettier-ignore
+    await executeIncreasePosition(account.target);
+    const position2 = await account.getPosition(gmxV1.target, order.path[order.path.length - 1], order.index, order.isLong); // prettier-ignore
+    console.log(`position: ${position2}`);
+
+    console.log("\n`create another trigger order`");
+    await account.createTriggerOrder(triggerOrderParam);
+    const triggerOrderIndex1 = await warehouse.getTriggerOrderIndex(account.target); // prettier-ignore
+    const triggerOrder1 = await warehouse.getTriggerOrder(account.target, triggerOrderIndex1 - 1n); // prettier-ignore
+    console.log(`- triggerOrder: ${triggerOrder1}`) // prettier-ignore
+
+    console.log("\n`cancel trigger order`");
+    await account.cancelTriggerOrder(triggerOrderIndex1 - 1n);
+    const triggerOrderIndex2 = await warehouse.getTriggerOrderIndex(account.target); // prettier-ignore
+    const triggerOrder2 = await warehouse.getTriggerOrder(account.target, triggerOrderIndex2 - 1n); // prettier-ignore
+    console.log(`- triggerOrder: ${triggerOrder2}`) // prettier-ignore
   });
 });
