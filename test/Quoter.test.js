@@ -55,7 +55,7 @@ describe("Quoter", () => {
     const wethAmount = ethers.parseEther("1");
     const wbtcAmount = ethers.parseUnits("0.1", 8);
     const usdcAmount = ethers.parseUnits("1000", 6);
-    const orders = [
+    const requests = [
       // long
       { collateral: WETH, index: WETH, collateralAmount: wethAmount, leverage: 10n, isLong: true }, // prettier-ignore
       { collateral: WETH, index: WBTC, collateralAmount: wethAmount, leverage: 10n, isLong: true }, // prettier-ignore
@@ -72,18 +72,18 @@ describe("Quoter", () => {
       { collateral: USDC, index: WBTC, collateralAmount: usdcAmount, leverage: 10n, isLong: false }, // prettier-ignore
     ];
 
-    for (let i = 0; i < orders.length; i++) {
-      const order = orders[i];
+    for (let i = 0; i < requests.length; i++) {
+      const request = requests[i];
 
       const gmxOrder = {
-        ...order,
+        ...request,
         collateralPrice: 0,
         indexPrice: 0,
       };
       const muxOrder = {
-        ...order,
-        collateralPrice: getPrice(order.collateral),
-        indexPrice: getPrice(order.index),
+        ...request,
+        collateralPrice: getPrice(request.collateral),
+        indexPrice: getPrice(request.index),
       };
       const orders0 = [gmxOrder];
       const orders1 = [muxOrder];
@@ -98,27 +98,27 @@ describe("Quoter", () => {
       console.log(answer1);
 
       // collateralPrice
-      console.log(`\ncollateralPrice (${tokenStr(order.collateral)}:${tokenStr(order.index)} - ${isLongStr(order.isLong)})`); // prettier-ignore
+      console.log(`\ncollateralPrice (${isLongStr(request.isLong)}: ${tokenStr(request.collateral)} -> ${tokenStr(request.index)})`); // prettier-ignore
       console.log(`- gmx: ${answer0[1]}`);
       console.log(`- mux: ${answer1[1]}`);
 
       // indexPrice
-      console.log(`\nindexPrice (${tokenStr(order.collateral)}:${tokenStr(order.index)} - ${isLongStr(order.isLong)})`); // prettier-ignore
+      console.log(`\nindexPrice (${isLongStr(request.isLong)}: ${tokenStr(request.collateral)} -> ${tokenStr(request.index)})`); // prettier-ignore
       console.log(`- gmx: ${answer0[2]}`);
       console.log(`- mux: ${answer1[2]}`);
 
       // fee
-      console.log(`\nfee (${tokenStr(order.collateral)}:${tokenStr(order.index)} - ${isLongStr(order.isLong)})`); // prettier-ignore
+      console.log(`\nfee (${isLongStr(request.isLong)}: ${tokenStr(request.collateral)} -> ${tokenStr(request.index)})`); // prettier-ignore
       console.log(`- gmx: ${answer0[3]}`);
       console.log(`- mux: ${answer1[3]}`);
 
       // liquidity available
-      console.log(`\nliquidity available (${tokenStr(order.collateral)}:${tokenStr(order.index)} - ${isLongStr(order.isLong)})`); // prettier-ignore
+      console.log(`\nliquidity available (${isLongStr(request.isLong)}: ${tokenStr(request.collateral)} -> ${tokenStr(request.index)})`); // prettier-ignore
       console.log(`- gmx: ${answer0[4]}`);
       console.log(`- mux: ${answer1[4]}`);
 
       // position order
-      console.log(`\nposition order (${tokenStr(order.collateral)}:${tokenStr(order.index)} - ${isLongStr(order.isLong)})`); // prettier-ignore
+      console.log(`\nposition orders (${isLongStr(request.isLong)}: ${tokenStr(request.collateral)} -> ${tokenStr(request.index)})`); // prettier-ignore
       console.log(`- gmx: ${answer0[5]}`);
       console.log(`- mux: ${answer1[5]}`);
     }

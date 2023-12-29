@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 import "./IExchange.sol";
 
 interface IQuoter {
-    struct Order {
+    struct Request {
         address collateral;
         address index;
         uint256 collateralAmount;
@@ -26,6 +26,6 @@ interface IQuoter {
     function quote(
         address account,
         address[] memory adapters,
-        Order[] memory orders
+        Request[] memory requests
     ) external view returns (Answer[] memory answers);
 }
