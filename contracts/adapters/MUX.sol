@@ -51,6 +51,9 @@ contract MUX is IAdapter {
             uint256 fundingRate
         ) = ILiquidityPool(LIQUIDITY_POOL).getSubAccount(subAccountId);
 
+        uint8 collateralDecimals = IERC20(collateral).decimals();
+        collateralAmount = collateralAmount / (10 ** (PRICE_DECIMALS - collateralDecimals));
+
         return IAdapter.Position(
             collateralAmount,
             size,
