@@ -8,14 +8,14 @@ describe("Exchange", () => {
   const WBTC = "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f";
 
   let owner;
-  let user0;
+  let user;
 
   let wbtc;
   let usdc;
   let exchange;
 
   before(async () => {
-    [owner, user0] = await ethers.getSigners();
+    [owner, user] = await ethers.getSigners();
 
     wbtc = await ethers.getContractAt("IERC20", WBTC);
     usdc = await ethers.getContractAt("IERC20", USDC);
@@ -34,7 +34,7 @@ describe("Exchange", () => {
   describe("swap", () => {
     it("eth -> wbtc", async () => {
       await exchange
-        .connect(user0)
+        .connect(user)
         .swap(ethers.ZeroAddress, WBTC, ethers.parseEther("1"), {
           value: ethers.parseEther("1"),
         });
@@ -42,7 +42,7 @@ describe("Exchange", () => {
 
     it("eth -> usdc", async () => {
       await exchange
-        .connect(user0)
+        .connect(user)
         .swap(ethers.ZeroAddress, USDC, ethers.parseEther("1"), {
           value: ethers.parseEther("1"),
         });
@@ -50,26 +50,26 @@ describe("Exchange", () => {
 
     it("wbtc -> eth", async () => {
       await exchange
-        .connect(user0)
+        .connect(user)
         .swap(ethers.ZeroAddress, WBTC, ethers.parseEther("1"), {
           value: ethers.parseEther("1"),
         });
-      const wbtcBalance = await wbtc.balanceOf(user0.address);
+      const wbtcBalance = await wbtc.balanceOf(user.address);
 
-      await wbtc.connect(user0).approve(exchange.target, wbtcBalance);
-      await exchange.connect(user0).swap(WBTC, WETH, wbtcBalance);
+      await wbtc.connect(user).approve(exchange.target, wbtcBalance);
+      await exchange.connect(user).swap(WBTC, WETH, wbtcBalance);
     });
 
     it("usdc -> eth", async () => {
       await exchange
-        .connect(user0)
+        .connect(user)
         .swap(ethers.ZeroAddress, USDC, ethers.parseEther("1"), {
           value: ethers.parseEther("1"),
         });
-      const usdcBalance = await usdc.balanceOf(user0.address);
+      const usdcBalance = await usdc.balanceOf(user.address);
 
-      await usdc.connect(user0).approve(exchange.target, usdcBalance);
-      await exchange.connect(user0).swap(USDC, WETH, usdcBalance);
+      await usdc.connect(user).approve(exchange.target, usdcBalance);
+      await exchange.connect(user).swap(USDC, WETH, usdcBalance);
     });
   });
 
@@ -88,10 +88,10 @@ describe("Exchange", () => {
     expect(await exchange.getAllRegisteredAdapters()).to.eql([]);
 
     await expect(
-      exchange.connect(user0).registerAdapter(newAdapter)
+      exchange.connect(user).registerAdapter(newAdapter)
     ).to.be.revertedWith("Ownable: caller is not the owner");
     await expect(
-      exchange.connect(user0).unregisterAdapter(newAdapter)
+      exchange.connect(user).unregisterAdapter(newAdapter)
     ).to.be.revertedWith("Ownable: caller is not the owner");
   });
 
@@ -110,16 +110,16 @@ describe("Exchange", () => {
     expect(await exchange.getAllRegisteredTokens()).to.eql([]);
 
     await expect(
-      exchange.connect(user0).registerToken(newToken)
+      exchange.connect(user).registerToken(newToken)
     ).to.be.revertedWith("Ownable: caller is not the owner");
     await expect(
-      exchange.connect(user0).unregisterToken(newToken)
+      exchange.connect(user).unregisterToken(newToken)
     ).to.be.revertedWith("Ownable: caller is not the owner");
   });
 
   describe("account", () => {
     it("createAccount", async () => {
-      await exchange.connect(user0).createAccount();
+      await exchange.connect(user).createAccount();
 
       expect(await exchange.totalAccount()).to.equal(1);
     });
@@ -127,14 +127,14 @@ describe("Exchange", () => {
     it("createAccountAndDeposit", async () => {
       const depositAmount = ethers.parseEther("1");
       await exchange
-        .connect(user0)
+        .connect(user)
         .createAccountAndDeposit(ethers.ZeroAddress, depositAmount, {
           value: depositAmount,
         });
 
       const account = await ethers.getContractAt(
         "IAccount",
-        await exchange.account(user0.address)
+        await exchange.account(user.address)
       );
       expect(await exchange.totalAccount()).to.equal(1);
       expect(await account.getBalance(ethers.ZeroAddress)).to.equal(

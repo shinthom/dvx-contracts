@@ -25,9 +25,4 @@ interface IAccount {
     function createMarketOrders(address[] calldata adapters, IExchange.PositionOrder[] calldata orders) payable external;
     function executeLimitOrder(address[] memory adapters, IExchange.PositionOrder[] calldata orders) payable external;
     function executeTriggerOrder(address adapter, IExchange.PositionOrder calldata order) payable external;
-
-    // function cancelLimitOrder(uint256 limitOrderId) external;
-    // function executeLimitOrder(uint256 limitOrderId) external;
-    // function cancelTriggerOrder(uint256 triggerOrderId) external;
-    // function executeTriggerOrder(uint256 triggerOrderId) external;
 }

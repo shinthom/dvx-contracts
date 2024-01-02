@@ -2,12 +2,12 @@
 pragma solidity ^0.8.0;
 
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import "./Account.sol";
-import "./interfaces/tokens/IERC20.sol";
-import "./interfaces/IExchange.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
+import { IERC20 } from  "./interfaces/tokens/IERC20.sol";
+import { Account } from  "./Account.sol";
+import { IExchange } from "./interfaces/IExchange.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { ISwapRouter } from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 
 contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     address private constant WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
@@ -75,10 +75,14 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address tokenIn,
         address tokenOut,
         uint256 amount
-    ) override payable external returns (uint256) {
+    ) override external payable returns (uint256) {
+        if (tokenOut == address(0)) {
+            tokenOut = WETH;
+        }
+
         uint256 amountOut;
         if (tokenIn == address(0)) {
-            require(msg.value == amount, "INVALID_AMOUNT");
+            require(msg.value == amount, "Exchange: INVALID_AMOUNT");
             IERC20(WETH).deposit{value: msg.value}();
             IERC20(WETH).approve(SWAP_ROUTER, amount);
 
@@ -155,7 +159,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
     function registerAdapter(address adapter) external onlyOwner {
         for (uint256 i = 0; i < _registeredAdapters.length; i++) {
-            require(_registeredAdapters[i] != adapter, "ALREADY_REGISTERED");
+            require(_registeredAdapters[i] != adapter, "Exchange: ALREADY_REGISTERED");
         }
 
         _registeredAdapters.push(adapter);
@@ -172,12 +176,12 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
                 return;
             }
         }
-        revert("NOT_REGISTERED");
+        revert("Exchange: NOT_REGISTERED");
     }
 
     function registerToken(address token) external onlyOwner {
         for (uint256 i = 0; i < _registeredTokens.length; i++) {
-            require(_registeredTokens[i] != token, "ALREADY_REGISTERED");
+            require(_registeredTokens[i] != token, "Exchange: ALREADY_REGISTERED");
         }
 
         _registeredTokens.push(token);
@@ -194,6 +198,6 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
                 return;
             }
         }
-        revert("NOT_REGISTERED");
+        revert("Exchange: NOT_REGISTERED");
     }
 }

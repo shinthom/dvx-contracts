@@ -4,19 +4,20 @@ const { ethers } = require("hardhat");
 const PositionRouter = "0xb87a436b93ffe9d75c5cfa7bacfff96430b09868";
 const Router = "0xabbc5f99639c9b6bcb58544ddf04efa6802f4064";
 const Vault = "0x489ee077994b6658eafa855c308275ead8097c4a";
-// uniswap
-const SwapRouter = "0xE592427A0AEce92De3Edee1F18E0157C05861564";
 
 // mux contracts
 const OrderBook = "0xa19fD5aB6C8DCffa2A295F78a5Bb4aC543AAF5e3";
 const LiquidityPool = "0x3e0199792ce69dc29a0a36146bfa68bd7c8d6633";
 
 // token contracts
+const ETH = ethers.ZeroAddress;
 const WETH = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1";
 const USDC = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
 const WBTC = "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f";
 
-let user0;
+let deployer;
+let user;
+let other;
 // gmx
 let impersonatedAdmin;
 let impersonatedPositionKeeper;
@@ -40,8 +41,7 @@ let reader;
 let account;
 
 const deploy = async (noAccount) => {
-  // accounts
-  [user0] = await ethers.getSigners();
+  [deployer, user, other] = await ethers.getSigners();
   impersonatedAdmin = await ethers.getImpersonatedSigner(
     "0xb4d2603b2494103c90b2c607261dd85484b49ef0" // gmx admin
   );
@@ -54,7 +54,6 @@ const deploy = async (noAccount) => {
 
   vault = await ethers.getContractAt("IVault", Vault);
   positionRouter = await ethers.getContractAt(
-    // gmx position router
     "IPositionRouter",
     PositionRouter
   );
@@ -63,13 +62,11 @@ const deploy = async (noAccount) => {
     .setPositionKeeper(impersonatedPositionKeeper.address, true); // execution reverted: 403
   await positionRouter.connect(impersonatedAdmin).setDelayValues(0, 0, 100); // execution reverted: delay
   orderBook = await ethers.getContractAt("IOrderBook", OrderBook); // mux order book
+  quoter = await ethers.deployContract("Quoter");
 
   weth = await ethers.getContractAt("IERC20", WETH);
   usdc = await ethers.getContractAt("IERC20", USDC);
   wbtc = await ethers.getContractAt("IERC20", WBTC);
-
-  // deploy
-  quoter = await ethers.deployContract("Quoter");
 
   const warehouseImpl = await ethers.deployContract("Warehouse");
   const warehouseProxy = await ethers.deployContract("ERC1967Proxy", [
@@ -90,31 +87,41 @@ const deploy = async (noAccount) => {
     PositionRouter,
     Router,
     Vault,
-    SwapRouter,
     exchange.target,
   ]);
   mux = await ethers.deployContract("MUX", [OrderBook, LiquidityPool]);
   reader = await ethers.deployContract("Reader");
 
+  const minExecutionFee = await positionRouter.minExecutionFee();
+  const orderType = {
+    increasePosition: 0,
+    decreasePosition: 1,
+    increaseCollateral: 2,
+    decreaseCollateral: 3,
+  };
+
   if (!noAccount) {
-    await exchange.connect(user0).createAccount();
+    await exchange.connect(user).createAccount();
     account = await ethers.getContractAt(
       "Account",
-      await exchange.account(user0.address)
+      await exchange.account(user.address)
     );
   }
 
-  const faucet = async (tokenAddress, tokenIn) => {
-    await exchange.swap(ethers.ZeroAddress, tokenAddress, tokenIn, {
-      value: tokenIn,
-    });
+  const checkBalance = async (account) => {
+    console.log(`
+-  ETH: ${await account.getBalance(ETH)}
+- WETH: ${await account.getBalance(WETH)}
+- WBTC: ${await account.getBalance(WBTC)}
+- USDC: ${await account.getBalance(USDC)}
+`);
   };
 
-  const swap = async (from, to, fromAmount) => {
-    await weth.deposit({ value: fromAmount });
-    await weth.transfer(gmxV1.target, fromAmount);
-
-    await gmxV1.swap(from, to, fromAmount);
+  const faucet = async (token, tokenAmount) => {
+    // swap from eth to some token (tokenIn is eth amount)
+    await exchange.connect(user).swap(ETH, token, tokenAmount, {
+      value: tokenAmount,
+    });
   };
 
   const executeIncreasePosition = async (account) => {
@@ -127,7 +134,7 @@ const deploy = async (noAccount) => {
     );
     await positionRouter
       .connect(impersonatedPositionKeeper)
-      .executeIncreasePosition(requestKey, user0.address);
+      .executeIncreasePosition(requestKey, user.address);
   };
 
   const executeDecreasePosition = async (account) => {
@@ -140,7 +147,7 @@ const deploy = async (noAccount) => {
     );
     await positionRouter
       .connect(impersonatedPositionKeeper)
-      .executeDecreasePosition(requestKey, user0.address);
+      .executeDecreasePosition(requestKey, user.address);
   };
 
   const fillPositionOrder = async () => {
@@ -174,10 +181,10 @@ const deploy = async (noAccount) => {
     const seconds = 60 * 60 * 8; // 8 hours
     await increaseTime(seconds);
 
-    const beforeFundingRate = await vault.cumulativeFundingRates(collateral);
+    // const beforeFundingRate = await vault.cumulativeFundingRates(collateral);
     await vault.updateCumulativeFundingRate(collateral);
-    const afterFundingRate = await vault.cumulativeFundingRates(collateral);
-    console.log(`\nfundingRate is updated: ${beforeFundingRate} -> ${afterFundingRate}\n`) // prettier-ignore
+    // const afterFundingRate = await vault.cumulativeFundingRates(collateral);
+    // console.log(`\nfundingRate is updated: ${beforeFundingRate} -> ${afterFundingRate}\n`) // prettier-ignore
   };
 
   const updateFundingState = async () => {
@@ -204,12 +211,16 @@ const deploy = async (noAccount) => {
   };
 
   return {
-    user0,
+    deployer,
+    user,
+    other,
     impersonatedAdmin,
     impersonatedPositionKeeper,
     impersonatedBroker,
     vault,
     positionRouter,
+    minExecutionFee,
+    orderType,
     orderBook,
     weth,
     usdc,
@@ -221,13 +232,96 @@ const deploy = async (noAccount) => {
     quoter,
     reader,
     account,
-    tokens: {
-      WETH,
-      USDC,
-      WBTC,
-    },
+    ETH,
+    WETH,
+    USDC,
+    WBTC,
+    checkBalance,
     faucet,
-    swap,
+    executeIncreasePosition,
+    executeDecreasePosition,
+    fillPositionOrder,
+    fillWithdrawalOrder,
+    updateCumulativeFundingRate,
+    updateFundingState,
+  };
+};
+
+const deployAndDeposit = async () => {
+  const {
+    deployer,
+    user,
+    other,
+    impersonatedAdmin,
+    impersonatedPositionKeeper,
+    impersonatedBroker,
+    vault,
+    positionRouter,
+    minExecutionFee,
+    orderType,
+    orderBook,
+    weth,
+    usdc,
+    wbtc,
+    gmxV1,
+    mux,
+    exchange,
+    warehouse,
+    quoter,
+    reader,
+    account,
+    ETH,
+    WETH,
+    USDC,
+    WBTC,
+    checkBalance,
+    faucet,
+    executeIncreasePosition,
+    executeDecreasePosition,
+    fillPositionOrder,
+    fillWithdrawalOrder,
+    updateCumulativeFundingRate,
+    updateFundingState,
+  } = await deploy();
+
+  const depositAmount = ethers.parseEther("1");
+  await faucet(WBTC, depositAmount);
+  await faucet(USDC, depositAmount);
+
+  await account.connect(user).deposit(ethers.ZeroAddress, depositAmount, { value: depositAmount }); // prettier-ignore
+  await wbtc.connect(user).approve(account.target, await wbtc.balanceOf(user.address)); // prettier-ignore
+  await usdc.connect(user).approve(account.target, await usdc.balanceOf(user.address)); // prettier-ignore
+  await account.connect(user).deposit(WBTC, await wbtc.balanceOf(user.address));
+  await account.connect(user).deposit(USDC, await usdc.balanceOf(user.address));
+
+  return {
+    deployer,
+    user,
+    other,
+    impersonatedAdmin,
+    impersonatedPositionKeeper,
+    impersonatedBroker,
+    vault,
+    positionRouter,
+    minExecutionFee,
+    orderType,
+    orderBook,
+    weth,
+    usdc,
+    wbtc,
+    gmxV1,
+    mux,
+    exchange,
+    warehouse,
+    quoter,
+    reader,
+    account,
+    ETH,
+    WETH,
+    USDC,
+    WBTC,
+    checkBalance,
+    faucet,
     executeIncreasePosition,
     executeDecreasePosition,
     fillPositionOrder,
@@ -239,4 +333,5 @@ const deploy = async (noAccount) => {
 
 module.exports = {
   deploy,
+  deployAndDeposit,
 };

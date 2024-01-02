@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "./interfaces/IAdapter.sol";
-import "./interfaces/IAccount.sol";
-import "./interfaces/IQuoter.sol";
-import "./interfaces/IExchange.sol";
-import "./interfaces/IWarehouse.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { IAdapter } from "./interfaces/IAdapter.sol";
+import { IAccount } from "./interfaces/IAccount.sol";
+import { IQuoter } from "./interfaces/IQuoter.sol";
+import { IExchange } from "./interfaces/IExchange.sol";
+import { IWarehouse } from "./interfaces/IWarehouse.sol";
 
 contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
     mapping (address => bool) private _orderKeepers;
@@ -90,7 +90,7 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         address account,
         uint256 orderIndex,
         IQuoter.Answer[] memory answers
-    ) payable external onlyOrderKeeper {
+    ) external payable onlyOrderKeeper {
         IExchange.LimitOrder storage limitOrder = _limitOrders[account][orderIndex];
         require(
             limitOrder.index != address(0),
@@ -128,7 +128,7 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
     function executeTriggerOrder(
         address account,
         uint256 orderIndex
-    ) payable external onlyOrderKeeper {
+    ) external payable onlyOrderKeeper {
         IExchange.TriggerOrder memory triggerOrder = _triggerOrders[account][orderIndex];
         require(
             triggerOrder.index != address(0),

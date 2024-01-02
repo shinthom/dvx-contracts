@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import "./interfaces/tokens/IERC20.sol";
-import "./interfaces/IAccount.sol";
-import "./interfaces/IAdapter.sol";
-import "./interfaces/IExchange.sol";
-import "./interfaces/IWarehouse.sol";
+import { IERC20 } from "./interfaces/tokens/IERC20.sol";
+import { IAccount } from "./interfaces/IAccount.sol";
+import { IAdapter } from  "./interfaces/IAdapter.sol";
+import { IExchange } from "./interfaces/IExchange.sol";
+import { IWarehouse } from  "./interfaces/IWarehouse.sol";
 
 contract Account is IAccount {
     address private _owner;
@@ -14,6 +14,14 @@ contract Account is IAccount {
     constructor(address owner_, address exchange_) {
         _owner = owner_;
         _exchange = exchange_;
+    }
+
+    modifier onlyOwner() {
+        require(
+            _owner == msg.sender,
+            "Account: NOT_OWNER"
+        );
+        _;
     }
 
     receive() external payable {}
@@ -62,20 +70,19 @@ contract Account is IAccount {
         }
     }
 
-    function deposit(address token, uint256 amount) override payable external {
-        require(amount > 0, "ZERO_AMOUNT");
+    function deposit(address token, uint256 amount) override external payable {
+        require(amount > 0, "Account: ZERO_AMOUNT");
 
         if (token == address(0)) {
-            require(amount == msg.value, "VAL");
+            require(amount == msg.value, "Account: INVALID_AMOUNT");
         } else {
             IERC20(token).transferFrom(msg.sender, address(this), amount );
         }
         emit Deposited(msg.sender, token, amount);
     }
 
-    function withdraw(address token, uint256 amount) override external {
-        require(msg.sender == _owner, "NOT_OWNER");
-        require(amount > 0, "ZERO_AMOUNT");
+    function withdraw(address token, uint256 amount) override external onlyOwner  {
+        require(amount > 0, "Account: ZERO_AMOUNT");
 
         if (token == address(0)) {
             payable(msg.sender).transfer(amount);
@@ -89,7 +96,9 @@ contract Account is IAccount {
         address tokenIn,
         address tokenOut,
         uint256 amount
-    ) override external returns (uint256 amountOut) {
+    ) override external onlyOwner returns (uint256 amountOut) {
+        require(tokenIn != tokenOut, "Account: SAME_TOKEN");
+
         if (tokenIn == address(0)) {
             require(address(this).balance >= amount, "INSUFFICIENT_BALANCE");
             amountOut = IExchange(_exchange).swap{value: amount}(tokenIn, tokenOut, amount);
@@ -164,7 +173,7 @@ contract Account is IAccount {
     function createMarketOrders(
         address[] calldata adapters,
         IExchange.PositionOrder[] calldata orders
-    ) override payable external {
+    ) override external payable onlyOwner {
         for (uint256 i = 0; i < adapters.length; i++) {
             (bool success, bytes memory data) = _createMarketOrder(
                 adapters[i],
@@ -176,14 +185,14 @@ contract Account is IAccount {
 
     function createLimitOrder(
         IExchange.LimitOrder memory order
-    ) public {
+    ) public onlyOwner {
         address warehouse = IExchange(_exchange).warehouse();
         IWarehouse(warehouse).createLimitOrder(order);
 
         // todo: send tokens? or lock tokens?
     }
 
-    function cancelLimitOrder(uint256 orderIndex) public {
+    function cancelLimitOrder(uint256 orderIndex) public onlyOwner {
         address warehouse = IExchange(_exchange).warehouse();
         IWarehouse(warehouse).cancelLimitOrder(orderIndex);
     }
@@ -191,7 +200,7 @@ contract Account is IAccount {
     function executeLimitOrder(
         address[] calldata adapters,
         IExchange.PositionOrder[] calldata orders
-    ) override payable public {
+    ) override public payable {
         address warehouse = IExchange(_exchange).warehouse();
         require(msg.sender == warehouse, "NOT_WAREHOUSE");
 
@@ -206,12 +215,12 @@ contract Account is IAccount {
 
     function createTriggerOrder(
         IExchange.TriggerOrder memory order
-    ) public {
+    ) public onlyOwner {
         address warehouse = IExchange(_exchange).warehouse();
         IWarehouse(warehouse).createTriggerOrder(order);
     }
 
-    function cancelTriggerOrder(uint256 orderId) public {
+    function cancelTriggerOrder(uint256 orderId) public onlyOwner {
         address warehouse = IExchange(_exchange).warehouse();
         IWarehouse(warehouse).cancelTriggerOrder(orderId);
     }
@@ -219,7 +228,7 @@ contract Account is IAccount {
     function executeTriggerOrder(
         address adapter,
         IExchange.PositionOrder calldata order
-    ) override payable public {
+    ) override public payable {
         address warehouse = IExchange(_exchange).warehouse();
         require(msg.sender == warehouse, "NOT_WAREHOUSE");
 

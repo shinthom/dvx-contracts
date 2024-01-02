@@ -7,7 +7,7 @@ const usdcPrice = ethers.parseUnits("1", 18);
 
 async function main() {
   const {
-    user0,
+    user,
     gmxV1,
     mux,
     exchange,
@@ -15,13 +15,15 @@ async function main() {
     reader,
     quoter,
     account,
-    tokens,
+    WETH,
+    WBTC,
+    USDC,
+    faucet,
     executeIncreasePosition,
     fillPositionOrder,
-    swap,
   } = await deploy();
   console.log(`
-- user0    : ${user0.address}
+- user     : ${user.address}
 - gmxV1    : ${gmxV1.target}
 - mux      : ${mux.target}
 - exchange : ${exchange.target}
@@ -31,18 +33,9 @@ async function main() {
 - account  : ${account.target}
   `);
 
-  const { WETH, USDC, WBTC } = tokens;
-
-  const faucet = async (tokenAddress, tokenAmount, tokenName) => {
-    await swap(WETH, tokenAddress, tokenAmount);
-
-    const token = await ethers.getContractAt("IERC20", tokenAddress);
-    console.log(`- ${tokenName}: ${await token.balanceOf(user0.address)}`);
-  };
-
   console.log("`faucet`");
-  await faucet(USDC, ethers.parseEther("200"), "USDC");
-  await faucet(WBTC, ethers.parseEther("200"), "WBTC");
+  await faucet(WBTC, ethers.parseEther("10"));
+  await faucet(USDC, ethers.parseEther("10"));
 
   const depositAndIncreasePosition = async (
     collateral,
@@ -79,16 +72,18 @@ async function main() {
     );
 
     if (collateral == WETH) {
-      await account.deposit(ethers.ZeroAddress, collateralAmount, {
-        value: collateralAmount,
-      });
+      await account
+        .connect(user)
+        .deposit(ethers.ZeroAddress, collateralAmount, {
+          value: collateralAmount,
+        });
     } else {
       const token = await ethers.getContractAt("IERC20", collateral);
-      await token.approve(account.target, collateralAmount);
-      await account.deposit(collateral, collateralAmount);
+      await token.connect(user).approve(account.target, collateralAmount);
+      await account.connect(user).deposit(collateral, collateralAmount);
     }
 
-    await account.createMarketOrders(
+    await account.connect(user).createMarketOrders(
       [gmxV1.target],
       [
         {
@@ -107,7 +102,7 @@ async function main() {
             : BigInt("180000000000000"),
       }
     );
-    await account.createMarketOrders(
+    await account.connect(user).createMarketOrders(
       [mux.target],
       [
         {

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import "./interfaces/IAdapter.sol";
-import "./interfaces/IExchange.sol";
-import "./interfaces/IQuoter.sol";
+import { IAdapter } from  "./interfaces/IAdapter.sol";
+import { IExchange } from  "./interfaces/IExchange.sol";
+import { IQuoter } from "./interfaces/IQuoter.sol";
 
 contract Quoter is IQuoter {
     uint256 public constant PRICE_DECIMAL = 2;
@@ -154,7 +154,7 @@ contract Quoter is IQuoter {
     ) override public view returns (Answer[] memory answers) {
         require(
             adapters.length > 0 && adapters.length == requests.length,
-            "INVALID_LENGTH"
+            "Quoter: INVALID_LENGTH"
         );
 
         uint256[] memory feeList = new uint256[](adapters.length);
@@ -191,7 +191,7 @@ contract Quoter is IQuoter {
     ) public view returns (Answer[] memory answers) {
         require(
             adapters.length > 0 && adapters.length == requests.length,
-            "INVALID_LENGTH"
+            "Quoter: INVALID_LENGTH"
         );
 
         uint256[] memory feeList = new uint256[](adapters.length);

@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import "./interfaces/IAccount.sol";
-import "./interfaces/IAdapter.sol";
-import "./interfaces/IWarehouse.sol";
-import "hardhat/console.sol";
+import { IExchange } from  "./interfaces/IExchange.sol";
+import { IAdapter } from  "./interfaces/IAdapter.sol";
+import { IWarehouse } from "./interfaces/IWarehouse.sol";
 
 contract Reader {
     struct Position {

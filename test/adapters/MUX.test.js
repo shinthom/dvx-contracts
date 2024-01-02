@@ -48,7 +48,7 @@ describe("MUX", () => {
     });
 
     it("position fee", async () => {
-      const { mux, fillPositionOrder } = await loadFixture(deploy);
+      const { user, mux, fillPositionOrder } = await loadFixture(deploy);
       const positionOrder = await mux.makePositionOrder(
         WETH,
         WETH,
@@ -58,16 +58,18 @@ describe("MUX", () => {
         wethPrice,
         wethPrice
       );
-      await mux.increasePosition(
-        [...positionOrder.path],
-        positionOrder.index,
-        positionOrder.collateralAmount,
-        positionOrder.size,
-        positionOrder.isLong,
-        {
-          value: positionOrder.collateralAmount,
-        }
-      );
+      await mux
+        .connect(user)
+        .increasePosition(
+          [...positionOrder.path],
+          positionOrder.index,
+          positionOrder.collateralAmount,
+          positionOrder.size,
+          positionOrder.isLong,
+          {
+            value: positionOrder.collateralAmount,
+          }
+        );
       await fillPositionOrder();
 
       const position = await mux.getPosition(mux.target, WETH, WETH, true);
@@ -80,9 +82,8 @@ describe("MUX", () => {
     });
 
     it("funding fee", async () => {
-      const { mux, fillPositionOrder, updateFundingState } = await loadFixture(
-        deploy
-      );
+      const { user, mux, fillPositionOrder, updateFundingState } =
+        await loadFixture(deploy);
       const positionOrder = await mux.makePositionOrder(
         WETH,
         WETH,
@@ -92,16 +93,18 @@ describe("MUX", () => {
         wethPrice,
         wethPrice
       );
-      await mux.increasePosition(
-        [...positionOrder.path],
-        positionOrder.index,
-        positionOrder.collateralAmount,
-        positionOrder.size,
-        positionOrder.isLong,
-        {
-          value: positionOrder.collateralAmount,
-        }
-      );
+      await mux
+        .connect(user)
+        .increasePosition(
+          [...positionOrder.path],
+          positionOrder.index,
+          positionOrder.collateralAmount,
+          positionOrder.size,
+          positionOrder.isLong,
+          {
+            value: positionOrder.collateralAmount,
+          }
+        );
       await fillPositionOrder();
 
       const position = await mux.getPosition(mux.target, WETH, WETH, true);

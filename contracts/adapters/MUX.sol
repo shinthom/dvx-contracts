@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import "../interfaces/exchanges/MUX/ILiquidityPool.sol";
-import "../interfaces/exchanges/MUX/IOrderBook.sol";
-import "../interfaces/tokens/IERC20.sol";
-import "../interfaces/IAdapter.sol";
-import "../interfaces/IExchange.sol";
+import { ILiquidityPool } from "../interfaces/exchanges/MUX/ILiquidityPool.sol";
+import { IOrderBook } from "../interfaces/exchanges/MUX/IOrderBook.sol";
+import { IERC20 } from "../interfaces/tokens/IERC20.sol";
+import { IAdapter } from "../interfaces/IAdapter.sol";
+import { IExchange } from "../interfaces/IExchange.sol";
 
 contract MUX is IAdapter {
     address constant private WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
@@ -14,14 +14,14 @@ contract MUX is IAdapter {
     uint256 constant public PRICE_DECIMALS = 18;
     uint256 constant public USD = 1 * (10 ** PRICE_DECIMALS);
 
-    address immutable private _orderBook;
-    address immutable private _liquidityPool;
+    address immutable private ORDER_BOOK;
+    address immutable private LIQUIDITY_POOL;
 
     receive() external payable {}
 
     constructor(address orderBook, address liquidityPool) {
-        _orderBook = orderBook;
-        _liquidityPool = liquidityPool;
+        ORDER_BOOK = orderBook;
+        LIQUIDITY_POOL = liquidityPool;
     }
 
     function getPriceDecimals() override public pure returns (uint256) {
@@ -49,7 +49,7 @@ contract MUX is IAdapter {
             uint256 lastIncreasedTime,
             uint256 price,
             uint256 fundingRate
-        ) = ILiquidityPool(_liquidityPool).getSubAccount(subAccountId);
+        ) = ILiquidityPool(LIQUIDITY_POOL).getSubAccount(subAccountId);
 
         return IAdapter.Position(
             collateralAmount,
@@ -83,7 +83,7 @@ contract MUX is IAdapter {
     ) override public view returns (uint256) {
         uint8 indexId = _getIdFromAsset(index);
         uint32 positionFeeRate
-            = (ILiquidityPool(_liquidityPool).getAssetInfo(indexId)).positionFeeRate;
+            = (ILiquidityPool(LIQUIDITY_POOL).getAssetInfo(indexId)).positionFeeRate;
 
         uint256 decimals = IERC20(index).decimals();
         return ((indexPrice * positionFeeRate) * size) / 1e5 / (10 ** decimals);
@@ -98,7 +98,7 @@ contract MUX is IAdapter {
         uint256 indexPrice
     ) override public view returns (uint256) {
         uint8 indexId = _getIdFromAsset(index);
-        ILiquidityPool.Asset memory asset = ILiquidityPool(_liquidityPool).getAssetInfo(indexId);
+        ILiquidityPool.Asset memory asset = ILiquidityPool(LIQUIDITY_POOL).getAssetInfo(indexId);
 
         uint256 cumulativeFunding;
         if (isLong) {
@@ -116,7 +116,7 @@ contract MUX is IAdapter {
         bool isLong
     ) override public view returns (uint256) {
         uint8 indexId = _getIdFromAsset(index);
-        ILiquidityPool.Asset memory asset = ILiquidityPool(_liquidityPool).getAssetInfo(indexId);
+        ILiquidityPool.Asset memory asset = ILiquidityPool(LIQUIDITY_POOL).getAssetInfo(indexId);
 
         uint256 availableLiquidity;
         if (isLong) {
@@ -164,7 +164,7 @@ contract MUX is IAdapter {
     }
 
     function _getIdFromAsset(address tokenAddress) private view returns (uint8) {
-        ILiquidityPool.Asset[] memory assets = ILiquidityPool(_liquidityPool).getAllAssetInfo();
+        ILiquidityPool.Asset[] memory assets = ILiquidityPool(LIQUIDITY_POOL).getAllAssetInfo();
         for (uint256 i = 0; i < assets.length; i++) {
             if (assets[i].tokenAddress == tokenAddress) {
                 return assets[i].id;
@@ -179,7 +179,7 @@ contract MUX is IAdapter {
         uint256 collateralAmount,
         uint256 size,
         bool isLong
-    ) override payable public {
+    ) override public payable {
         require(path.length == 1, "INVALID_PATH");
         address collateral = path[0];
 
@@ -195,7 +195,7 @@ contract MUX is IAdapter {
 
         // ETH
         if (collateralId == 3) {
-            IOrderBook(_orderBook).placePositionOrder3{value: collateralAmount}(
+            IOrderBook(ORDER_BOOK).placePositionOrder3{value: collateralAmount}(
                 subAccountId,
                 uint96(collateralAmount),
                 uint96(size),
@@ -207,8 +207,8 @@ contract MUX is IAdapter {
                 IOrderBook.PositionOrderExtra(0, 0, 0, 0)
             );
         } else {
-            IERC20(collateral).approve(_orderBook, collateralAmount);
-            IOrderBook(_orderBook).placePositionOrder3(
+            IERC20(collateral).approve(ORDER_BOOK, collateralAmount);
+            IOrderBook(ORDER_BOOK).placePositionOrder3(
                 subAccountId,
                 uint96(collateralAmount),
                 uint96(size),
@@ -227,7 +227,7 @@ contract MUX is IAdapter {
         address index,
         uint256 size,
         bool isLong
-    ) override payable public {
+    ) override public payable {
         uint8 collateralId = _getIdFromAsset(collateral);
         uint8 indexId = _getIdFromAsset(index);
 
@@ -238,7 +238,7 @@ contract MUX is IAdapter {
             isLong
         );
 
-        IOrderBook(_orderBook).placePositionOrder3(
+        IOrderBook(ORDER_BOOK).placePositionOrder3(
             subAccountId,
             0, // collateral
             uint96(size),
@@ -256,7 +256,7 @@ contract MUX is IAdapter {
         address index,
         uint256 collateralAmount,
         bool isLong
-    ) override payable public {
+    ) override public payable {
         require(path.length == 1, "INVALID_PATH");
         address collateral = path[0];
 
@@ -271,10 +271,10 @@ contract MUX is IAdapter {
         );
 
         if (collateral == WETH) {
-            IOrderBook(_orderBook).depositCollateral{value: collateralAmount}(subAccountId, collateralAmount);
+            IOrderBook(ORDER_BOOK).depositCollateral{value: collateralAmount}(subAccountId, collateralAmount);
         } else {
-            IERC20(collateral).approve(_orderBook, collateralAmount);
-            IOrderBook(_orderBook).depositCollateral(subAccountId, collateralAmount);
+            IERC20(collateral).approve(ORDER_BOOK, collateralAmount);
+            IOrderBook(ORDER_BOOK).depositCollateral(subAccountId, collateralAmount);
         }
     }
 
@@ -283,7 +283,7 @@ contract MUX is IAdapter {
         address index,
         uint256 collateralAmount,
         bool isLong
-    ) override payable public {
+    ) override public payable {
         uint8 collateralId = _getIdFromAsset(collateral);
         uint8 indexId = _getIdFromAsset(index);
 
@@ -294,7 +294,7 @@ contract MUX is IAdapter {
             isLong
         );
 
-        IOrderBook(_orderBook).placeWithdrawalOrder(
+        IOrderBook(ORDER_BOOK).placeWithdrawalOrder(
             subAccountId,
             uint96(collateralAmount),
             0, // profitTokenId

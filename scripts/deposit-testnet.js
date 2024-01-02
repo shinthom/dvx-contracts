@@ -3,7 +3,7 @@ const { deploy } = require("../test/fixture/setup");
 
 async function main() {
   const {
-    user0,
+    user,
     gmxV1,
     mux,
     exchange,
@@ -11,13 +11,14 @@ async function main() {
     reader,
     quoter,
     account,
-    tokens,
+    WBTC,
+    USDC,
     usdc,
     wbtc,
-    swap,
+    faucet,
   } = await deploy();
   console.log(`
-- user0    : ${user0.address}
+- user     : ${user.address}
 - gmxV1    : ${gmxV1.target}
 - mux      : ${mux.target}
 - exchange : ${exchange.target}
@@ -27,26 +28,19 @@ async function main() {
 - account  : ${account.target}
   `);
 
-  const { WETH, USDC, WBTC } = tokens;
-
-  const faucet = async (tokenAddress, tokenAmount, tokenName) => {
-    await swap(WETH, tokenAddress, tokenAmount);
-
-    const token = await ethers.getContractAt("IERC20", tokenAddress);
-    console.log(`- ${tokenName}: ${await token.balanceOf(user0.address)}`);
-  };
-
   console.log("`faucet`");
-  await faucet(USDC, ethers.parseEther("300"), "USDC");
-  await faucet(WBTC, ethers.parseEther("300"), "WBTC");
+  await faucet(USDC, ethers.parseEther("30"), "USDC");
+  await faucet(WBTC, ethers.parseEther("30"), "WBTC");
+  const usdcBalance = await usdc.balanceOf(user.address);
+  const wbtcBalance = await wbtc.balanceOf(user.address);
 
   await account.deposit(ethers.ZeroAddress, ethers.parseEther("30"), {
     value: ethers.parseEther("30"),
   });
-  await usdc.approve(account.target, ethers.parseUnits("6000", 6));
-  await account.deposit(USDC, ethers.parseUnits("6000", 6));
-  await wbtc.approve(account.target, ethers.parseUnits("10", 8));
-  await account.deposit(WBTC, ethers.parseUnits("10", 8));
+  await usdc.connect(user).approve(account.target, usdcBalance);
+  await account.connect(user).deposit(USDC, usdcBalance);
+  await wbtc.connect(user).approve(account.target, wbtcBalance);
+  await account.connect(user).deposit(WBTC, wbtcBalance);
 
   console.log("\n`deposit`");
   console.log("- weth: " + (await account.getBalance(ethers.ZeroAddress)));

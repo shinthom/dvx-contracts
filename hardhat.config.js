@@ -17,7 +17,7 @@ task("unset-automine", "Unset automine").setAction(async (_args, hre) => {
 task("execute-order:increase", "Execute GMX V1 increase order")
   .addParam("account", "Account address")
   .setAction(async ({ account }, { ethers }) => {
-    const [user0] = await ethers.getSigners();
+    const [user] = await ethers.getSigners();
     const PositionRouter = "0xb87a436b93ffe9d75c5cfa7bacfff96430b09868";
     const positionRouter = await ethers.getContractAt(
       "IPositionRouter",
@@ -37,14 +37,14 @@ task("execute-order:increase", "Execute GMX V1 increase order")
     );
     await positionRouter
       .connect(impersonatedPositionKeeper)
-      .executeIncreasePosition(requestKey, user0.address);
+      .executeIncreasePosition(requestKey, user.address);
   });
 
 // hardhat execute-order:decrease --account 0x988aa44e12c7bce07e449a4156b4a269d6642b3a --network local
 task("execute-order:decrease", "Execute GMX V1 decrease order")
   .addParam("account", "Account address")
   .setAction(async ({ account }, { ethers }) => {
-    const [user0] = await ethers.getSigners();
+    const [user] = await ethers.getSigners();
     const PositionRouter = "0xb87a436b93ffe9d75c5cfa7bacfff96430b09868";
     const positionRouter = await ethers.getContractAt(
       "IPositionRouter",
@@ -64,7 +64,7 @@ task("execute-order:decrease", "Execute GMX V1 decrease order")
     );
     await positionRouter
       .connect(impersonatedPositionKeeper)
-      .executeDecreasePosition(requestKey, user0.address);
+      .executeDecreasePosition(requestKey, user.address);
   });
 
 // hardhat fill-order:increase --network local
@@ -144,9 +144,9 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200
-      }
-    }
+        runs: 200,
+      },
+    },
   },
   networks: {
     local: {
