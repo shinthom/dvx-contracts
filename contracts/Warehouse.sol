@@ -10,7 +10,7 @@ import { IExchange } from "./interfaces/IExchange.sol";
 import { IWarehouse } from "./interfaces/IWarehouse.sol";
 
 contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
-    mapping (address => bool) private _orderKeepers;
+    mapping(address => bool) private _orderKeepers;
 
     mapping(address => uint256) private _limitOrderIndex;
     mapping(address => uint256) private _triggerOrderIndex;

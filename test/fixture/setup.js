@@ -113,8 +113,7 @@ const deploy = async (noAccount) => {
 -  ETH: ${await account.getBalance(ETH)}
 - WETH: ${await account.getBalance(WETH)}
 - WBTC: ${await account.getBalance(WBTC)}
-- USDC: ${await account.getBalance(USDC)}
-`);
+- USDC: ${await account.getBalance(USDC)}`);
   };
 
   const faucet = async (token, tokenAmount) => {
@@ -331,7 +330,245 @@ const deployAndDeposit = async () => {
   };
 };
 
+const deployAndDepositETH = async () => {
+  const {
+    deployer,
+    user,
+    other,
+    impersonatedAdmin,
+    impersonatedPositionKeeper,
+    impersonatedBroker,
+    vault,
+    positionRouter,
+    minExecutionFee,
+    orderType,
+    orderBook,
+    weth,
+    usdc,
+    wbtc,
+    gmxV1,
+    mux,
+    exchange,
+    warehouse,
+    quoter,
+    reader,
+    account,
+    ETH,
+    WETH,
+    USDC,
+    WBTC,
+    checkBalance,
+    faucet,
+    executeIncreasePosition,
+    executeDecreasePosition,
+    fillPositionOrder,
+    fillWithdrawalOrder,
+    updateCumulativeFundingRate,
+    updateFundingState,
+  } = await deploy();
+
+  const depositAmount = ethers.parseEther("1");
+  await account.connect(user).deposit(ethers.ZeroAddress, depositAmount, { value: depositAmount }); // prettier-ignore
+
+  return {
+    deployer,
+    user,
+    other,
+    impersonatedAdmin,
+    impersonatedPositionKeeper,
+    impersonatedBroker,
+    vault,
+    positionRouter,
+    minExecutionFee,
+    orderType,
+    orderBook,
+    weth,
+    usdc,
+    wbtc,
+    gmxV1,
+    mux,
+    exchange,
+    warehouse,
+    quoter,
+    reader,
+    account,
+    ETH,
+    WETH,
+    USDC,
+    WBTC,
+    checkBalance,
+    faucet,
+    executeIncreasePosition,
+    executeDecreasePosition,
+    fillPositionOrder,
+    fillWithdrawalOrder,
+    updateCumulativeFundingRate,
+    updateFundingState,
+  };
+};
+
+const deployAndDepositWBTC = async () => {
+  const {
+    deployer,
+    user,
+    other,
+    impersonatedAdmin,
+    impersonatedPositionKeeper,
+    impersonatedBroker,
+    vault,
+    positionRouter,
+    minExecutionFee,
+    orderType,
+    orderBook,
+    weth,
+    usdc,
+    wbtc,
+    gmxV1,
+    mux,
+    exchange,
+    warehouse,
+    quoter,
+    reader,
+    account,
+    ETH,
+    WETH,
+    USDC,
+    WBTC,
+    checkBalance,
+    faucet,
+    executeIncreasePosition,
+    executeDecreasePosition,
+    fillPositionOrder,
+    fillWithdrawalOrder,
+    updateCumulativeFundingRate,
+    updateFundingState,
+  } = await deploy();
+  const depositAmount = ethers.parseEther("1");
+  await faucet(WBTC, depositAmount);
+
+  await wbtc.connect(user).approve(account.target, await wbtc.balanceOf(user.address)); // prettier-ignore
+  await account.connect(user).deposit(WBTC, await wbtc.balanceOf(user.address));
+
+  return {
+    deployer,
+    user,
+    other,
+    impersonatedAdmin,
+    impersonatedPositionKeeper,
+    impersonatedBroker,
+    vault,
+    positionRouter,
+    minExecutionFee,
+    orderType,
+    orderBook,
+    weth,
+    usdc,
+    wbtc,
+    gmxV1,
+    mux,
+    exchange,
+    warehouse,
+    quoter,
+    reader,
+    account,
+    ETH,
+    WETH,
+    USDC,
+    WBTC,
+    checkBalance,
+    faucet,
+    executeIncreasePosition,
+    executeDecreasePosition,
+    fillPositionOrder,
+    fillWithdrawalOrder,
+    updateCumulativeFundingRate,
+    updateFundingState,
+  };
+};
+
+const deployAndDepositUSDC = async () => {
+  const {
+    deployer,
+    user,
+    other,
+    impersonatedAdmin,
+    impersonatedPositionKeeper,
+    impersonatedBroker,
+    vault,
+    positionRouter,
+    minExecutionFee,
+    orderType,
+    orderBook,
+    weth,
+    usdc,
+    wbtc,
+    gmxV1,
+    mux,
+    exchange,
+    warehouse,
+    quoter,
+    reader,
+    account,
+    ETH,
+    WETH,
+    USDC,
+    WBTC,
+    checkBalance,
+    faucet,
+    executeIncreasePosition,
+    executeDecreasePosition,
+    fillPositionOrder,
+    fillWithdrawalOrder,
+    updateCumulativeFundingRate,
+    updateFundingState,
+  } = await deploy();
+  const depositAmount = ethers.parseEther("1");
+  await faucet(USDC, depositAmount);
+
+  await usdc.connect(user).approve(account.target, await usdc.balanceOf(user.address)); // prettier-ignore
+  await account.connect(user).deposit(USDC, await usdc.balanceOf(user.address));
+
+  return {
+    deployer,
+    user,
+    other,
+    impersonatedAdmin,
+    impersonatedPositionKeeper,
+    impersonatedBroker,
+    vault,
+    positionRouter,
+    minExecutionFee,
+    orderType,
+    orderBook,
+    weth,
+    usdc,
+    wbtc,
+    gmxV1,
+    mux,
+    exchange,
+    warehouse,
+    quoter,
+    reader,
+    account,
+    ETH,
+    WETH,
+    USDC,
+    WBTC,
+    checkBalance,
+    faucet,
+    executeIncreasePosition,
+    executeDecreasePosition,
+    fillPositionOrder,
+    fillWithdrawalOrder,
+    updateCumulativeFundingRate,
+    updateFundingState,
+  };
+};
+
 module.exports = {
   deploy,
   deployAndDeposit,
+  deployAndDepositETH,
+  deployAndDepositUSDC,
+  deployAndDepositWBTC,
 };

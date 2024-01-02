@@ -1,19 +1,131 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
-const { deploy } = require("../fixture/setup");
+const {
+  deploy,
+  deployAndDepositETH,
+  deployAndDepositUSDC,
+  deployAndDepositWBTC,
+} = require("../fixture/setup");
 
 describe("GMXV1", () => {
-  // token contracts
-  const WETH = "0x82af49447d8a07e3bd95bd0d56f35241523fbab1";
-  const USDC = "0xaf88d065e77c8cc2239327c5edb3a432268e5831";
-  const WBTC = "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f";
+  describe("increase/decrease position", () => {
+    it("long: eth -> eth", async () => {
+      const { gmxV1, user, account, orderType, ETH, WETH, minExecutionFee, checkBalance, executeIncreasePosition, executeDecreasePosition } = await loadFixture(deployAndDepositETH); // prettier-ignore
+      const collateralAmount = (await account.getBalance(ETH)) / 2n;
+      await checkBalance(account);
 
-  const minExecutionFee = BigInt("180000000000000");
+      const order = await gmxV1.makePositionOrder(WETH, WETH, collateralAmount, 10n, true, 0, 0); // prettier-ignore
+      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: order.orderType, path: [...order.path], index: order.index, collateralAmount: order.collateralAmount, size: order.size, isLong: order.isLong }], { value: minExecutionFee }); // prettier-ignore
+      await executeIncreasePosition(account.target);
+      const position = await gmxV1.getPosition(account.target, WETH, WETH, true); // prettier-ignore
+      await checkBalance(account);
+      console.log(`- position: ${await gmxV1.getPosition(account.target, WETH, WETH, true)}`); // prettier-ignore
+
+      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: orderType.increaseCollateral, path: [WETH], index: WETH, collateralAmount: collateralAmount, size: position.size, isLong: position.isLong }], { value: minExecutionFee }); // prettier-ignore
+      await executeIncreasePosition(account.target);
+      await checkBalance(account);
+      console.log(`- position: ${await gmxV1.getPosition(account.target, WETH, WETH, true)}`); // prettier-ignore
+
+      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: orderType.decreaseCollateral, path: [WETH], index: WETH, collateralAmount: collateralAmount, size: position.size, isLong: position.isLong }], { value: minExecutionFee }); // prettier-ignore
+      await executeDecreasePosition(account.target);
+      await checkBalance(account);
+      console.log(`- position: ${await gmxV1.getPosition(account.target, WETH, WETH, true)}`); // prettier-ignore
+
+      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: orderType.decreasePosition, path: [WETH], index: WETH, collateralAmount: 0, size: position.size, isLong: position.isLong }], { value: minExecutionFee }); // prettier-ignore
+      await executeDecreasePosition(account.target);
+      await checkBalance(account);
+      console.log(`- position: ${await gmxV1.getPosition(account.target, WETH, WETH, true)}`); // prettier-ignore
+    });
+
+    it("long: wbtc -> wbtc", async () => {
+      const { user, account, gmxV1, orderType, WBTC, minExecutionFee, checkBalance, faucet, executeIncreasePosition, executeDecreasePosition } = await loadFixture(deployAndDepositWBTC); // prettier-ignore
+      const collateralAmount = (await account.getBalance(WBTC)) / 2n;
+      await checkBalance(account);
+
+      const order = await gmxV1.makePositionOrder(WBTC, WBTC, collateralAmount, 10n, true, 0, 0); // prettier-ignore
+      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: order.orderType, path: [...order.path], index: order.index, collateralAmount: order.collateralAmount, size: order.size, isLong: order.isLong }], { value: minExecutionFee }); // prettier-ignore
+      await executeIncreasePosition(account.target);
+      await checkBalance(account);
+      const position = await gmxV1.getPosition(account.target, WBTC, WBTC, true); // prettier-ignore
+      console.log(`- position: ${position}`); // prettier-ignore
+
+      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: orderType.increaseCollateral, path: [WBTC], index: WBTC, collateralAmount: collateralAmount, size: 0, isLong: position.isLong }], { value: minExecutionFee }); // prettier-ignore
+      await executeIncreasePosition(account.target);
+      await checkBalance(account);
+      console.log(`- position: ${await gmxV1.getPosition(account.target, WBTC, WBTC, true)}`); // prettier-ignore
+
+      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: orderType.decreaseCollateral, path: [WBTC], index: WBTC, collateralAmount: collateralAmount, size: 0, isLong: position.isLong }], { value: minExecutionFee }); // prettier-ignore
+      await executeDecreasePosition(account.target);
+      await checkBalance(account);
+      console.log(`- position: ${await gmxV1.getPosition(account.target, WBTC, WBTC, true)}`); // prettier-ignore
+
+      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: orderType.decreasePosition, path: [WBTC], index: WBTC, collateralAmount: 0, size: position.size, isLong: position.isLong }], { value: minExecutionFee }); // prettier-ignore
+      await executeDecreasePosition(account.target);
+      await checkBalance(account);
+      console.log(`- position: ${await gmxV1.getPosition(account.target, WBTC, WBTC, true)}`); // prettier-ignore
+    });
+
+    it("short: usdc -> eth", async () => {
+      const { user, account, gmxV1, orderType, WETH, USDC, minExecutionFee, checkBalance, faucet, executeIncreasePosition, executeDecreasePosition } = await loadFixture(deployAndDepositUSDC); // prettier-ignore
+      const collateralAmount = (await account.getBalance(USDC)) / 2n;
+      await checkBalance(account);
+
+      const order = await gmxV1.makePositionOrder(USDC, WETH, collateralAmount, 10n, false, 0, 0); // prettier-ignore
+      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: order.orderType, path: [...order.path], index: order.index, collateralAmount: order.collateralAmount, size: order.size, isLong: order.isLong }], { value: minExecutionFee }); // prettier-ignore
+      await executeIncreasePosition(account.target);
+      await checkBalance(account);
+      const position = await gmxV1.getPosition(account.target, USDC, WETH, false); // prettier-ignore
+      console.log(`- position: ${position}`); // prettier-ignore
+
+      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: orderType.increaseCollateral, path: [USDC], index: WETH, collateralAmount: collateralAmount, size: 0, isLong: position.isLong }], { value: minExecutionFee }); // prettier-ignore
+      await executeIncreasePosition(account.target);
+      await checkBalance(account);
+      console.log(`- position: ${await gmxV1.getPosition(account.target, USDC, WETH, false)}`); // prettier-ignore
+
+      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: orderType.decreaseCollateral, path: [USDC], index: WETH, collateralAmount: collateralAmount, size: 0, isLong: position.isLong }], { value: minExecutionFee }); // prettier-ignore
+      await executeDecreasePosition(account.target);
+      await checkBalance(account);
+      console.log(`- position: ${await gmxV1.getPosition(account.target, USDC, WETH, false)}`); // prettier-ignore
+
+      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: orderType.decreasePosition, path: [USDC], index: WETH, collateralAmount: 0, size: position.size, isLong: position.isLong }], { value: minExecutionFee }); // prettier-ignore
+      await executeDecreasePosition(account.target);
+      await checkBalance(account);
+      console.log(`- position: ${await gmxV1.getPosition(account.target, USDC, WETH, false)}`); // prettier-ignore
+    });
+
+    it("short: usdc -> wbtc", async () => {
+      const { user, account, gmxV1, orderType, WBTC, USDC, minExecutionFee, checkBalance, faucet, executeIncreasePosition, executeDecreasePosition } = await loadFixture(deployAndDepositUSDC); // prettier-ignore
+      const collateralAmount = (await account.getBalance(USDC)) / 2n;
+      await checkBalance(account);
+
+      const order = await gmxV1.makePositionOrder(USDC, WBTC, collateralAmount, 10n, false, 0, 0); // prettier-ignore
+      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: order.orderType, path: [...order.path], index: order.index, collateralAmount: order.collateralAmount, size: order.size, isLong: order.isLong }], { value: minExecutionFee }); // prettier-ignore
+      await executeIncreasePosition(account.target);
+      await checkBalance(account);
+      const position = await gmxV1.getPosition(account.target, USDC, WBTC, false); // prettier-ignore
+      console.log(`- position: ${position}`); // prettier-ignore
+
+      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: orderType.increaseCollateral, path: [USDC], index: WBTC, collateralAmount: collateralAmount, size: 0, isLong: position.isLong }], { value: minExecutionFee }); // prettier-ignore
+      await executeIncreasePosition(account.target);
+      await checkBalance(account);
+      console.log(`- position: ${await gmxV1.getPosition(account.target, USDC, WBTC, false)}`); // prettier-ignore
+
+      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: orderType.decreaseCollateral, path: [USDC], index: WBTC, collateralAmount: collateralAmount, size: 0, isLong: position.isLong }], { value: minExecutionFee }); // prettier-ignore
+      await executeDecreasePosition(account.target);
+      await checkBalance(account);
+      console.log(`- position: ${await gmxV1.getPosition(account.target, USDC, WBTC, false)}`); // prettier-ignore
+
+      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: orderType.decreasePosition, path: [USDC], index: WBTC, collateralAmount: 0, size: position.size, isLong: position.isLong }], { value: minExecutionFee }); // prettier-ignore
+      await executeDecreasePosition(account.target);
+      await checkBalance(account);
+      console.log(`- position: ${await gmxV1.getPosition(account.target, USDC, WBTC, false)}`); // prettier-ignore
+    });
+  });
 
   describe("values", () => {
     it("price", async () => {
-      const { gmxV1 } = await loadFixture(deploy);
+      const { gmxV1, WETH, WBTC, USDC } = await loadFixture(deploy);
       console.log(await gmxV1.getPrice(WETH, 0, true));
       console.log(await gmxV1.getPrice(WETH, 0, false));
       console.log(await gmxV1.getPrice(WBTC, 0, true));
@@ -23,9 +135,8 @@ describe("GMXV1", () => {
     });
 
     it("deposit fee", async () => {
-      const { gmxV1, weth, executeIncreasePosition } = await loadFixture(
-        deploy
-      );
+      const { gmxV1, weth, minExecutionFee, executeIncreasePosition } =
+        await loadFixture(deploy);
       const positionOrder = await gmxV1.makePositionOrder(
         weth.target,
         weth.target,
@@ -86,9 +197,8 @@ describe("GMXV1", () => {
     });
 
     it("position fee", async () => {
-      const { gmxV1, weth, executeIncreasePosition } = await loadFixture(
-        deploy
-      );
+      const { gmxV1, weth, minExecutionFee, executeIncreasePosition } =
+        await loadFixture(deploy);
       const positionOrder = await gmxV1.makePositionOrder(
         weth.target,
         weth.target,
@@ -267,109 +377,6 @@ describe("GMXV1", () => {
           )
         ).to.be.gt(0n);
       }
-    });
-  });
-
-  describe("increase/decrease position", () => {
-    const orderType = {
-      increasePosition: 0,
-      decreasePosition: 1,
-    };
-
-    const checkBalance = async (account) => {
-      console.log(`
-  -  ETH: ${await account.getBalance(ethers.ZeroAddress)}
-  - WETH: ${await account.getBalance(WETH)}
-  - WBTC: ${await account.getBalance(WBTC)}
-  - USDC: ${await account.getBalance(USDC)}
-  `);
-    };
-
-    it("long: eth -> eth", async () => {
-      const { gmxV1, user, account, executeIncreasePosition, executeDecreasePosition } = await loadFixture(deploy); // prettier-ignore
-
-      const collateralAmount = ethers.parseEther("1"); // prettier-ignore
-      await account.connect(user).deposit(ethers.ZeroAddress, collateralAmount, { value: collateralAmount }); // prettier-ignore
-      await checkBalance(account);
-
-      const order = await gmxV1.makePositionOrder(WETH, WETH, collateralAmount, 10n, true, 0, 0); // prettier-ignore
-      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: order.orderType, path: [...order.path], index: order.index, collateralAmount: order.collateralAmount, size: order.size, isLong: order.isLong }], { value: minExecutionFee }); // prettier-ignore
-      await executeIncreasePosition(account.target);
-      const position0 = await gmxV1.getPosition(account.target, WETH, WETH, true); // prettier-ignore
-      console.log(`- position: ${position0}`); // prettier-ignore
-      await checkBalance(account);
-
-      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: orderType.decreasePosition, path: [WETH], index: WETH, collateralAmount: 0, size: position0.size, isLong: position0.isLong }], { value: minExecutionFee }); // prettier-ignore
-      await executeDecreasePosition(account.target);
-      const position1 = await gmxV1.getPosition(account.target, WETH, WETH, true); // prettier-ignore
-      console.log(`- position: ${position1}`); // prettier-ignore
-      await checkBalance(account);
-    });
-
-    it("long: btc -> btc", async () => {
-      const { user, account, wbtc, gmxV1, faucet, executeIncreasePosition, executeDecreasePosition } = await loadFixture(deploy); // prettier-ignore
-      await faucet(WBTC, ethers.parseEther("1"));
-      const collateralAmount = await wbtc.balanceOf(user.address);
-      await wbtc.connect(user).approve(account.target, collateralAmount);
-      await account.connect(user).deposit(WBTC, collateralAmount);
-      await checkBalance(account);
-
-      const order = await gmxV1.makePositionOrder(WBTC, WBTC, collateralAmount, 10n, true, 0, 0); // prettier-ignore
-      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: order.orderType, path: [...order.path], index: order.index, collateralAmount: order.collateralAmount, size: order.size, isLong: order.isLong }], { value: minExecutionFee }); // prettier-ignore
-      await executeIncreasePosition(account.target);
-      const position0 = await gmxV1.getPosition(account.target, WBTC, WBTC, true); // prettier-ignore
-      console.log(`- position: ${position0}`); // prettier-ignore
-      await checkBalance(account);
-
-      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: orderType.decreasePosition, path: [WBTC], index: WBTC, collateralAmount: 0, size: position0.size, isLong: position0.isLong }], { value: minExecutionFee }); // prettier-ignore
-      await executeDecreasePosition(account.target);
-      const position1 = await gmxV1.getPosition(account.target, WBTC, WBTC, true); // prettier-ignore
-      console.log(`- position: ${position1}`); // prettier-ignore
-      await checkBalance(account);
-    });
-
-    it("short: usdc -> eth", async () => {
-      const { user, account, usdc, gmxV1, faucet, executeIncreasePosition, executeDecreasePosition } = await loadFixture(deploy); // prettier-ignore
-      await faucet(USDC, ethers.parseEther("1"));
-      const collateralAmount = await usdc.balanceOf(user.address);
-      await usdc.connect(user).approve(account.target, collateralAmount);
-      await account.connect(user).deposit(USDC, collateralAmount);
-      await checkBalance(account);
-
-      const order = await gmxV1.makePositionOrder(USDC, WETH, collateralAmount, 10n, false, 0, 0); // prettier-ignore
-      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: order.orderType, path: [...order.path], index: order.index, collateralAmount: order.collateralAmount, size: order.size, isLong: order.isLong }], { value: minExecutionFee }); // prettier-ignore
-      await executeIncreasePosition(account.target);
-      const position0 = await gmxV1.getPosition(account.target, USDC, WETH, false); // prettier-ignore
-      console.log(`- position: ${position0}`); // prettier-ignore
-      await checkBalance(account);
-
-      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: orderType.decreasePosition, path: [USDC], index: WETH, collateralAmount: 0, size: position0.size, isLong: position0.isLong }], { value: minExecutionFee }); // prettier-ignore
-      await executeDecreasePosition(account.target);
-      const position1 = await gmxV1.getPosition(account.target, USDC, WETH, false); // prettier-ignore
-      console.log(`- position: ${position1}`); // prettier-ignore
-      await checkBalance(account);
-    });
-
-    it("short: usdc -> btc", async () => {
-      const { user, account, usdc, gmxV1, faucet, executeIncreasePosition, executeDecreasePosition } = await loadFixture(deploy); // prettier-ignore
-      await faucet(USDC, ethers.parseEther("1"));
-      const collateralAmount = await usdc.balanceOf(user.address);
-      await usdc.connect(user).approve(account.target, collateralAmount);
-      await account.connect(user).deposit(USDC, collateralAmount);
-      await checkBalance(account);
-
-      const order = await gmxV1.makePositionOrder(USDC, WBTC, collateralAmount, 10n, false, 0, 0); // prettier-ignore
-      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: order.orderType, path: [...order.path], index: order.index, collateralAmount: order.collateralAmount, size: order.size, isLong: order.isLong }], { value: minExecutionFee }); // prettier-ignore
-      await executeIncreasePosition(account.target);
-      const position0 = await gmxV1.getPosition(account.target, USDC, WBTC, false); // prettier-ignore
-      console.log(`- position: ${position0}`); // prettier-ignore
-      await checkBalance(account);
-
-      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: orderType.decreasePosition, path: [USDC], index: WBTC, collateralAmount: 0, size: position0.size, isLong: position0.isLong }], { value: minExecutionFee }); // prettier-ignore
-      await executeDecreasePosition(account.target);
-      const position1 = await gmxV1.getPosition(account.target, USDC, WBTC, false); // prettier-ignore
-      console.log(`- position: ${position1}`); // prettier-ignore
-      await checkBalance(account);
     });
   });
 });

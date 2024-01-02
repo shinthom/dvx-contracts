@@ -441,6 +441,16 @@ contract GMXV1 is IAdapter {
         uint256 collateralAmount,
         bool isLong
     ) override public payable {
+        uint8 collateralDecimals = IERC20(collateral).decimals();
+        if (collateral == USDC) {
+            collateralAmount = collateralAmount * 10 ** (PRICE_DECIMALS - collateralDecimals);
+        } else if (collateral == index) {
+            uint256 price = IVault(VAULT).getMaxPrice(collateral);
+            collateralAmount = collateralAmount * price / (10 ** collateralDecimals);
+        } else {
+            revert("INVALID_COLLATERAL");
+        }
+
         _decrease(
             collateral,
             index,
