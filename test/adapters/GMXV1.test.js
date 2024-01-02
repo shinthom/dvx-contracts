@@ -9,7 +9,7 @@ const {
 } = require("../fixture/setup");
 
 describe("GMXV1", () => {
-  describe("increase/decrease position", () => {
+  describe("increase/decrease", () => {
     it("long: eth -> eth", async () => {
       const { gmxV1, user, account, orderType, ETH, WETH, minExecutionFee, checkBalance, executeIncreasePosition, executeDecreasePosition } = await loadFixture(deployAndDepositETH); // prettier-ignore
       const collateralAmount = (await account.getBalance(ETH)) / 2n;
@@ -22,12 +22,12 @@ describe("GMXV1", () => {
       await checkBalance(account);
       console.log(`- position: ${await gmxV1.getPosition(account.target, WETH, WETH, true)}`); // prettier-ignore
 
-      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: orderType.increaseCollateral, path: [WETH], index: WETH, collateralAmount: collateralAmount, size: position.size, isLong: position.isLong }], { value: minExecutionFee }); // prettier-ignore
+      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: orderType.increaseCollateral, path: [WETH], index: WETH, collateralAmount: collateralAmount, size: 0, isLong: position.isLong }], { value: minExecutionFee }); // prettier-ignore
       await executeIncreasePosition(account.target);
       await checkBalance(account);
       console.log(`- position: ${await gmxV1.getPosition(account.target, WETH, WETH, true)}`); // prettier-ignore
 
-      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: orderType.decreaseCollateral, path: [WETH], index: WETH, collateralAmount: collateralAmount, size: position.size, isLong: position.isLong }], { value: minExecutionFee }); // prettier-ignore
+      await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: orderType.decreaseCollateral, path: [WETH], index: WETH, collateralAmount: collateralAmount, size: 0, isLong: position.isLong }], { value: minExecutionFee }); // prettier-ignore
       await executeDecreasePosition(account.target);
       await checkBalance(account);
       console.log(`- position: ${await gmxV1.getPosition(account.target, WETH, WETH, true)}`); // prettier-ignore

@@ -58,8 +58,8 @@ contract GMXV1 is IAdapter {
         IExchange.PositionOrder memory positionOrder
     ) override public view returns (uint256) {
         address collateral = positionOrder.path[positionOrder.path.length - 1];
-        IAdapter.Position memory position
-            = getPosition(account, collateral, positionOrder.index, positionOrder.isLong);
+        IVault.Position memory position
+            = _getPosition(account, collateral, positionOrder.index, positionOrder.isLong);
         if (position.size == 0) {
             return 0;
         }
@@ -68,9 +68,9 @@ contract GMXV1 is IAdapter {
         uint256 collateralAmountUsd = IVault(VAULT).tokenToUsdMin(collateral, positionOrder.collateralAmount);
 
         uint256 nextSize = position.size + positionOrder.size;
-        uint256 nextCollateralAmount = position.collateralAmount + collateralAmountUsd;
+        uint256 nextCollateralAmount = position.collateral + collateralAmountUsd;
 
-        uint256 prevLeverage = position.size * BASIS_POINTS_DIVISOR / position.collateralAmount;
+        uint256 prevLeverage = position.size * BASIS_POINTS_DIVISOR / position.collateral;
         uint256 nextLeverage = nextSize * (BASIS_POINTS_DIVISOR + increasePositionBufferBps) / nextCollateralAmount;
 
         if (nextLeverage > prevLeverage) {
@@ -137,28 +137,62 @@ contract GMXV1 is IAdapter {
         return IPositionRouter(POSITION_ROUTER).minExecutionFee();
     }
 
-    function getPosition(
+    function _getPosition(
         address account,
         address collateral,
         address index,
         bool isLong
-    ) override public view returns (IAdapter.Position memory) {
+    ) private view returns (IVault.Position memory position) {
         bytes32 positionKey = IVault(VAULT).getPositionKey(
             account,
             collateral,
             index,
             isLong
         );
-        IVault.Position memory position = IVault(VAULT).positions(positionKey);
+        position = IVault(VAULT).positions(positionKey);
+    }
 
-        return IAdapter.Position({
-            collateralAmount: position.collateral,
-            size: position.size,
-            lastIncreasedTime: position.lastIncreasedTime,
-            price: position.averagePrice,
-            fundingRate: position.entryFundingRate,
-            isLong: isLong
-        });
+    function getPosition(
+        address account,
+        address collateral,
+        address index,
+        bool isLong
+    ) override public view returns (IAdapter.Position memory) {
+        IVault.Position memory position = _getPosition(account, collateral, index, isLong);
+
+        if (position.size == 0) {
+            return IAdapter.Position({
+                collateralAmount: position.collateral,
+                size: position.size,
+                lastIncreasedTime: position.lastIncreasedTime,
+                price: position.averagePrice,
+                fundingRate: position.entryFundingRate,
+                isLong: isLong
+            });
+        }
+
+        if (isLong) {
+            uint8 indexDecimals = IERC20(index).decimals();
+            return IAdapter.Position({
+                collateralAmount: position.collateral * (10 ** indexDecimals) / position.averagePrice,
+                size: position.size * (10 ** indexDecimals) / position.averagePrice,
+                lastIncreasedTime: position.lastIncreasedTime,
+                price: position.averagePrice,
+                fundingRate: position.entryFundingRate,
+                isLong: isLong
+            });
+        } else {
+            uint8 collateralDecimals = IERC20(collateral).decimals();
+            uint8 indexDecimals = IERC20(index).decimals();
+            return IAdapter.Position({
+                collateralAmount: position.collateral / (10 ** (PRICE_DECIMALS - collateralDecimals)),
+                size: position.size * (10 ** indexDecimals) / position.averagePrice,
+                lastIncreasedTime: position.lastIncreasedTime,
+                price: position.averagePrice,
+                fundingRate: position.entryFundingRate,
+                isLong: isLong
+            });
+        }
     }
 
     function makePositionOrderWithFee(
@@ -411,6 +445,19 @@ contract GMXV1 is IAdapter {
         uint256 size,
         bool isLong
     ) override public payable {
+        bytes32 positionKey = IVault(VAULT).getPositionKey(
+            address(this),
+            collateral,
+            index,
+            isLong
+        );
+
+        IVault.Position memory position = IVault(VAULT).positions(positionKey);
+        size = size * position.averagePrice / (10 ** IERC20(index).decimals());
+        // There may be a slight diffences in the size calculation.
+        if (position.collateral > position.size - size) {
+            size = position.size;
+        }
         _decrease(
             collateral,
             index,
