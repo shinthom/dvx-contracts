@@ -8,10 +8,12 @@ import { IExchange } from "./interfaces/IExchange.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { ISwapRouter } from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
+import { IQuoterV2 } from "@uniswap/v3-periphery/contracts/interfaces/IQuoterV2.sol";
 
 contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     address private constant WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
     address private constant SWAP_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564; // uniswap V3
+    address private constant QUOTER = 0x61fFE014bA17989E743c5F6cB21bF9697530B21e; // uniswap V3
 
     address private _warehouse;
 
@@ -71,10 +73,60 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         emit FeeSet(newFee);
     }
 
+    function quoteExactInputSingle(
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn
+    ) external returns (uint256) {
+        if (tokenIn == address(0)) {
+            tokenIn = WETH;
+        }
+        if (tokenOut == address(0)) {
+            tokenOut = WETH;
+        }
+
+        IQuoterV2.QuoteExactInputSingleParams memory params =
+            IQuoterV2.QuoteExactInputSingleParams({
+                tokenIn: tokenIn,
+                tokenOut: tokenOut,
+                fee: 3000,
+                amountIn: amountIn,
+                sqrtPriceLimitX96: 0
+            });
+
+        (uint256 amountOut, , ,) = IQuoterV2(QUOTER).quoteExactInputSingle(params);
+        return amountOut;
+    }
+
+    function quoteExactOutputSingle(
+        address tokenIn,
+        address tokenOut,
+        uint256 amountOut
+    ) external returns (uint256) {
+        if (tokenIn == address(0)) {
+            tokenIn = WETH;
+        }
+        if (tokenOut == address(0)) {
+            tokenOut = WETH;
+        }
+
+        IQuoterV2.QuoteExactOutputSingleParams memory params =
+            IQuoterV2.QuoteExactOutputSingleParams({
+                tokenIn: tokenIn,
+                tokenOut: tokenOut,
+                fee: 3000,
+                amount: amountOut,
+                sqrtPriceLimitX96: 0
+            });
+
+        (uint256 amountIn, , ,) = IQuoterV2(QUOTER).quoteExactOutputSingle(params);
+        return amountIn;
+    }
+
     function swap(
         address tokenIn,
         address tokenOut,
-        uint256 amount
+        uint256 amountIn
     ) override external payable returns (uint256) {
         if (tokenOut == address(0)) {
             tokenOut = WETH;
@@ -82,9 +134,9 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
         uint256 amountOut;
         if (tokenIn == address(0)) {
-            require(msg.value == amount, "Exchange: INVALID_AMOUNT");
+            require(msg.value == amountIn, "Exchange: INVALID_AMOUNT");
             IERC20(WETH).deposit{value: msg.value}();
-            IERC20(WETH).approve(SWAP_ROUTER, amount);
+            IERC20(WETH).approve(SWAP_ROUTER, amountIn);
 
             ISwapRouter.ExactInputSingleParams memory params =
                 ISwapRouter.ExactInputSingleParams({
@@ -93,14 +145,14 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
                     fee: 3000,
                     recipient: address(this),
                     deadline: block.timestamp,
-                    amountIn: amount,
+                    amountIn: amountIn,
                     amountOutMinimum: 0,
                     sqrtPriceLimitX96: 0
                 });
             amountOut = ISwapRouter(SWAP_ROUTER).exactInputSingle(params);
         } else {
-            IERC20(tokenIn).transferFrom(msg.sender, address(this), amount);
-            IERC20(tokenIn).approve(SWAP_ROUTER, amount);
+            IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
+            IERC20(tokenIn).approve(SWAP_ROUTER, amountIn);
 
             ISwapRouter.ExactInputSingleParams memory params =
                 ISwapRouter.ExactInputSingleParams({
@@ -109,7 +161,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
                     fee: 3000,
                     recipient: address(this),
                     deadline: block.timestamp,
-                    amountIn: amount,
+                    amountIn: amountIn,
                     amountOutMinimum: 0,
                     sqrtPriceLimitX96: 0
                 });

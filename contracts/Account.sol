@@ -95,16 +95,16 @@ contract Account is IAccount {
     function swap(
         address tokenIn,
         address tokenOut,
-        uint256 amount
+        uint256 amountIn
     ) override external onlyOwner returns (uint256 amountOut) {
         require(tokenIn != tokenOut, "Account: SAME_TOKEN");
 
         if (tokenIn == address(0)) {
-            require(address(this).balance >= amount, "INSUFFICIENT_BALANCE");
-            amountOut = IExchange(_exchange).swap{value: amount}(tokenIn, tokenOut, amount);
+            require(address(this).balance >= amountIn, "INSUFFICIENT_BALANCE");
+            amountOut = IExchange(_exchange).swap{value: amountIn}(tokenIn, tokenOut, amountIn);
         } else {
-            IERC20(tokenIn).approve(_exchange, amount);
-            amountOut = IExchange(_exchange).swap(tokenIn, tokenOut, amount);
+            IERC20(tokenIn).approve(_exchange, amountIn);
+            amountOut = IExchange(_exchange).swap(tokenIn, tokenOut, amountIn);
         }
     }
 
