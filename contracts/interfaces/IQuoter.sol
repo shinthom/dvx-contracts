@@ -7,11 +7,8 @@ interface IQuoter {
         address collateral;
         address index;
         uint256 collateralAmount;
-        uint256 leverage;
+        uint256 size;
         bool isLong;
-        // prices
-        uint256 collateralPrice;
-        uint256 indexPrice;
     }
 
     struct Answer {
@@ -26,6 +23,6 @@ interface IQuoter {
     function quote(
         address account,
         address[] memory adapters,
-        Request[] memory requests
+        Request memory request
     ) external view returns (Answer[] memory answers);
 }

@@ -15,11 +15,7 @@ interface IAdapter {
 
     function getPriceDecimals() external view returns (uint256);
 
-    function getPrice(
-        address collateral,
-        uint256 price,
-        bool isLong
-    ) external view returns (uint256);
+    function getPrice(address collateral, bool isLong) external view returns (uint256);
 
     function getDepositFee(
         address account,
@@ -31,13 +27,11 @@ interface IAdapter {
         address index,
         uint256 size,
         uint256 entryFundingRate,
-        bool isLong,
-        uint256 indexPrice
+        bool isLong
     ) external view returns (uint256);
 
     function getPositionFee(
         address index,
-        uint256 indexPrice,
         uint256 size
     ) external view returns (uint256);
 
@@ -48,9 +42,7 @@ interface IAdapter {
         address index,
         uint256 collateralAmount,
         uint256 leverage,
-        bool isLong,
-        uint256 collateralPrice,
-        uint256 indexPrice
+        bool isLong
     ) external view returns (IExchange.PositionOrder memory);
 
     function getPosition(

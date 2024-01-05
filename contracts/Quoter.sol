@@ -10,17 +10,15 @@ contract Quoter is IQuoter {
 
     function makePositionOrder(
         address adapter,
-        Request memory order
+        Request memory request
     ) public view returns (IExchange.PositionOrder memory) {
         IExchange.PositionOrder memory positionOrder
             = IAdapter(adapter).makePositionOrder(
-                order.collateral,
-                order.index,
-                order.collateralAmount,
-                order.leverage,
-                order.isLong,
-                order.collateralPrice,
-                order.indexPrice
+                request.collateral,
+                request.index,
+                request.collateralAmount,
+                request.size,
+                request.isLong
             );
 
         return positionOrder;
@@ -50,10 +48,8 @@ contract Quoter is IQuoter {
             request.collateral,
             request.index,
             request.collateralAmount,
-            request.leverage,
-            request.isLong,
-            request.collateralPrice,
-            request.indexPrice
+            request.size,
+            request.isLong
         );
         IAdapter.Position memory currentPosition = IAdapter(adapter).getPosition(
             account,
@@ -62,16 +58,14 @@ contract Quoter is IQuoter {
             positionOrder.isLong
         );
 
-        // usd
-        fee = IAdapter(adapter).getPositionFee(request.index, request.indexPrice, positionOrder.size);
+        fee = IAdapter(adapter).getPositionFee(request.index, positionOrder.size);
         if (currentPosition.size > 0) {
             fee += IAdapter(adapter).getFundingFee(
                 positionOrder.path[positionOrder.path.length - 1],
                 request.index,
                 currentPosition.size,
                 currentPosition.fundingRate,
-                request.isLong,
-                request.indexPrice
+                request.isLong
             );
             fee += IAdapter(adapter).getDepositFee(account, positionOrder);
         }
@@ -84,33 +78,12 @@ contract Quoter is IQuoter {
         }
     }
 
-    function getCollateralPrice(
+    function getPrice(
         address adapter,
-        Request memory request
+        address token,
+        bool isLong
     ) public view returns (uint256 price) {
-        price = IAdapter(adapter).getPrice(
-            request.collateral,
-            request.collateralPrice,
-            request.isLong
-        );
-
-        uint256 priceDecimals = IAdapter(adapter).getPriceDecimals();
-        if (priceDecimals > PRICE_DECIMAL) {
-            price = price / (10 ** (priceDecimals - PRICE_DECIMAL));
-        } else {
-            price = price * (10 ** (PRICE_DECIMAL - priceDecimals));
-        }
-    }
-
-    function getIndexPrice(
-        address adapter,
-        Request memory request
-    ) public view returns (uint256 price) {
-        price = IAdapter(adapter).getPrice(
-            request.index,
-            request.indexPrice,
-            request.isLong
-        );
+        price = IAdapter(adapter).getPrice(token, isLong);
 
         uint256 priceDecimals = IAdapter(adapter).getPriceDecimals();
         if (priceDecimals > PRICE_DECIMAL) {
@@ -137,8 +110,8 @@ contract Quoter is IQuoter {
         Request memory request
     ) private view returns (Answer memory answer) {
         answer.adapter = adapter;
-        answer.collateralPrice = getCollateralPrice(adapter, request);
-        answer.indexPrice = getIndexPrice(adapter, request);
+        answer.collateralPrice = getPrice(adapter, request.collateral, request.isLong);
+        answer.indexPrice = getPrice(adapter, request.index, request.isLong);
         answer.fee = getFee(account, adapter, request);
         answer.availableLiquidity = IAdapter(adapter).getAvailableLiquidity(
             request.index,
@@ -150,37 +123,29 @@ contract Quoter is IQuoter {
     function quote(
         address account,
         address[] memory adapters,
-        Request[] memory requests
+        Request memory request
     ) override public view returns (Answer[] memory answers) {
-        require(
-            adapters.length > 0 && adapters.length == requests.length,
-            "Quoter: INVALID_LENGTH"
-        );
-
-        uint256[] memory feeList = new uint256[](adapters.length);
+        uint256[] memory fees = new uint256[](adapters.length);
         for (uint256 i = 0; i < adapters.length; i++) {
-            feeList[i] = getFee(account, adapters[i], requests[i]);
+            fees[i] = getFee(account, adapters[i], request);
         }
 
         // sort by fee
         if (adapters.length > 1) {
             for (uint256 i = 0; i < adapters.length; i++) {
                 for (uint256 j = i + 1; j < adapters.length; j++) {
-                    if (feeList[i] > feeList[j]) {
+                    if (fees[i] > fees[j]) {
                         address temp0 = adapters[i];
                         adapters[i] = adapters[j];
                         adapters[j] = temp0;
-
-                        Request memory temp1 = requests[i];
-                        requests[i] = requests[j];
-                        requests[j] = temp1;
                     }
                 }
             }
         }
+
         // todo: split answers following available liquditiy.
         answers = new Answer[](1);
-        answers[0] = _get(account, adapters[0], requests[0]);
+        answers[0] = _get(account, adapters[0], request);
     }
 
     // test

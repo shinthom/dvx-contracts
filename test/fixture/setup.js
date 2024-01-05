@@ -259,6 +259,14 @@ stable:
     );
   };
 
+  const getAssetFromTokenAddress = async (tokenAddress) => {
+    const allAssets = await liquidityPool.getAllAssetInfo();
+    const asset = allAssets.find(
+      (asset) => asset.tokenAddress === tokenAddress
+    );
+    return asset;
+  };
+
   const getIdFromTokenAddress = async (tokenAddress) => {
     const allAssets = await liquidityPool.getAllAssetInfo();
     const asset = allAssets.find(
@@ -338,6 +346,7 @@ stable:
     WETH,
     USDC,
     WBTC,
+    getAssetFromTokenAddress,
     getIdFromTokenAddress,
     checkBalance,
     faucet,
@@ -386,6 +395,7 @@ const deployAndDepositETH = async () => {
     WETH,
     USDC,
     WBTC,
+    getAssetFromTokenAddress,
     getIdFromTokenAddress,
     checkBalance,
     faucet,
@@ -433,6 +443,7 @@ const deployAndDepositETH = async () => {
     WETH,
     USDC,
     WBTC,
+    getAssetFromTokenAddress,
     getIdFromTokenAddress,
     checkBalance,
     faucet,
@@ -479,6 +490,7 @@ const deployAndDepositWBTC = async () => {
     WETH,
     USDC,
     WBTC,
+    getAssetFromTokenAddress,
     getIdFromTokenAddress,
     checkBalance,
     faucet,
@@ -528,6 +540,7 @@ const deployAndDepositWBTC = async () => {
     WETH,
     USDC,
     WBTC,
+    getAssetFromTokenAddress,
     getIdFromTokenAddress,
     checkBalance,
     faucet,
@@ -574,6 +587,7 @@ const deployAndDepositUSDC = async () => {
     WETH,
     USDC,
     WBTC,
+    getAssetFromTokenAddress,
     getIdFromTokenAddress,
     checkBalance,
     faucet,
@@ -623,6 +637,7 @@ const deployAndDepositUSDC = async () => {
     WETH,
     USDC,
     WBTC,
+    getAssetFromTokenAddress,
     getIdFromTokenAddress,
     checkBalance,
     faucet,

@@ -39,11 +39,7 @@ contract GMXV1 is IAdapter {
         return PRICE_DECIMALS;
     }
 
-    function getPrice(
-        address token,
-        uint256 /* price */,
-        bool isLong
-    ) override public view returns (uint256) {
+    function getPrice(address token, bool isLong) override public view returns (uint256) {
         uint256 tokenPrice
             = token == USDC ? USD :
             (isLong ?
@@ -89,7 +85,6 @@ contract GMXV1 is IAdapter {
 
     function getPositionFee(
         address /* index */,
-        uint256 /* indexPrice */,
         uint256 size
     ) override public view returns (uint256) {
         {
@@ -105,8 +100,7 @@ contract GMXV1 is IAdapter {
         address /* index */,
         uint256 size,
         uint256 fundingRate,
-        bool /* isLong */,
-        uint256 /* indexPrice */
+        bool /* isLong */
     ) override public view returns (uint256) {
         if (size == 0) {
             return 0;
@@ -158,42 +152,66 @@ contract GMXV1 is IAdapter {
         address index,
         bool isLong
     ) override public view returns (IAdapter.Position memory) {
-        IVault.Position memory position = _getPosition(account, collateral, index, isLong);
+        bytes32 positionKey = IVault(VAULT).getPositionKey(
+            account,
+            collateral,
+            index,
+            isLong
+        );
+        IVault.Position memory position = IVault(VAULT).positions(positionKey);
 
-        if (position.size == 0) {
-            return IAdapter.Position({
-                collateralAmount: position.collateral,
-                size: position.size,
-                lastIncreasedTime: position.lastIncreasedTime,
-                price: position.averagePrice,
-                fundingRate: position.entryFundingRate,
-                isLong: isLong
-            });
-        }
-
-        if (isLong) {
-            uint8 indexDecimals = IERC20(index).decimals();
-            return IAdapter.Position({
-                collateralAmount: position.collateral * (10 ** indexDecimals) / position.averagePrice,
-                size: position.size * (10 ** indexDecimals) / position.averagePrice,
-                lastIncreasedTime: position.lastIncreasedTime,
-                price: position.averagePrice,
-                fundingRate: position.entryFundingRate,
-                isLong: isLong
-            });
-        } else {
-            uint8 collateralDecimals = IERC20(collateral).decimals();
-            uint8 indexDecimals = IERC20(index).decimals();
-            return IAdapter.Position({
-                collateralAmount: position.collateral / (10 ** (PRICE_DECIMALS - collateralDecimals)),
-                size: position.size * (10 ** indexDecimals) / position.averagePrice,
-                lastIncreasedTime: position.lastIncreasedTime,
-                price: position.averagePrice,
-                fundingRate: position.entryFundingRate,
-                isLong: isLong
-            });
-        }
+        return IAdapter.Position({
+            collateralAmount: position.collateral,
+            size: position.size,
+            lastIncreasedTime: position.lastIncreasedTime,
+            price: position.averagePrice,
+            fundingRate: position.entryFundingRate,
+            isLong: isLong
+        });
     }
+
+    // function getPosition(
+    //     address account,
+    //     address collateral,
+    //     address index,
+    //     bool isLong
+    // ) override public view returns (IAdapter.Position memory) {
+    //     IVault.Position memory position = _getPosition(account, collateral, index, isLong);
+
+    //     if (position.size == 0) {
+    //         return IAdapter.Position({
+    //             collateralAmount: position.collateral,
+    //             size: position.size,
+    //             lastIncreasedTime: position.lastIncreasedTime,
+    //             price: position.averagePrice,
+    //             fundingRate: position.entryFundingRate,
+    //             isLong: isLong
+    //         });
+    //     }
+
+    //     if (isLong) {
+    //         uint8 indexDecimals = IERC20(index).decimals();
+    //         return IAdapter.Position({
+    //             collateralAmount: position.collateral * (10 ** indexDecimals) / position.averagePrice,
+    //             size: position.size * (10 ** indexDecimals) / position.averagePrice,
+    //             lastIncreasedTime: position.lastIncreasedTime,
+    //             price: position.averagePrice,
+    //             fundingRate: position.entryFundingRate,
+    //             isLong: isLong
+    //         });
+    //     } else {
+    //         uint8 collateralDecimals = IERC20(collateral).decimals();
+    //         uint8 indexDecimals = IERC20(index).decimals();
+    //         return IAdapter.Position({
+    //             collateralAmount: position.collateral / (10 ** (PRICE_DECIMALS - collateralDecimals)),
+    //             size: position.size * (10 ** indexDecimals) / position.averagePrice,
+    //             lastIncreasedTime: position.lastIncreasedTime,
+    //             price: position.averagePrice,
+    //             fundingRate: position.entryFundingRate,
+    //             isLong: isLong
+    //         });
+    //     }
+    // }
 
     function makePositionOrderWithFee(
         address collateral,
@@ -255,21 +273,9 @@ contract GMXV1 is IAdapter {
         address collateral,
         address index,
         uint256 collateralAmount,
-        uint256 leverage,
-        bool isLong,
-        uint256 /* collateralPrice */,
-        uint256 /* indexPrice */
-    ) override public view returns (IExchange.PositionOrder memory) {
-        uint8 collateralDecimals = IERC20(collateral).decimals();
-        uint256 collateralPrice
-            = collateral == USDC ? USD :
-            (isLong ?
-                IVault(VAULT).getMaxPrice(collateral) :
-                IVault(VAULT).getMinPrice(collateral));
-
-        uint256 collateralAmountUsd
-            = collateralAmount * collateralPrice / (10 ** collateralDecimals);
-
+        uint256 size,
+        bool isLong
+    ) override public view returns (IExchange.PositionOrder memory positionOrder) {
         address[] memory path;
         if (isLong) {
             if (collateral == index) {
@@ -291,12 +297,16 @@ contract GMXV1 is IAdapter {
             }
         }
 
-        return IExchange.PositionOrder({
+        uint8 indexDecimal = IERC20(index).decimals();
+        uint256 indexPrice = isLong ? IVault(VAULT).getMaxPrice(index) : IVault(VAULT).getMinPrice(index);
+        uint256 sizeUsd = size * indexPrice / (10 ** indexDecimal);
+
+        positionOrder = IExchange.PositionOrder({
             orderType: IExchange.OrderType.IncreasePosition,
             path: path,
             index: index,
             collateralAmount: collateralAmount,
-            size: collateralAmountUsd * leverage,
+            size: sizeUsd,
             isLong: isLong
         });
     }

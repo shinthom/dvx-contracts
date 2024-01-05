@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
+import { IChainlink } from "../interfaces/exchanges/MUX/IChainlink.sol";
 import { ILiquidityPool } from "../interfaces/exchanges/MUX/ILiquidityPool.sol";
 import { IOrderBook } from "../interfaces/exchanges/MUX/IOrderBook.sol";
 import { IERC20 } from "../interfaces/tokens/IERC20.sol";
@@ -64,14 +65,6 @@ contract MUX is IAdapter {
         );
     }
 
-    function getPrice(
-        address /* collateral */,
-        uint256 price,
-        bool /* isLong */
-    ) override public pure returns (uint256) {
-        return price;
-    }
-
     function getDepositFee(
         address /* account */,
         IExchange.PositionOrder memory /* positionOrder */
@@ -79,17 +72,29 @@ contract MUX is IAdapter {
         return 0;
     }
 
+    function getPrice(address token, bool /* isLong */) override public view returns (uint256) {
+        uint8 tokenId = _getIdFromTokenAddress(token);
+        ILiquidityPool.Asset memory asset = ILiquidityPool(LIQUIDITY_POOL).getAssetInfo(tokenId);
+
+        address referenceOracle = asset.referenceOracle;
+        int256 price = IChainlink(referenceOracle).latestAnswer();
+        price *= 1e10; // decimals 8 => 18
+
+        return uint256(price);
+    }
+
     function getPositionFee(
         address index,
-        uint256 indexPrice,
         uint256 size
     ) override public view returns (uint256) {
         uint8 indexId = _getIdFromTokenAddress(index);
-        uint32 positionFeeRate
-            = (ILiquidityPool(LIQUIDITY_POOL).getAssetInfo(indexId)).positionFeeRate;
+        ILiquidityPool.Asset memory asset = ILiquidityPool(LIQUIDITY_POOL).getAssetInfo(indexId);
+
+        int256 price = IChainlink(asset.referenceOracle).latestAnswer();
+        price *= 1e10; // decimals 8 => 18
 
         uint256 decimals = IERC20(index).decimals();
-        return ((indexPrice * positionFeeRate) * size) / 1e5 / (10 ** decimals);
+        return ((uint256(price) * asset.positionFeeRate) * size) / 1e5 / (10 ** decimals);
     }
 
     function getFundingFee(
@@ -97,21 +102,26 @@ contract MUX is IAdapter {
         address index,
         uint256 size,
         uint256 fundingRate,
-        bool isLong,
-        uint256 indexPrice
+        bool isLong
     ) override public view returns (uint256) {
+        if (size == 0) {
+            return 0;
+        }
+
         uint8 indexId = _getIdFromTokenAddress(index);
         ILiquidityPool.Asset memory asset = ILiquidityPool(LIQUIDITY_POOL).getAssetInfo(indexId);
+
+        int256 price = IChainlink(asset.referenceOracle).latestAnswer();
+        price *= 1e10; // decimals 8 => 18
 
         uint256 cumulativeFunding;
         if (isLong) {
             cumulativeFunding = asset.longCumulativeFundingRate - fundingRate;
-            cumulativeFunding = cumulativeFunding * indexPrice;
+            cumulativeFunding = cumulativeFunding * uint256(price) / 1e18;
         } else {
             cumulativeFunding = asset.shortCumulativeFunding - fundingRate;
         }
-
-        return cumulativeFunding * size;
+        return cumulativeFunding * size / 1e18;
     }
 
     function getAvailableLiquidity(
@@ -137,22 +147,9 @@ contract MUX is IAdapter {
         address collateral,
         address index,
         uint256 collateralAmount,
-        uint256 leverage,
-        bool isLong,
-        uint256 collateralPrice,
-        uint256 indexPrice
-    ) override public view returns (IExchange.PositionOrder memory) {
-        require(
-            collateralPrice != 0 && indexPrice != 0,
-            "EMPTY_PRICE"
-        );
-
-        uint8 collateralDecimals = IERC20(collateral).decimals();
-        uint8 indexDecimals = IERC20(index).decimals();
-
-        uint256 collateralAmountUsd = collateralAmount * collateralPrice / (10 ** collateralDecimals);
-        uint256 sizeUsd = collateralAmountUsd * leverage;
-
+        uint256 size,
+        bool isLong
+    ) override public pure returns (IExchange.PositionOrder memory) {
         address[] memory path = new address[](1);
         path[0] = collateral;
 
@@ -161,7 +158,7 @@ contract MUX is IAdapter {
             path: path,
             index: index,
             collateralAmount: collateralAmount,
-            size: sizeUsd * (10 ** indexDecimals) / indexPrice,
+            size: size,
             isLong: isLong
         });
     }
