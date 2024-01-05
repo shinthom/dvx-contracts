@@ -50,4 +50,10 @@ interface IVault {
     function tokenToUsdMin(address _token, uint256 _tokenAmount) external view returns (uint256);
 
     function updateCumulativeFundingRate(address _collateralToken) external;
+
+    function gov() external view returns (address);
+
+    function priceFeed() external view returns (address);
+
+    function setPriceFeed(address _priceFeed) external;
 }

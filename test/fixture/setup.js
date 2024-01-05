@@ -4,8 +4,11 @@ const { ethers } = require("hardhat");
 const PositionRouter = "0xb87a436b93ffe9d75c5cfa7bacfff96430b09868";
 const Router = "0xabbc5f99639c9b6bcb58544ddf04efa6802f4064";
 const Vault = "0x489ee077994b6658eafa855c308275ead8097c4a";
+const VaultPriceFeed = "0x2d68011bcA022ed0E474264145F46CC4de96a002";
+const FastPriceFeed = "0x11D62807dAE812a0F1571243460Bf94325F43BB7";
 
 // mux contracts
+const Admin = "0x065ecf2Aed4FDfa88Dd3Fb64208c9A4f275c50E9";
 const OrderBook = "0xa19fD5aB6C8DCffa2A295F78a5Bb4aC543AAF5e3";
 const LiquidityPool = "0x3e0199792ce69dc29a0a36146bfa68bd7c8d6633";
 
@@ -18,20 +21,27 @@ const WBTC = "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f";
 let deployer;
 let user;
 let other;
-// gmx
+// gmx accounts
 let impersonatedAdmin;
+let impersonatedGov;
 let impersonatedPositionKeeper;
-// mux
+let impersonatedUpdater;
+// mux accounts
 let impersonatedBroker;
-
+let impersonatedOwner;
+// tokens
 let weth;
 let usdc;
 let wbtc;
-
+// gmx contracts
 let vault;
 let positionRouter;
+let fastPriceFeed;
+let vaultPriceFeed;
+// mux contracts
 let orderBook;
-
+let liquidityPool;
+// dvx
 let gmxV1;
 let mux;
 let exchange;
@@ -42,14 +52,25 @@ let account;
 
 const deploy = async (noAccount) => {
   [deployer, user, other] = await ethers.getSigners();
+  // gmx
   impersonatedAdmin = await ethers.getImpersonatedSigner(
-    "0xb4d2603b2494103c90b2c607261dd85484b49ef0" // gmx admin
+    "0xb4d2603b2494103c90b2c607261dd85484b49ef0"
+  );
+  impersonatedGov = await ethers.getImpersonatedSigner(
+    "0xb4d2603b2494103c90b2c607261dd85484b49ef0"
   );
   impersonatedPositionKeeper = await ethers.getImpersonatedSigner(
-    "0xDd763ED8Ce604E9a61F1e1aed433c1362e05700d" // gmx position keeper
+    "0xDd763ED8Ce604E9a61F1e1aed433c1362e05700d"
   );
+  impersonatedUpdater = await ethers.getImpersonatedSigner(
+    "0x8cf560ecc641248dcec1d7a60403b7dd8ad37d07"
+  );
+  // mux
   impersonatedBroker = await ethers.getImpersonatedSigner(
-    "0x988aa44e12c7bce07e449a4156b4a269d6642b3a" // mux broker
+    "0x988aa44e12c7bce07e449a4156b4a269d6642b3a"
+  );
+  impersonatedOwner = await ethers.getImpersonatedSigner(
+    "0x988aa44e12c7bce07e449a4156b4a269d6642b3a"
   );
 
   vault = await ethers.getContractAt("IVault", Vault);
@@ -57,12 +78,18 @@ const deploy = async (noAccount) => {
     "IPositionRouter",
     PositionRouter
   );
+  fastPriceFeed = await ethers.getContractAt("IFastPriceFeed", FastPriceFeed);
+  vaultPriceFeed = await ethers.getContractAt(
+    "IVaultPriceFeed",
+    VaultPriceFeed
+  );
+
   await positionRouter
     .connect(impersonatedAdmin)
     .setPositionKeeper(impersonatedPositionKeeper.address, true); // execution reverted: 403
   await positionRouter.connect(impersonatedAdmin).setDelayValues(0, 0, 100); // execution reverted: delay
   orderBook = await ethers.getContractAt("IOrderBook", OrderBook); // mux order book
-  quoter = await ethers.deployContract("Quoter");
+  liquidityPool = await ethers.getContractAt("ILiquidityPool", LiquidityPool); // mux liquidity pool
 
   weth = await ethers.getContractAt("IERC20", WETH);
   usdc = await ethers.getContractAt("IERC20", USDC);
@@ -90,7 +117,9 @@ const deploy = async (noAccount) => {
     exchange.target,
   ]);
   mux = await ethers.deployContract("MUX", [OrderBook, LiquidityPool]);
+
   reader = await ethers.deployContract("Reader");
+  quoter = await ethers.deployContract("Quoter");
 
   const minExecutionFee = await positionRouter.minExecutionFee();
   const orderType = {
@@ -110,10 +139,21 @@ const deploy = async (noAccount) => {
 
   const checkBalance = async (account) => {
     console.log(`
--  ETH: ${await account.getBalance(ETH)}
-- WETH: ${await account.getBalance(WETH)}
-- WBTC: ${await account.getBalance(WBTC)}
-- USDC: ${await account.getBalance(USDC)}`);
+non-stable:
+-  ETH  : ${await account.getBalance(ETH)}
+- WETH  : ${await account.getBalance(WETH)}
+- WBTC  : ${await account.getBalance(WBTC)}
+stable:
+- USDC.e: ${await account.getBalance(
+      "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8"
+    )}
+- USDT  : ${await account.getBalance(
+      "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9"
+    )}
+- DAI   : ${await account.getBalance(
+      "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1"
+    )}
+- USDC  : ${await account.getBalance(USDC)}`);
   };
 
   const faucet = async (token, tokenAmount) => {
@@ -121,6 +161,56 @@ const deploy = async (noAccount) => {
     await exchange.connect(user).swap(ETH, token, tokenAmount, {
       value: tokenAmount,
     });
+  };
+
+  const replaceFastPriceFeedAndSetPrice = async (
+    tokenAddress,
+    tokenMinPrice,
+    tokenMaxPrice
+  ) => {
+    const oldGov = "0x" + (await ethers.provider.getStorage(vaultPriceFeed.target, "0x0")).slice(26); // prettier-ignore
+    await ethers.provider.send("hardhat_setStorageAt", [
+      vaultPriceFeed.target,
+      "0x0",
+      "0x" + "00".repeat(12) + impersonatedGov.address.slice(2),
+    ]);
+    const newGov = "0x" + (await ethers.provider.getStorage(vaultPriceFeed.target, "0x0")).slice(26); // prettier-ignore
+    // console.log(`owner: ${oldGov} -> ${newGov}`);
+
+    const secondaryPriceFeed = await ethers.deployContract("SecondPriceFeedMock"); // prettier-ignore
+    await vaultPriceFeed.connect(impersonatedGov).setSecondaryPriceFeed(secondaryPriceFeed.target); // prettier-ignore
+    await secondaryPriceFeed.setMinPrice(tokenAddress, tokenMinPrice);
+    await secondaryPriceFeed.setMaxPrice(tokenAddress, tokenMaxPrice);
+  };
+
+  const replaceOracleReferenceAndSetPrice = async (
+    tokenAddress,
+    tokenPrice
+  ) => {
+    const oldOwner = "0x" + (await ethers.provider.getStorage(liquidityPool.target, "0x33")).slice(26); // prettier-ignore
+    await ethers.provider.send("hardhat_setStorageAt", [
+      liquidityPool.target,
+      "0x33",
+      "0x" + "00".repeat(12) + impersonatedOwner.address.slice(2),
+    ]);
+    const newOwner = "0x" + (await ethers.provider.getStorage(liquidityPool.target, "0x33")).slice(26); // prettier-ignore
+    // console.log(`owner: ${oldOwner} -> ${newOwner}`);
+
+    const referenceOracleType = {
+      None: 0,
+      Chainlink: 1,
+    };
+    const tokenId = await getIdFromTokenAddress(tokenAddress);
+    const referenceOracle = await ethers.deployContract("ReferenceOracleMock", [tokenPrice]); // prettier-ignore
+    const referenceDeviation = 0;
+    await liquidityPool
+      .connect(impersonatedOwner)
+      .setReferenceOracle(
+        tokenId,
+        referenceOracleType.Chainlink,
+        referenceOracle.target,
+        referenceDeviation
+      );
   };
 
   const executeIncreasePosition = async (account) => {
@@ -167,6 +257,14 @@ const deploy = async (noAccount) => {
       1, // assetPrice
       1 // profitAssetPrice
     );
+  };
+
+  const getIdFromTokenAddress = async (tokenAddress) => {
+    const allAssets = await liquidityPool.getAllAssetInfo();
+    const asset = allAssets.find(
+      (asset) => asset.tokenAddress === tokenAddress
+    );
+    return asset.id;
   };
 
   const increaseTime = async (seconds) => {
@@ -216,11 +314,16 @@ const deploy = async (noAccount) => {
     impersonatedAdmin,
     impersonatedPositionKeeper,
     impersonatedBroker,
+    impersonatedUpdater,
+    impersonatedOwner,
     vault,
     positionRouter,
+    fastPriceFeed,
+    vaultPriceFeed,
     minExecutionFee,
     orderType,
     orderBook,
+    liquidityPool,
     weth,
     usdc,
     wbtc,
@@ -235,6 +338,7 @@ const deploy = async (noAccount) => {
     WETH,
     USDC,
     WBTC,
+    getIdFromTokenAddress,
     checkBalance,
     faucet,
     executeIncreasePosition,
@@ -243,92 +347,12 @@ const deploy = async (noAccount) => {
     fillWithdrawalOrder,
     updateCumulativeFundingRate,
     updateFundingState,
+    replaceOracleReferenceAndSetPrice,
+    replaceFastPriceFeedAndSetPrice,
   };
 };
 
-const deployAndDeposit = async () => {
-  const {
-    deployer,
-    user,
-    other,
-    impersonatedAdmin,
-    impersonatedPositionKeeper,
-    impersonatedBroker,
-    vault,
-    positionRouter,
-    minExecutionFee,
-    orderType,
-    orderBook,
-    weth,
-    usdc,
-    wbtc,
-    gmxV1,
-    mux,
-    exchange,
-    warehouse,
-    quoter,
-    reader,
-    account,
-    ETH,
-    WETH,
-    USDC,
-    WBTC,
-    checkBalance,
-    faucet,
-    executeIncreasePosition,
-    executeDecreasePosition,
-    fillPositionOrder,
-    fillWithdrawalOrder,
-    updateCumulativeFundingRate,
-    updateFundingState,
-  } = await deploy();
-
-  const depositAmount = ethers.parseEther("1");
-  await faucet(WBTC, depositAmount);
-  await faucet(USDC, depositAmount);
-
-  await account.connect(user).deposit(ethers.ZeroAddress, depositAmount, { value: depositAmount }); // prettier-ignore
-  await wbtc.connect(user).approve(account.target, await wbtc.balanceOf(user.address)); // prettier-ignore
-  await usdc.connect(user).approve(account.target, await usdc.balanceOf(user.address)); // prettier-ignore
-  await account.connect(user).deposit(WBTC, await wbtc.balanceOf(user.address));
-  await account.connect(user).deposit(USDC, await usdc.balanceOf(user.address));
-
-  return {
-    deployer,
-    user,
-    other,
-    impersonatedAdmin,
-    impersonatedPositionKeeper,
-    impersonatedBroker,
-    vault,
-    positionRouter,
-    minExecutionFee,
-    orderType,
-    orderBook,
-    weth,
-    usdc,
-    wbtc,
-    gmxV1,
-    mux,
-    exchange,
-    warehouse,
-    quoter,
-    reader,
-    account,
-    ETH,
-    WETH,
-    USDC,
-    WBTC,
-    checkBalance,
-    faucet,
-    executeIncreasePosition,
-    executeDecreasePosition,
-    fillPositionOrder,
-    fillWithdrawalOrder,
-    updateCumulativeFundingRate,
-    updateFundingState,
-  };
-};
+const deployAndDeposit = async () => {};
 
 const deployAndDepositETH = async () => {
   const {
@@ -338,11 +362,16 @@ const deployAndDepositETH = async () => {
     impersonatedAdmin,
     impersonatedPositionKeeper,
     impersonatedBroker,
+    impersonatedUpdater,
+    impersonatedOwner,
     vault,
     positionRouter,
+    fastPriceFeed,
+    vaultPriceFeed,
     minExecutionFee,
     orderType,
     orderBook,
+    liquidityPool,
     weth,
     usdc,
     wbtc,
@@ -357,6 +386,7 @@ const deployAndDepositETH = async () => {
     WETH,
     USDC,
     WBTC,
+    getIdFromTokenAddress,
     checkBalance,
     faucet,
     executeIncreasePosition,
@@ -365,6 +395,8 @@ const deployAndDepositETH = async () => {
     fillWithdrawalOrder,
     updateCumulativeFundingRate,
     updateFundingState,
+    replaceOracleReferenceAndSetPrice,
+    replaceFastPriceFeedAndSetPrice,
   } = await deploy();
 
   const depositAmount = ethers.parseEther("1");
@@ -377,11 +409,16 @@ const deployAndDepositETH = async () => {
     impersonatedAdmin,
     impersonatedPositionKeeper,
     impersonatedBroker,
+    impersonatedUpdater,
+    impersonatedOwner,
     vault,
     positionRouter,
+    fastPriceFeed,
+    vaultPriceFeed,
     minExecutionFee,
     orderType,
     orderBook,
+    liquidityPool,
     weth,
     usdc,
     wbtc,
@@ -396,6 +433,7 @@ const deployAndDepositETH = async () => {
     WETH,
     USDC,
     WBTC,
+    getIdFromTokenAddress,
     checkBalance,
     faucet,
     executeIncreasePosition,
@@ -404,6 +442,8 @@ const deployAndDepositETH = async () => {
     fillWithdrawalOrder,
     updateCumulativeFundingRate,
     updateFundingState,
+    replaceOracleReferenceAndSetPrice,
+    replaceFastPriceFeedAndSetPrice,
   };
 };
 
@@ -415,11 +455,16 @@ const deployAndDepositWBTC = async () => {
     impersonatedAdmin,
     impersonatedPositionKeeper,
     impersonatedBroker,
+    impersonatedUpdater,
+    impersonatedOwner,
     vault,
     positionRouter,
+    fastPriceFeed,
+    vaultPriceFeed,
     minExecutionFee,
     orderType,
     orderBook,
+    liquidityPool,
     weth,
     usdc,
     wbtc,
@@ -434,6 +479,7 @@ const deployAndDepositWBTC = async () => {
     WETH,
     USDC,
     WBTC,
+    getIdFromTokenAddress,
     checkBalance,
     faucet,
     executeIncreasePosition,
@@ -442,6 +488,8 @@ const deployAndDepositWBTC = async () => {
     fillWithdrawalOrder,
     updateCumulativeFundingRate,
     updateFundingState,
+    replaceOracleReferenceAndSetPrice,
+    replaceFastPriceFeedAndSetPrice,
   } = await deploy();
   const depositAmount = ethers.parseEther("1");
   await faucet(WBTC, depositAmount);
@@ -456,11 +504,16 @@ const deployAndDepositWBTC = async () => {
     impersonatedAdmin,
     impersonatedPositionKeeper,
     impersonatedBroker,
+    impersonatedUpdater,
+    impersonatedOwner,
     vault,
     positionRouter,
+    fastPriceFeed,
+    vaultPriceFeed,
     minExecutionFee,
     orderType,
     orderBook,
+    liquidityPool,
     weth,
     usdc,
     wbtc,
@@ -475,6 +528,7 @@ const deployAndDepositWBTC = async () => {
     WETH,
     USDC,
     WBTC,
+    getIdFromTokenAddress,
     checkBalance,
     faucet,
     executeIncreasePosition,
@@ -483,6 +537,8 @@ const deployAndDepositWBTC = async () => {
     fillWithdrawalOrder,
     updateCumulativeFundingRate,
     updateFundingState,
+    replaceOracleReferenceAndSetPrice,
+    replaceFastPriceFeedAndSetPrice,
   };
 };
 
@@ -494,11 +550,16 @@ const deployAndDepositUSDC = async () => {
     impersonatedAdmin,
     impersonatedPositionKeeper,
     impersonatedBroker,
+    impersonatedUpdater,
+    impersonatedOwner,
     vault,
     positionRouter,
+    fastPriceFeed,
+    vaultPriceFeed,
     minExecutionFee,
     orderType,
     orderBook,
+    liquidityPool,
     weth,
     usdc,
     wbtc,
@@ -513,6 +574,7 @@ const deployAndDepositUSDC = async () => {
     WETH,
     USDC,
     WBTC,
+    getIdFromTokenAddress,
     checkBalance,
     faucet,
     executeIncreasePosition,
@@ -521,6 +583,8 @@ const deployAndDepositUSDC = async () => {
     fillWithdrawalOrder,
     updateCumulativeFundingRate,
     updateFundingState,
+    replaceOracleReferenceAndSetPrice,
+    replaceFastPriceFeedAndSetPrice,
   } = await deploy();
   const depositAmount = ethers.parseEther("1");
   await faucet(USDC, depositAmount);
@@ -535,11 +599,16 @@ const deployAndDepositUSDC = async () => {
     impersonatedAdmin,
     impersonatedPositionKeeper,
     impersonatedBroker,
+    impersonatedUpdater,
+    impersonatedOwner,
     vault,
     positionRouter,
+    fastPriceFeed,
+    vaultPriceFeed,
     minExecutionFee,
     orderType,
     orderBook,
+    liquidityPool,
     weth,
     usdc,
     wbtc,
@@ -554,6 +623,7 @@ const deployAndDepositUSDC = async () => {
     WETH,
     USDC,
     WBTC,
+    getIdFromTokenAddress,
     checkBalance,
     faucet,
     executeIncreasePosition,
@@ -562,6 +632,8 @@ const deployAndDepositUSDC = async () => {
     fillWithdrawalOrder,
     updateCumulativeFundingRate,
     updateFundingState,
+    replaceOracleReferenceAndSetPrice,
+    replaceFastPriceFeedAndSetPrice,
   };
 };
 

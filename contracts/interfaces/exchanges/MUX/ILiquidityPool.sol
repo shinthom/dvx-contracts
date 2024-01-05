@@ -2,6 +2,11 @@
 pragma solidity ^0.8.0;
 
 interface ILiquidityPool {
+    enum ReferenceOracleType {
+        None,
+        Chainlink
+    }
+
     struct Asset {
         // slot
         // assets with the same symbol in different chains are the same asset. they shares the same muxToken. so debts of the same symbol
@@ -68,4 +73,13 @@ interface ILiquidityPool {
         external
         view
         returns (uint96 collateral, uint96 size, uint32 lastIncreasedTime, uint96 entryPrice, uint128 entryFunding);
+
+    function setReferenceOracle(
+        uint8 assetId,
+        ReferenceOracleType referenceOracleType,
+        address referenceOracle,
+        uint32 referenceDeviation // 1e5
+    ) external;
+
+    function owner() external view returns (address);
 }

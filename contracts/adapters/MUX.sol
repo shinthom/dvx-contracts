@@ -34,8 +34,8 @@ contract MUX is IAdapter {
         address index,
         bool isLong
     ) override public view returns (IAdapter.Position memory) {
-        uint8 collateralId = _getIdFromAsset(collateral);
-        uint8 indexId = _getIdFromAsset(index);
+        uint8 collateralId = _getIdFromTokenAddress(collateral);
+        uint8 indexId = _getIdFromTokenAddress(index);
 
         bytes32 subAccountId = _assembleSubAccountId(
             account,
@@ -84,7 +84,7 @@ contract MUX is IAdapter {
         uint256 indexPrice,
         uint256 size
     ) override public view returns (uint256) {
-        uint8 indexId = _getIdFromAsset(index);
+        uint8 indexId = _getIdFromTokenAddress(index);
         uint32 positionFeeRate
             = (ILiquidityPool(LIQUIDITY_POOL).getAssetInfo(indexId)).positionFeeRate;
 
@@ -100,7 +100,7 @@ contract MUX is IAdapter {
         bool isLong,
         uint256 indexPrice
     ) override public view returns (uint256) {
-        uint8 indexId = _getIdFromAsset(index);
+        uint8 indexId = _getIdFromTokenAddress(index);
         ILiquidityPool.Asset memory asset = ILiquidityPool(LIQUIDITY_POOL).getAssetInfo(indexId);
 
         uint256 cumulativeFunding;
@@ -118,7 +118,7 @@ contract MUX is IAdapter {
         address index,
         bool isLong
     ) override public view returns (uint256) {
-        uint8 indexId = _getIdFromAsset(index);
+        uint8 indexId = _getIdFromTokenAddress(index);
         ILiquidityPool.Asset memory asset = ILiquidityPool(LIQUIDITY_POOL).getAssetInfo(indexId);
 
         uint256 availableLiquidity;
@@ -166,7 +166,7 @@ contract MUX is IAdapter {
         });
     }
 
-    function _getIdFromAsset(address tokenAddress) private view returns (uint8) {
+    function _getIdFromTokenAddress(address tokenAddress) private view returns (uint8) {
         ILiquidityPool.Asset[] memory assets = ILiquidityPool(LIQUIDITY_POOL).getAllAssetInfo();
         for (uint256 i = 0; i < assets.length; i++) {
             if (assets[i].tokenAddress == tokenAddress) {
@@ -186,8 +186,8 @@ contract MUX is IAdapter {
         require(path.length == 1, "INVALID_PATH");
         address collateral = path[0];
 
-        uint8 collateralId = _getIdFromAsset(collateral);
-        uint8 indexId = _getIdFromAsset(index);
+        uint8 collateralId = _getIdFromTokenAddress(collateral);
+        uint8 indexId = _getIdFromTokenAddress(index);
 
         bytes32 subAccountId = _assembleSubAccountId(
             address(this),
@@ -231,8 +231,8 @@ contract MUX is IAdapter {
         uint256 size,
         bool isLong
     ) override public payable {
-        uint8 collateralId = _getIdFromAsset(collateral);
-        uint8 indexId = _getIdFromAsset(index);
+        uint8 collateralId = _getIdFromTokenAddress(collateral);
+        uint8 indexId = _getIdFromTokenAddress(index);
 
         bytes32 subAccountId = _assembleSubAccountId(
             address(this),
@@ -263,8 +263,8 @@ contract MUX is IAdapter {
         require(path.length == 1, "INVALID_PATH");
         address collateral = path[0];
 
-        uint8 collateralId = _getIdFromAsset(collateral);
-        uint8 indexId = _getIdFromAsset(index);
+        uint8 collateralId = _getIdFromTokenAddress(collateral);
+        uint8 indexId = _getIdFromTokenAddress(index);
 
         bytes32 subAccountId = _assembleSubAccountId(
             address(this),
@@ -287,8 +287,8 @@ contract MUX is IAdapter {
         uint256 collateralAmount,
         bool isLong
     ) override public payable {
-        uint8 collateralId = _getIdFromAsset(collateral);
-        uint8 indexId = _getIdFromAsset(index);
+        uint8 collateralId = _getIdFromTokenAddress(collateral);
+        uint8 indexId = _getIdFromTokenAddress(index);
 
         bytes32 subAccountId = _assembleSubAccountId(
             address(this),
