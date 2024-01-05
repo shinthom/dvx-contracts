@@ -7,7 +7,6 @@ import { IVault } from "../interfaces/exchanges/GMXV1/IVault.sol";
 import { IERC20 } from "../interfaces/tokens/IERC20.sol";
 import { IExchange } from "../interfaces/IExchange.sol";
 import { IAdapter } from "../interfaces/IAdapter.sol";
-import "hardhat/console.sol"; // test
 
 contract GMXV1 is IAdapter {
     address constant private WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
@@ -40,13 +39,10 @@ contract GMXV1 is IAdapter {
     }
 
     function getPrice(address token, bool isLong) override public view returns (uint256) {
-        uint256 tokenPrice
-            = token == USDC ? USD :
-            (isLong ?
-                IVault(VAULT).getMaxPrice(token) :
-                IVault(VAULT).getMinPrice(token));
-
-        return tokenPrice;
+        if (token == USDC) {
+            return USD;
+        }
+        return isLong ? IVault(VAULT).getMaxPrice(token) : IVault(VAULT).getMinPrice(token);
     }
 
     function getDepositFee(
@@ -54,8 +50,8 @@ contract GMXV1 is IAdapter {
         IExchange.PositionOrder memory positionOrder
     ) override public view returns (uint256) {
         address collateral = positionOrder.path[positionOrder.path.length - 1];
-        IVault.Position memory position
-            = _getPosition(account, collateral, positionOrder.index, positionOrder.isLong);
+        IAdapter.Position memory position
+            = getPosition(account, collateral, positionOrder.index, positionOrder.isLong);
         if (position.size == 0) {
             return 0;
         }
@@ -64,9 +60,9 @@ contract GMXV1 is IAdapter {
         uint256 collateralAmountUsd = IVault(VAULT).tokenToUsdMin(collateral, positionOrder.collateralAmount);
 
         uint256 nextSize = position.size + positionOrder.size;
-        uint256 nextCollateralAmount = position.collateral + collateralAmountUsd;
+        uint256 nextCollateralAmount = position.collateralAmount + collateralAmountUsd;
 
-        uint256 prevLeverage = position.size * BASIS_POINTS_DIVISOR / position.collateral;
+        uint256 prevLeverage = position.size * BASIS_POINTS_DIVISOR / position.collateralAmount;
         uint256 nextLeverage = nextSize * (BASIS_POINTS_DIVISOR + increasePositionBufferBps) / nextCollateralAmount;
 
         if (nextLeverage > prevLeverage) {
@@ -86,12 +82,7 @@ contract GMXV1 is IAdapter {
     function getPositionFee(
         address /* index */,
         uint256 size
-    ) override public view returns (uint256) {
-        {
-            uint256 marginFeeBasisPoints = IVault(VAULT).marginFeeBasisPoints();
-            console.log("marginFeeBasisPoints: %s", marginFeeBasisPoints); // 40
-        }
-        // return IVault(VAULT).getPositionFee(size);
+    ) override public pure returns (uint256) {
         return size * 10 / BASIS_POINTS_DIVISOR;
     }
 
@@ -131,21 +122,6 @@ contract GMXV1 is IAdapter {
         return IPositionRouter(POSITION_ROUTER).minExecutionFee();
     }
 
-    function _getPosition(
-        address account,
-        address collateral,
-        address index,
-        bool isLong
-    ) private view returns (IVault.Position memory position) {
-        bytes32 positionKey = IVault(VAULT).getPositionKey(
-            account,
-            collateral,
-            index,
-            isLong
-        );
-        position = IVault(VAULT).positions(positionKey);
-    }
-
     function getPosition(
         address account,
         address collateral,
@@ -166,105 +142,6 @@ contract GMXV1 is IAdapter {
             lastIncreasedTime: position.lastIncreasedTime,
             price: position.averagePrice,
             fundingRate: position.entryFundingRate,
-            isLong: isLong
-        });
-    }
-
-    // function getPosition(
-    //     address account,
-    //     address collateral,
-    //     address index,
-    //     bool isLong
-    // ) override public view returns (IAdapter.Position memory) {
-    //     IVault.Position memory position = _getPosition(account, collateral, index, isLong);
-
-    //     if (position.size == 0) {
-    //         return IAdapter.Position({
-    //             collateralAmount: position.collateral,
-    //             size: position.size,
-    //             lastIncreasedTime: position.lastIncreasedTime,
-    //             price: position.averagePrice,
-    //             fundingRate: position.entryFundingRate,
-    //             isLong: isLong
-    //         });
-    //     }
-
-    //     if (isLong) {
-    //         uint8 indexDecimals = IERC20(index).decimals();
-    //         return IAdapter.Position({
-    //             collateralAmount: position.collateral * (10 ** indexDecimals) / position.averagePrice,
-    //             size: position.size * (10 ** indexDecimals) / position.averagePrice,
-    //             lastIncreasedTime: position.lastIncreasedTime,
-    //             price: position.averagePrice,
-    //             fundingRate: position.entryFundingRate,
-    //             isLong: isLong
-    //         });
-    //     } else {
-    //         uint8 collateralDecimals = IERC20(collateral).decimals();
-    //         uint8 indexDecimals = IERC20(index).decimals();
-    //         return IAdapter.Position({
-    //             collateralAmount: position.collateral / (10 ** (PRICE_DECIMALS - collateralDecimals)),
-    //             size: position.size * (10 ** indexDecimals) / position.averagePrice,
-    //             lastIncreasedTime: position.lastIncreasedTime,
-    //             price: position.averagePrice,
-    //             fundingRate: position.entryFundingRate,
-    //             isLong: isLong
-    //         });
-    //     }
-    // }
-
-    function makePositionOrderWithFee(
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 leverage,
-        bool isLong,
-        uint256 /* collateralPrice */,
-        uint256 /* indexPrice */,
-        uint256 fee,
-        bool isSizeFixed
-    ) public view returns (IExchange.PositionOrder memory) {
-        uint8 collateralDecimals = IERC20(collateral).decimals();
-        uint256 collateralPrice
-            = collateral == USDC ? USD :
-            (isLong ?
-                IVault(VAULT).getMaxPrice(collateral) :
-                IVault(VAULT).getMinPrice(collateral));
-
-        uint256 collateralAmountUsd
-            = collateralAmount * collateralPrice / (10 ** collateralDecimals);
-
-        address[] memory path;
-        if (isLong) {
-            if (collateral == index) {
-                path = new address[](1);
-                path[0] = collateral;
-            } else {
-                path = new address[](2);
-                path[0] = collateral;
-                path[1] = index;
-            }
-        } else {
-            if (collateral == USDC) {
-                path = new address[](1);
-                path[0] = collateral;
-            } else {
-                path = new address[](2);
-                path[0] = collateral;
-                path[1] = USDC;            }
-        }
-
-        // todo: check
-        isSizeFixed ?
-            collateralAmount += collateralAmount * fee / USD :
-            collateralAmountUsd -= fee;
-
-        return IExchange.PositionOrder({
-            orderType: IExchange.OrderType.IncreasePosition,
-            path: path,
-            index: index,
-            collateralAmount: collateralAmount,
-            size: collateralAmountUsd * leverage,
             isLong: isLong
         });
     }
@@ -298,9 +175,8 @@ contract GMXV1 is IAdapter {
         }
 
         uint8 indexDecimal = IERC20(index).decimals();
-        uint256 indexPrice = isLong ? IVault(VAULT).getMaxPrice(index) : IVault(VAULT).getMinPrice(index);
+        uint256 indexPrice = getPrice(index, isLong);
         uint256 sizeUsd = size * indexPrice / (10 ** indexDecimal);
-
         positionOrder = IExchange.PositionOrder({
             orderType: IExchange.OrderType.IncreasePosition,
             path: path,
@@ -324,9 +200,7 @@ contract GMXV1 is IAdapter {
         );
 
         address collateral = path[path.length - 1];
-        isLong ?
-            require(collateral == index, "INVALID_PATH") :
-            require(collateral == USDC, "INVALID_PATH");
+        isLong ? require(collateral == index, "INVALID_PATH") : require(collateral == USDC, "INVALID_PATH");
 
         if (path.length == 2) {
             require(path[0] != path[1], "INVALID_PATH");
@@ -337,17 +211,9 @@ contract GMXV1 is IAdapter {
             IERC20(path[0]).approve(EXCHANGE, collateralAmount);
             collateralAmount
                 = IExchange(EXCHANGE).swap(path[0], path[1], collateralAmount);
-
-            // note: WETH will be withrawn to this contract as ETH from exchange contract.
-            // if (path[1] == WETH) {
-            //     IERC20(path[1]).withdraw(collateralAmount);
-            // }
         }
 
-        uint256 price =
-            isLong ?
-            IVault(VAULT).getMaxPrice(index) :
-            IVault(VAULT).getMinPrice(index);
+        uint256 price = getPrice(index, isLong);
         uint256 fee = IPositionRouter(POSITION_ROUTER).minExecutionFee();
 
         // initialize path variable
@@ -383,19 +249,19 @@ contract GMXV1 is IAdapter {
                 );
             }
         } else {
-                IERC20(collateral).approve(ROUTER, collateralAmount);
-                IPositionRouter(POSITION_ROUTER).createIncreasePosition{value: fee}(
-                    path,
-                    index,
-                    collateralAmount,
-                    0,
-                    size,
-                    isLong,
-                    price,
-                    fee,
-                    0x0,
-                    address(0)
-                );
+            IERC20(collateral).approve(ROUTER, collateralAmount);
+            IPositionRouter(POSITION_ROUTER).createIncreasePosition{value: fee}(
+                path,
+                index,
+                collateralAmount,
+                0,
+                size,
+                isLong,
+                price,
+                fee,
+                0x0,
+                address(0)
+            );
         }
     }
 
@@ -406,8 +272,7 @@ contract GMXV1 is IAdapter {
         uint256 size,
         bool isLong
     ) private {
-        uint256 price =
-            isLong ? IVault(VAULT).getMinPrice(index) : IVault(VAULT).getMaxPrice(index);
+        uint256 price = getPrice(index, isLong);
         uint256 fee = IPositionRouter(POSITION_ROUTER).minExecutionFee();
 
         address[] memory path = new address[](1);
@@ -455,19 +320,6 @@ contract GMXV1 is IAdapter {
         uint256 size,
         bool isLong
     ) override public payable {
-        bytes32 positionKey = IVault(VAULT).getPositionKey(
-            address(this),
-            collateral,
-            index,
-            isLong
-        );
-
-        IVault.Position memory position = IVault(VAULT).positions(positionKey);
-        size = size * position.averagePrice / (10 ** IERC20(index).decimals());
-        // There may be a slight diffences in the size calculation.
-        if (position.collateral > position.size - size) {
-            size = position.size;
-        }
         _decrease(
             collateral,
             index,
@@ -498,20 +350,22 @@ contract GMXV1 is IAdapter {
         uint256 collateralAmount,
         bool isLong
     ) override public payable {
-        uint8 collateralDecimals = IERC20(collateral).decimals();
-        if (collateral == USDC) {
-            collateralAmount = collateralAmount * 10 ** (PRICE_DECIMALS - collateralDecimals);
-        } else if (collateral == index) {
-            uint256 price = IVault(VAULT).getMaxPrice(collateral);
-            collateralAmount = collateralAmount * price / (10 ** collateralDecimals);
+        uint256 collateralAmountUsd;
+
+        if (isLong) {
+            collateralAmountUsd = IVault(VAULT).tokenToUsdMin(collateral, collateralAmount);
         } else {
-            revert("INVALID_COLLATERAL");
+            require(
+                collateral == USDC,
+                "INVALID_COLLATERAL"
+            );
+            collateralAmountUsd = collateralAmount * (10 ** 24);
         }
 
         _decrease(
             collateral,
             index,
-            collateralAmount,
+            collateralAmountUsd,
             0,
             isLong
         );

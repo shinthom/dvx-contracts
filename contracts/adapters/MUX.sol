@@ -7,6 +7,7 @@ import { IOrderBook } from "../interfaces/exchanges/MUX/IOrderBook.sol";
 import { IERC20 } from "../interfaces/tokens/IERC20.sol";
 import { IAdapter } from "../interfaces/IAdapter.sol";
 import { IExchange } from "../interfaces/IExchange.sol";
+import "hardhat/console.sol";
 
 contract MUX is IAdapter {
     address constant private WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
@@ -243,7 +244,7 @@ contract MUX is IAdapter {
             0, // collateral
             uint96(size),
             0, // price
-            0, // profitTokenId
+            11, // profitTokenId (11 is USDC)
             96, // flags
             0,
             0x0,
@@ -297,8 +298,7 @@ contract MUX is IAdapter {
         IOrderBook(ORDER_BOOK).placeWithdrawalOrder(
             subAccountId,
             uint96(collateralAmount),
-            0, // profitTokenId
-            // TODO: check logic in mux protocol
+            11, // profitTokenId (11 is USDC)
             false // isProfit
         );
     }

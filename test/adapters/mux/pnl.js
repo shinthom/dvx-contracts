@@ -43,32 +43,387 @@ describe("MUX", () => {
         ETH,
         WETH,
         checkBalance,
+        printPosition,
         fillPositionOrder,
         replaceOracleReferenceAndSetPrice,
-      } = await loadFixture(deployAndDepositETH);
-      const collateralAmount = (await account.getBalance(ETH)) / 2n;
-      const leverage = 10n;
+      } = await loadFixture(deploy);
+      const collateral = WETH;
+      const index = WETH;
+      const collateralAmount = ethers.parseEther("1");
+      const size = ethers.parseEther("10");
       const isLong = true;
+      await account.deposit(ETH, collateralAmount, { value: collateralAmount });
       {
+        console.log("`deposit`");
         await checkBalance(account);
       }
       var price = ethers.parseUnits("2000", 8);
       await replaceOracleReferenceAndSetPrice(WETH, price);
-      const order = await mux.makePositionOrder(WETH, WETH, collateralAmount, leverage, isLong, usdcPrice, wethPrice); // prettier-ignore
-      await account.connect(user).createMarketOrders([mux.target], [{ orderType: order.orderType, path: [...order.path], index: order.index, collateralAmount: order.collateralAmount, size: order.size, isLong: order.isLong }]); // prettier-ignore
+      const positionOrder = await mux.makePositionOrder(collateral, index, collateralAmount, size, isLong); // prettier-ignore
+      await account.connect(user).createMarketOrders([mux.target], [{ orderType: positionOrder.orderType, path: [...positionOrder.path], index: positionOrder.index, collateralAmount: positionOrder.collateralAmount, size: positionOrder.size, isLong: positionOrder.isLong }]); // prettier-ignore
       await fillPositionOrder();
       {
+        console.log("`increasePosition`");
         await checkBalance(account);
-        console.log("position:\n", await mux.getPosition(account.target, WETH, WETH, isLong)); // prettier-ignore
+        await printPosition(mux.target, collateral, index, isLong);
+      }
+      await account.deposit(ETH, collateralAmount, { value: collateralAmount });
+      {
+        console.log("`deposit`");
+        await checkBalance(account);
       }
       var price = ethers.parseUnits("2200", 8); // pnl +10%
       await replaceOracleReferenceAndSetPrice(WETH, price);
-      await account.connect(user).createMarketOrders([mux.target], [{ orderType: order.orderType, path: [...order.path], index: order.index, collateralAmount: order.collateralAmount, size: order.size, isLong: order.isLong }]); // prettier-ignore
+      await account.connect(user).createMarketOrders([mux.target], [{ orderType: positionOrder.orderType, path: [...positionOrder.path], index: positionOrder.index, collateralAmount: positionOrder.collateralAmount, size: positionOrder.size, isLong: positionOrder.isLong }]); // prettier-ignore
       await fillPositionOrder();
       {
+        console.log("`increasePosition`");
         await checkBalance(account);
-        console.log("position:\n", await mux.getPosition(account.target, WETH, WETH, isLong)); // prettier-ignore
+        await printPosition(mux.target, collateral, index, isLong);
       }
     });
+
+    it("eth -> eth: long, increaseCollateral", async () => {
+      const {
+        mux,
+        user,
+        account,
+        ETH,
+        WETH,
+        orderType,
+        checkBalance,
+        printPosition,
+        fillPositionOrder,
+        replaceOracleReferenceAndSetPrice,
+      } = await loadFixture(deploy);
+      const collateral = WETH;
+      const index = WETH;
+      const collateralAmount = ethers.parseEther("1");
+      const size = ethers.parseEther("10");
+      const isLong = true;
+      await account.deposit(ETH, collateralAmount, { value: collateralAmount });
+      {
+        console.log("`deposit`");
+        await checkBalance(account);
+      }
+      var price = ethers.parseUnits("2000", 8);
+      await replaceOracleReferenceAndSetPrice(WETH, price);
+      const positionOrder = await mux.makePositionOrder(collateral, index, collateralAmount, size, isLong); // prettier-ignore
+      await account.connect(user).createMarketOrders([mux.target], [{ orderType: positionOrder.orderType, path: [...positionOrder.path], index: positionOrder.index, collateralAmount: positionOrder.collateralAmount, size: positionOrder.size, isLong: positionOrder.isLong }]); // prettier-ignore
+      await fillPositionOrder();
+      {
+        console.log("`increasePosition`");
+        await checkBalance(account);
+        await printPosition(mux.target, collateral, index, isLong);
+      }
+      await account.deposit(ETH, collateralAmount, { value: collateralAmount });
+      {
+        console.log("`deposit`");
+        await checkBalance(account);
+      }
+      var price = ethers.parseUnits("2200", 8); // pnl +10%
+      await replaceOracleReferenceAndSetPrice(WETH, price);
+      await account.connect(user).createMarketOrders(
+        [mux.target],
+        [
+          {
+            orderType: orderType.increaseCollateral,
+            path: [collateral],
+            index: index,
+            collateralAmount: collateralAmount,
+            size: 0,
+            isLong: isLong,
+          },
+        ]
+      );
+      {
+        console.log("`increaseCollateral`");
+        await checkBalance(account);
+        await printPosition(mux.target, collateral, index, isLong);
+      }
+    });
+
+    it("eth -> eth: long, decreaseCollateral", async () => {
+      const {
+        mux,
+        user,
+        account,
+        ETH,
+        WETH,
+        orderType,
+        checkBalance,
+        printPosition,
+        fillPositionOrder,
+        fillWithdrawalOrder,
+        replaceOracleReferenceAndSetPrice,
+      } = await loadFixture(deploy);
+      const collateral = WETH;
+      const index = WETH;
+      const collateralAmount = ethers.parseEther("1");
+      const size = ethers.parseEther("10");
+      const isLong = true;
+      await account.deposit(ETH, collateralAmount, { value: collateralAmount });
+      {
+        console.log("`deposit`");
+        await checkBalance(account);
+      }
+      var price = ethers.parseUnits("2000", 8);
+      await replaceOracleReferenceAndSetPrice(WETH, price);
+      const positionOrder = await mux.makePositionOrder(collateral, index, collateralAmount, size, isLong); // prettier-ignore
+      await account.connect(user).createMarketOrders([mux.target], [{ orderType: positionOrder.orderType, path: [...positionOrder.path], index: positionOrder.index, collateralAmount: positionOrder.collateralAmount, size: positionOrder.size, isLong: positionOrder.isLong }]); // prettier-ignore
+      await fillPositionOrder();
+      {
+        console.log("`increasePosition`");
+        await checkBalance(account);
+        await printPosition(mux.target, collateral, index, isLong);
+      }
+      var price = ethers.parseUnits("2200", 8); // pnl +10%
+      await replaceOracleReferenceAndSetPrice(WETH, price);
+      await account.connect(user).createMarketOrders(
+        [mux.target],
+        [
+          {
+            orderType: orderType.decreaseCollateral,
+            path: [collateral],
+            index: index,
+            collateralAmount: collateralAmount / 2n,
+            size: 0,
+            isLong: isLong,
+          },
+        ]
+      );
+      await fillWithdrawalOrder();
+      {
+        console.log("`decreaseCollateral`");
+        await checkBalance(account);
+        await printPosition(mux.target, collateral, index, isLong);
+      }
+    });
+
+    it("eth -> eth: long, decreasePosition", async () => {
+      const {
+        mux,
+        user,
+        account,
+        ETH,
+        WETH,
+        orderType,
+        checkBalance,
+        printPosition,
+        fillPositionOrder,
+        replaceOracleReferenceAndSetPrice,
+      } = await loadFixture(deploy);
+      const collateral = WETH;
+      const index = WETH;
+      const collateralAmount = ethers.parseEther("1");
+      const size = ethers.parseEther("10");
+      const isLong = true;
+      await account.deposit(ETH, collateralAmount, { value: collateralAmount });
+      {
+        console.log("`deposit`");
+        await checkBalance(account);
+      }
+      var price = ethers.parseUnits("2000", 8);
+      await replaceOracleReferenceAndSetPrice(WETH, price);
+      const positionOrder = await mux.makePositionOrder(collateral, index, collateralAmount, size, isLong); // prettier-ignore
+      await account.connect(user).createMarketOrders([mux.target], [{ orderType: positionOrder.orderType, path: [...positionOrder.path], index: positionOrder.index, collateralAmount: positionOrder.collateralAmount, size: positionOrder.size, isLong: positionOrder.isLong }]); // prettier-ignore
+      await fillPositionOrder();
+      {
+        console.log("`increasePosition`");
+        await checkBalance(account);
+        await printPosition(mux.target, collateral, index, isLong);
+      }
+      var price = ethers.parseUnits("2200", 8); // pnl +10%
+      await replaceOracleReferenceAndSetPrice(WETH, price);
+      const position = await account.getPosition(mux.target, collateral, index, isLong); // prettier-ignore
+      await account.connect(user).createMarketOrders(
+        [mux.target],
+        [
+          {
+            orderType: orderType.decreasePosition,
+            path: [collateral],
+            index: index,
+            collateralAmount: 0,
+            size: position.size,
+            isLong: isLong,
+          },
+        ]
+      );
+      await fillPositionOrder();
+      {
+        console.log("`decreasePosition`");
+        await checkBalance(account);
+        await printPosition(mux.target, collateral, index, isLong);
+      }
+    });
+
+    it("btc -> eth: long, decreasePosition", async () => {
+      const {
+        mux,
+        user,
+        account,
+        WETH,
+        WBTC,
+        orderType,
+        checkBalance,
+        printPosition,
+        fillPositionOrder,
+        replaceOracleReferenceAndSetPrice,
+      } = await loadFixture(deployAndDepositWBTC);
+      const collateral = WBTC;
+      const index = WETH;
+      const collateralAmount = await account.getBalance(WBTC);
+      const size = ethers.parseEther("10");
+      const isLong = true;
+      {
+        console.log("`deposit`");
+        await checkBalance(account);
+      }
+      var price = ethers.parseUnits("2000", 8);
+      await replaceOracleReferenceAndSetPrice(WETH, price);
+      const positionOrder = await mux.makePositionOrder(collateral, index, collateralAmount, size, isLong); // prettier-ignore
+      await account.connect(user).createMarketOrders([mux.target], [{ orderType: positionOrder.orderType, path: [...positionOrder.path], index: positionOrder.index, collateralAmount: positionOrder.collateralAmount, size: positionOrder.size, isLong: positionOrder.isLong }]); // prettier-ignore
+      await fillPositionOrder();
+      {
+        console.log("`increasePosition`");
+        await checkBalance(account);
+        await printPosition(mux.target, collateral, index, isLong);
+      }
+      var price = ethers.parseUnits("2200", 8); // pnl +10%
+      await replaceOracleReferenceAndSetPrice(WETH, price);
+      const position = await account.getPosition(mux.target, collateral, index, isLong); // prettier-ignore
+      await account.connect(user).createMarketOrders(
+        [mux.target],
+        [
+          {
+            orderType: orderType.decreasePosition,
+            path: [collateral],
+            index: index,
+            collateralAmount: 0,
+            size: position.size,
+            isLong: isLong,
+          },
+        ]
+      );
+      await fillPositionOrder();
+      {
+        console.log("`decreasePosition`");
+        await checkBalance(account);
+        await printPosition(mux.target, collateral, index, isLong);
+      }
+    });
+
+    it("btc -> eth: short, decreasePosition", async () => {
+      const {
+        mux,
+        user,
+        account,
+        WETH,
+        WBTC,
+        orderType,
+        checkBalance,
+        printPosition,
+        fillPositionOrder,
+        replaceOracleReferenceAndSetPrice,
+      } = await loadFixture(deployAndDepositWBTC);
+      const collateral = WBTC;
+      const index = WETH;
+      const collateralAmount = await account.getBalance(WBTC);
+      const size = ethers.parseEther("10");
+      const isLong = false;
+      {
+        console.log("`deposit`");
+        await checkBalance(account);
+      }
+      var price = ethers.parseUnits("2000", 8);
+      await replaceOracleReferenceAndSetPrice(WETH, price);
+      const positionOrder = await mux.makePositionOrder(collateral, index, collateralAmount, size, isLong); // prettier-ignore
+      await account.connect(user).createMarketOrders([mux.target], [{ orderType: positionOrder.orderType, path: [...positionOrder.path], index: positionOrder.index, collateralAmount: positionOrder.collateralAmount, size: positionOrder.size, isLong: positionOrder.isLong }]); // prettier-ignore
+      await fillPositionOrder();
+      {
+        console.log("`increasePosition`");
+        await checkBalance(account);
+        await printPosition(mux.target, collateral, index, isLong);
+      }
+      var price = ethers.parseUnits("1800", 8); // pnl +10%
+      await replaceOracleReferenceAndSetPrice(WETH, price);
+      const position = await account.getPosition(mux.target, collateral, index, isLong); // prettier-ignore
+      await account.connect(user).createMarketOrders(
+        [mux.target],
+        [
+          {
+            orderType: orderType.decreasePosition,
+            path: [collateral],
+            index: index,
+            collateralAmount: 0,
+            size: position.size,
+            isLong: isLong,
+          },
+        ]
+      );
+      await fillPositionOrder();
+      {
+        console.log("`decreasePosition`");
+        await checkBalance(account);
+        await printPosition(mux.target, collateral, index, isLong);
+      }
+    });
+  });
+
+  it("btc -> eth: short, decreasePosition", async () => {
+    const {
+      mux,
+      user,
+      account,
+      WETH,
+      WBTC,
+      orderType,
+      checkBalance,
+      printPosition,
+      fillPositionOrder,
+      fillWithdrawalOrder,
+      replaceOracleReferenceAndSetPrice,
+    } = await loadFixture(deployAndDepositWBTC);
+    const collateral = WBTC;
+    const index = WETH;
+    const collateralAmount = await account.getBalance(WBTC);
+    const size = ethers.parseEther("10");
+    const isLong = false;
+    {
+      console.log("`deposit`");
+      await checkBalance(account);
+    }
+    var price = ethers.parseUnits("2000", 8);
+    await replaceOracleReferenceAndSetPrice(WETH, price);
+    const positionOrder = await mux.makePositionOrder(collateral, index, collateralAmount, size, isLong); // prettier-ignore
+    await account.connect(user).createMarketOrders([mux.target], [{ orderType: positionOrder.orderType, path: [...positionOrder.path], index: positionOrder.index, collateralAmount: positionOrder.collateralAmount, size: positionOrder.size, isLong: positionOrder.isLong }]); // prettier-ignore
+    await fillPositionOrder();
+    {
+      console.log("`increasePosition`");
+      await checkBalance(account);
+      await printPosition(mux.target, collateral, index, isLong);
+    }
+    var price = ethers.parseUnits("1800", 8); // pnl +10%
+    await replaceOracleReferenceAndSetPrice(WETH, price);
+    const position = await account.getPosition(mux.target, collateral, index, isLong); // prettier-ignore
+    await account.connect(user).createMarketOrders(
+      [mux.target],
+      [
+        {
+          orderType: orderType.decreaseCollateral,
+          path: [collateral],
+          index: index,
+          collateralAmount: collateralAmount / 2n,
+          size: 0,
+          isLong: isLong,
+        },
+      ]
+    );
+    await fillWithdrawalOrder();
+    {
+      console.log("`decreaseCollateral`");
+      await checkBalance(account);
+      await printPosition(mux.target, collateral, index, isLong);
+    }
   });
 });

@@ -153,7 +153,26 @@ stable:
 - DAI   : ${await account.getBalance(
       "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1"
     )}
-- USDC  : ${await account.getBalance(USDC)}`);
+- USDC  : ${await account.getBalance(USDC)}
+`);
+  };
+
+  const printPosition = async (adapter, collateral, index, isLong) => {
+    const position = await account.getPosition(
+      adapter,
+      collateral,
+      index,
+      isLong
+    );
+    console.log(`position:
+- collateralAmount : ${position.collateralAmount}
+- size             : ${position.size}
+- lastIncreasedTime: ${position.lastIncreasedTime}
+- price            : ${position.price}
+- fundingRate      : ${position.fundingRate}
+- isLong           : ${position.isLong}
+
+`);
   };
 
   const faucet = async (token, tokenAmount) => {
@@ -349,6 +368,7 @@ stable:
     getAssetFromTokenAddress,
     getIdFromTokenAddress,
     checkBalance,
+    printPosition,
     faucet,
     executeIncreasePosition,
     executeDecreasePosition,
@@ -398,6 +418,7 @@ const deployAndDepositETH = async () => {
     getAssetFromTokenAddress,
     getIdFromTokenAddress,
     checkBalance,
+    printPosition,
     faucet,
     executeIncreasePosition,
     executeDecreasePosition,
@@ -446,6 +467,7 @@ const deployAndDepositETH = async () => {
     getAssetFromTokenAddress,
     getIdFromTokenAddress,
     checkBalance,
+    printPosition,
     faucet,
     executeIncreasePosition,
     executeDecreasePosition,
@@ -493,6 +515,7 @@ const deployAndDepositWBTC = async () => {
     getAssetFromTokenAddress,
     getIdFromTokenAddress,
     checkBalance,
+    printPosition,
     faucet,
     executeIncreasePosition,
     executeDecreasePosition,
@@ -543,6 +566,7 @@ const deployAndDepositWBTC = async () => {
     getAssetFromTokenAddress,
     getIdFromTokenAddress,
     checkBalance,
+    printPosition,
     faucet,
     executeIncreasePosition,
     executeDecreasePosition,
@@ -590,6 +614,7 @@ const deployAndDepositUSDC = async () => {
     getAssetFromTokenAddress,
     getIdFromTokenAddress,
     checkBalance,
+    printPosition,
     faucet,
     executeIncreasePosition,
     executeDecreasePosition,
@@ -640,6 +665,7 @@ const deployAndDepositUSDC = async () => {
     getAssetFromTokenAddress,
     getIdFromTokenAddress,
     checkBalance,
+    printPosition,
     faucet,
     executeIncreasePosition,
     executeDecreasePosition,
