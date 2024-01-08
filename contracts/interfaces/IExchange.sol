@@ -8,6 +8,11 @@ interface IExchange {
         IncreaseCollateral,
         DecreaseCollateral
     }
+    enum TriggerOrderState {
+        Pending,
+        Executed,
+        Canceled
+    }
 
     struct Fee {
         uint256 depositFeeBasisPoints;
@@ -33,15 +38,21 @@ interface IExchange {
         bool isLong;
         uint256 price; // trigger
         // todo: slippageTolerance
+        uint256 createdAt;
     }
     struct TriggerOrder {
+        uint256 id;
+        TriggerOrderState state;
         address account;
         address adapter;
         address collateral;
         address index;
         bool isLong;
-        uint256 price; // trigger
+        uint256 size;
+        uint256 tpPrice; // trigger
+        uint256 slPrice; // trigger
         // todo: slippageTolerance
+        uint256 createdAt;
     }
 
     event AccountCreated(address indexed wallet, address indexed account);

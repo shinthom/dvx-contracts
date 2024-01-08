@@ -8,14 +8,13 @@ import { IAccount } from "./interfaces/IAccount.sol";
 import { IQuoter } from "./interfaces/IQuoter.sol";
 import { IExchange } from "./interfaces/IExchange.sol";
 import { IWarehouse } from "./interfaces/IWarehouse.sol";
+import "hardhat/console.sol";
 
 contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
     mapping(address => bool) private _orderKeepers;
 
-    mapping(address => uint256) private _limitOrderIndex;
-    mapping(address => uint256) private _triggerOrderIndex;
-    mapping(address => mapping(uint256 => IExchange.LimitOrder)) private _limitOrders;
-    mapping(address => mapping(uint256 => IExchange.TriggerOrder)) private _triggerOrders;
+    mapping(bytes32 => IExchange.TriggerOrder[]) private _triggerOrders;
+    mapping(bytes32 => uint256) private _triggerOrderSize;
 
     modifier onlyOrderKeeper() {
         require(
@@ -39,103 +38,164 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
 
     function isOrderKeeper(address keeper) public view returns (bool) { return _orderKeepers[keeper]; }
 
-    function getLimitOrderIndex(address account) override public view returns (uint256) { return _limitOrderIndex[account]; }
+    // function getLimitOrderIndex(address account) override public view returns (uint256) { return _limitOrderIndex[account]; }
 
-    function getLimitOrder(address account, uint256 orderIndex) override public view returns (IExchange.LimitOrder memory) {
-        return _limitOrders[account][orderIndex];
+    // function getLimitOrder(address account, uint256 orderIndex) override public view returns (IExchange.LimitOrder memory) {
+    //     return _limitOrders[account][orderIndex];
+    // }
+
+    // function getLimitOrders(address account) override public view returns (IExchange.LimitOrder[] memory) {
+    //     uint256 orderIndex = _limitOrderIndex[account];
+    //     IExchange.LimitOrder[] memory limitOrders = new IExchange.LimitOrder[](orderIndex);
+    //     for (uint256 i = 0; i < orderIndex; i++) {
+    //         limitOrders[i] = _limitOrders[account][i];
+    //     }
+    //     return limitOrders;
+    // }
+
+    // function createLimitOrder(IExchange.LimitOrder calldata limitOrder) override public {
+    //     uint256 orderIndex = _limitOrderIndex[msg.sender];
+    //     _limitOrderIndex[msg.sender] = orderIndex + 1;
+    //     _limitOrders[msg.sender][orderIndex] = limitOrder;
+    //     emit LimitOrderCreated(msg.sender, orderIndex, limitOrder);
+    // }
+
+    // function cancelLimitOrder(uint256 orderIndex) override external {
+    //     IExchange.LimitOrder storage limitOrder = _limitOrders[msg.sender][orderIndex];
+    //     require(
+    //         limitOrder.index != address(0),
+    //         "Warehouse: non-existent limit order"
+    //     );
+    //     delete _limitOrders[msg.sender][orderIndex];
+    //     emit LimitOrderCanceled(msg.sender, orderIndex);
+    // }
+
+    // function executeLimitOrder(
+    //     address account,
+    //     uint256 orderIndex,
+    //     IQuoter.Answer[] memory answers
+    // ) external payable onlyOrderKeeper {
+    //     IExchange.LimitOrder storage limitOrder = _limitOrders[account][orderIndex];
+    //     require(
+    //         limitOrder.index != address(0),
+    //         "Warehouse: non-existent limit order"
+    //     );
+    //     delete _limitOrders[account][orderIndex];
+    //     emit LimitOrderExecuted(account, orderIndex);
+
+    //     address[] memory adapters = new address[](answers.length);
+    //     IExchange.PositionOrder[] memory positionOrders = new IExchange.PositionOrder[](answers.length);
+    //     for (uint256 i = 0; i < answers.length; i++) {
+    //         adapters[i] = answers[i].adapter;
+    //         positionOrders[i] = answers[i].positionOrder;
+    //     }
+    //     IAccount(account).executeLimitOrder{value: msg.value}(adapters, positionOrders);
+    // }
+
+    function getPositionKey(
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong
+    ) override public pure returns (bytes32) {
+        return keccak256(abi.encodePacked(adapter, collateral, index, isLong));
     }
 
-    function getLimitOrders(address account) override public view returns (IExchange.LimitOrder[] memory) {
-        uint256 orderIndex = _limitOrderIndex[account];
-        IExchange.LimitOrder[] memory limitOrders = new IExchange.LimitOrder[](orderIndex);
-        for (uint256 i = 0; i < orderIndex; i++) {
-            limitOrders[i] = _limitOrders[account][i];
-        }
-        return limitOrders;
+    function getTriggerOrders(bytes32 positionKey) override public view returns (IExchange.TriggerOrder[] memory) {
+        return _triggerOrders[positionKey];
     }
 
-    function getTriggerOrderIndex(address account) override public view returns (uint256) { return _triggerOrderIndex[account]; }
-
-    function getTriggerOrder(address account, uint256 orderIndex) override public view returns (IExchange.TriggerOrder memory) {
-        return _triggerOrders[account][orderIndex];
+    function getTriggerOrder(bytes32 positionKey, uint256 id) override public view returns (IExchange.TriggerOrder memory) {
+        return _triggerOrders[positionKey][id];
     }
 
-    function getTriggerOrders(address account) override public view returns (IExchange.TriggerOrder[] memory) {
-        uint256 orderIndex = _triggerOrderIndex[account];
-        IExchange.TriggerOrder[] memory triggerOrders = new IExchange.TriggerOrder[](orderIndex);
-        for (uint256 i = 0; i < orderIndex; i++) {
-            triggerOrders[i] = _triggerOrders[account][i];
-        }
-        return triggerOrders;
+    function getTriggerOrderSize(bytes32 positionKey) override public view returns (uint256) {
+        return _triggerOrderSize[positionKey];
     }
 
-    function createLimitOrder(IExchange.LimitOrder calldata limitOrder) override public {
-        uint256 orderIndex = _limitOrderIndex[msg.sender];
-        _limitOrderIndex[msg.sender] = orderIndex + 1;
-        _limitOrders[msg.sender][orderIndex] = limitOrder;
-        emit LimitOrderCreated(msg.sender, orderIndex, limitOrder);
-    }
-
-    function cancelLimitOrder(uint256 orderIndex) override external {
-        IExchange.LimitOrder storage limitOrder = _limitOrders[msg.sender][orderIndex];
-        require(
-            limitOrder.index != address(0),
-            "Warehouse: non-existent limit order"
+    function createTriggerOrder(
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong,
+        uint256 size,
+        uint256 tpPrice,
+        uint256 slPrice
+    ) override public {
+        IAdapter.Position memory position = IAdapter(adapter).getPosition(
+            msg.sender,
+            collateral,
+            index,
+            isLong
         );
-        delete _limitOrders[msg.sender][orderIndex];
-        emit LimitOrderCanceled(msg.sender, orderIndex);
-    }
+        require(position.size > 0, "Warehouse: NO_POSITION");
 
-    function executeLimitOrder(
-        address account,
-        uint256 orderIndex,
-        IQuoter.Answer[] memory answers
-    ) external payable onlyOrderKeeper {
-        IExchange.LimitOrder storage limitOrder = _limitOrders[account][orderIndex];
+        bytes32 positionKey = getPositionKey(adapter, collateral, index, isLong);
+        uint256 triggerOrderSize = _triggerOrderSize[positionKey];
         require(
-            limitOrder.index != address(0),
-            "Warehouse: non-existent limit order"
+            triggerOrderSize + size <= position.size,
+            "Warehouse: EXCEED_SIZE"
         );
-        delete _limitOrders[account][orderIndex];
-        emit LimitOrderExecuted(account, orderIndex);
 
-        address[] memory adapters = new address[](answers.length);
-        IExchange.PositionOrder[] memory positionOrders = new IExchange.PositionOrder[](answers.length);
-        for (uint256 i = 0; i < answers.length; i++) {
-            adapters[i] = answers[i].adapter;
-            positionOrders[i] = answers[i].positionOrder;
-        }
-        IAccount(account).executeLimitOrder{value: msg.value}(adapters, positionOrders);
+        uint256 id = _triggerOrders[positionKey].length;
+        _triggerOrders[positionKey].push(IExchange.TriggerOrder({
+            id: id,
+            state: IExchange.TriggerOrderState.Pending,
+            account: msg.sender,
+            adapter: adapter,
+            collateral: collateral,
+            index: index,
+            isLong: isLong,
+            size: size,
+            tpPrice: tpPrice,
+            slPrice: slPrice,
+            createdAt: block.timestamp
+        }));
+        emit TriggerOrderCreated(msg.sender, positionKey, id);
+
+        _triggerOrderSize[positionKey] += size;
     }
 
-    function createTriggerOrder(IExchange.TriggerOrder calldata triggerOrder) override public {
-        uint256 orderIndex = _triggerOrderIndex[msg.sender];
-        _triggerOrderIndex[msg.sender] = orderIndex + 1;
-        _triggerOrders[msg.sender][orderIndex] = triggerOrder;
-        emit TriggerOrderCreated(msg.sender, orderIndex, triggerOrder);
-    }
-
-    function cancelTriggerOrder(uint256 orderIndex) override external {
-        IExchange.TriggerOrder memory triggerOrder = _triggerOrders[msg.sender][orderIndex];
+    function cancelTriggerOrder(bytes32 positionKey, uint256 id) override external {
+        IExchange.TriggerOrder storage triggerOrder = _triggerOrders[positionKey][id];
         require(
-            triggerOrder.index != address(0),
-            "Warehouse: non-existent trigger order"
+            triggerOrder.account == msg.sender,
+            "Warehouse: NOT_OWNER"
         );
-        delete _triggerOrders[msg.sender][orderIndex];
-        emit TriggerOrderCanceled(msg.sender, orderIndex);
+        require(
+            triggerOrder.size > 0,
+            "Warehouse: NO_TRIGGER_ORDER"
+        );
+        require(
+            triggerOrder.state == IExchange.TriggerOrderState.Pending,
+            "Warehouse: NOT_PENDING"
+        );
+
+        triggerOrder.state = IExchange.TriggerOrderState.Canceled;
+        emit TriggerOrderCanceled(msg.sender, positionKey, id);
+
+        _triggerOrderSize[positionKey] -= triggerOrder.size;
     }
 
     function executeTriggerOrder(
         address account,
-        uint256 orderIndex
+        bytes32 positionKey,
+        uint256 id
     ) external payable onlyOrderKeeper {
-        IExchange.TriggerOrder memory triggerOrder = _triggerOrders[account][orderIndex];
+        IExchange.TriggerOrder memory triggerOrder = _triggerOrders[positionKey][id];
         require(
-            triggerOrder.index != address(0),
+            triggerOrder.size > 0,
             "Warehouse: non-existent trigger order"
         );
-        delete _triggerOrders[account][orderIndex];
-        emit TriggerOrderExecuted(account, orderIndex);
+        require(
+            triggerOrder.state == IExchange.TriggerOrderState.Pending,
+            "Warehouse: non-existent trigger order"
+        );
+
+        triggerOrder.state = IExchange.TriggerOrderState.Executed;
+        emit TriggerOrderExecuted(account, positionKey, id);
+
+        _triggerOrderSize[positionKey] -= triggerOrder.size;
 
         IAdapter.Position memory position
             = IAdapter(triggerOrder.adapter).getPosition(account, triggerOrder.collateral, triggerOrder.index, triggerOrder.isLong);

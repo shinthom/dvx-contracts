@@ -10,6 +10,9 @@ import { IWarehouse } from  "./interfaces/IWarehouse.sol";
 contract Account is IAccount {
     address private _owner;
     address private _exchange;
+    // todo
+    // mapping(address => uint256) private _lockedBalances;
+    // mapping(address => uint256) private _collateralBalance?
 
     constructor(address owner_, address exchange_) {
         _owner = owner_;
@@ -183,46 +186,60 @@ contract Account is IAccount {
         }
     }
 
-    function createLimitOrder(
-        IExchange.LimitOrder memory order
-    ) public onlyOwner {
-        address warehouse = IExchange(_exchange).warehouse();
-        IWarehouse(warehouse).createLimitOrder(order);
+    // function createLimitOrder(
+    //     IExchange.LimitOrder memory order
+    // ) public onlyOwner {
+    //     address warehouse = IExchange(_exchange).warehouse();
+    //     IWarehouse(warehouse).createLimitOrder(order);
 
-        // todo: send tokens? or lock tokens?
-    }
+    //     // todo: send tokens? or lock tokens?
+    // }
 
-    function cancelLimitOrder(uint256 orderIndex) public onlyOwner {
-        address warehouse = IExchange(_exchange).warehouse();
-        IWarehouse(warehouse).cancelLimitOrder(orderIndex);
-    }
+    // function cancelLimitOrder(uint256 orderIndex) public onlyOwner {
+    //     address warehouse = IExchange(_exchange).warehouse();
+    //     IWarehouse(warehouse).cancelLimitOrder(orderIndex);
+    // }
 
-    function executeLimitOrder(
-        address[] calldata adapters,
-        IExchange.PositionOrder[] calldata orders
-    ) override public payable {
-        address warehouse = IExchange(_exchange).warehouse();
-        require(msg.sender == warehouse, "NOT_WAREHOUSE");
+    // function executeLimitOrder(
+    //     address[] calldata adapters,
+    //     IExchange.PositionOrder[] calldata orders
+    // ) override public payable {
+    //     address warehouse = IExchange(_exchange).warehouse();
+    //     require(msg.sender == warehouse, "NOT_WAREHOUSE");
 
-        for (uint256 i = 0; i < adapters.length; i++) {
-            (bool success, bytes memory data) = _createMarketOrder(
-                adapters[i],
-                orders[i]
-            );
-            require(success, string(data));
-        }
-    }
+    //     for (uint256 i = 0; i < adapters.length; i++) {
+    //         (bool success, bytes memory data) = _createMarketOrder(
+    //             adapters[i],
+    //             orders[i]
+    //         );
+    //         require(success, string(data));
+    //     }
+    // }
 
     function createTriggerOrder(
-        IExchange.TriggerOrder memory order
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong,
+        uint256 size,
+        uint256 tpPrice,
+        uint256 slPrice
     ) public onlyOwner {
         address warehouse = IExchange(_exchange).warehouse();
-        IWarehouse(warehouse).createTriggerOrder(order);
+        IWarehouse(warehouse).createTriggerOrder(
+            adapter,
+            collateral,
+            index,
+            isLong,
+            size,
+            tpPrice,
+            slPrice
+        );
     }
 
-    function cancelTriggerOrder(uint256 orderId) public onlyOwner {
+    function cancelTriggerOrder(bytes32 positionKey, uint256 id) public onlyOwner {
         address warehouse = IExchange(_exchange).warehouse();
-        IWarehouse(warehouse).cancelTriggerOrder(orderId);
+        IWarehouse(warehouse).cancelTriggerOrder(positionKey, id);
     }
 
     function executeTriggerOrder(

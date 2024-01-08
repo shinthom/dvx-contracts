@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import { IExchange } from  "./interfaces/IExchange.sol";
+import { IWarehouse } from  "./interfaces/IWarehouse.sol";
 import { IAdapter } from  "./interfaces/IAdapter.sol";
 import { IWarehouse } from "./interfaces/IWarehouse.sol";
 
@@ -11,14 +12,6 @@ contract Reader {
         address collateral;
         address index;
         IAdapter.Position position;
-    }
-
-    function getLimitOrders(address warehouse) external view returns (IExchange.LimitOrder[] memory) {
-        return IWarehouse(warehouse).getLimitOrders(msg.sender);
-    }
-
-    function getTriggerOrders(address warehouse) external view returns (IExchange.TriggerOrder[] memory) {
-        return IWarehouse(warehouse).getTriggerOrders(msg.sender);
     }
 
     function getPositions(
@@ -55,5 +48,45 @@ contract Reader {
             }
         }
         return positions;
+    }
+
+    function getTriggerOrders(
+        address warehouse,
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong
+    ) public view returns (IExchange.TriggerOrder[] memory) {
+        bytes32 positionKey = IWarehouse(warehouse).getPositionKey(adapter, collateral, index, isLong);
+
+        return IWarehouse(warehouse).getTriggerOrders(positionKey);
+    }
+
+    function getPendingTriggerOrders(
+        address warehouse,
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong
+    ) external view returns (IExchange.TriggerOrder[] memory) {
+        IExchange.TriggerOrder[] memory triggerOrders = getTriggerOrders(warehouse, adapter, collateral, index, isLong);
+
+        uint256 numPendingTriggerOrder;
+        for (uint256 i = 0; i < triggerOrders.length; i++) {
+            if (triggerOrders[i].state == IExchange.TriggerOrderState.Pending) {
+                numPendingTriggerOrder++;
+            }
+        }
+
+        IExchange.TriggerOrder[] memory pendingTriggerOrders = new IExchange.TriggerOrder[](numPendingTriggerOrder);
+        uint256 idx;
+        for (uint256 i = 0; i < triggerOrders.length; i++) {
+            if (triggerOrders[i].state == IExchange.TriggerOrderState.Pending) {
+                pendingTriggerOrders[idx] = triggerOrders[i];
+                idx++;
+            }
+        }
+
+        return pendingTriggerOrders;
     }
 }

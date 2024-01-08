@@ -18,20 +18,38 @@ interface IWarehouse {
     event LimitOrderCreated(address indexed account, uint256 indexed orderIndex, IExchange.LimitOrder limitOrder);
     event LimitOrderCanceled(address indexed account, uint256 indexed orderIndex);
     event LimitOrderExecuted(address indexed account, uint256 indexed orderIndex);
-    event TriggerOrderCreated(address indexed account, uint256 indexed orderIndex, IExchange.TriggerOrder triggerOrder);
-    event TriggerOrderCanceled(address indexed account, uint256 indexed orderIndex);
-    event TriggerOrderExecuted(address indexed account, uint256 indexed orderIndex);
+    // event TriggerOrderCreated(address indexed account, uint256 indexed orderIndex, IExchange.TriggerOrder triggerOrder);
+    event TriggerOrderCreated(address indexed account, bytes32 indexed positionKey, uint256 indexed id);
+    event TriggerOrderCanceled(address indexed account, bytes32 indexed positionKey, uint256 indexed id);
+    event TriggerOrderExecuted(address indexed account, bytes32 indexed positionKey, uint256 indexed id);
     event OrderKeeperSet(address indexed orderKeeper, bool status);
 
-    function createLimitOrder(IExchange.LimitOrder memory) external;
-    function cancelLimitOrder(uint256 orderIndex) external;
-    function createTriggerOrder(IExchange.TriggerOrder memory) external;
-    function cancelTriggerOrder(uint256 orderIndex) external;
+    // function createLimitOrder(IExchange.LimitOrder memory) external;
+    // function cancelLimitOrder(uint256 orderIndex) external;
+    function getPositionKey(
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong
+    ) external view returns (bytes32);
+    function getTriggerOrders(bytes32 positionKey) external view returns (IExchange.TriggerOrder[] memory);
+    function getTriggerOrder(bytes32 positionKey, uint256 id) external view returns (IExchange.TriggerOrder memory);
+    function getTriggerOrderSize(bytes32 positionKey) external view returns (uint256);
+    function createTriggerOrder(
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong,
+        uint256 size,
+        uint256 tpPrice,
+        uint256 slPrice
+    ) external;
+    function cancelTriggerOrder(bytes32 positionKey, uint256 id) external;
 
-    function getLimitOrderIndex(address account) external view returns (uint256);
-    function getLimitOrder(address account, uint256 orderIndex) external view returns (IExchange.LimitOrder memory);
-    function getLimitOrders(address account) external view returns (IExchange.LimitOrder[] memory);
-    function getTriggerOrderIndex(address account) external view returns (uint256);
-    function getTriggerOrder(address account, uint256 orderIndex) external view returns (IExchange.TriggerOrder memory);
-    function getTriggerOrders(address account) external view returns (IExchange.TriggerOrder[] memory);
+    // function getLimitOrderIndex(address account) external view returns (uint256);
+    // function getLimitOrder(address account, uint256 orderIndex) external view returns (IExchange.LimitOrder memory);
+    // function getLimitOrders(address account) external view returns (IExchange.LimitOrder[] memory);
+    // function getTriggerOrderIndex(address account) external view returns (uint256);
+    // function getTriggerOrder(address account, uint256 orderIndex) external view returns (IExchange.TriggerOrder memory);
+    // function getTriggerOrders(address account) external view returns (IExchange.TriggerOrder[] memory);
 }
