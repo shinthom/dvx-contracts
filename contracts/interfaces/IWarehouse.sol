@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import "./IExchange.sol";
+import { IExchange } from  "./IExchange.sol";
+import { IQuoter } from  "./IQuoter.sol";
 
 interface IWarehouse {
     struct WarehouseLimitOrder {
@@ -36,6 +37,8 @@ interface IWarehouse {
     function getTriggerOrders(bytes32 positionKey) external view returns (IExchange.TriggerOrder[] memory);
     function getTriggerOrder(bytes32 positionKey, uint256 id) external view returns (IExchange.TriggerOrder memory);
     function getTriggerOrderSize(bytes32 positionKey) external view returns (uint256);
+    function isOrderKeeper(address keeper) external view returns (bool);
+    function setOrderKeeper(address keeper, bool status) external;
     function createLimitOrder(
         address collateral,
         address index,
@@ -45,6 +48,11 @@ interface IWarehouse {
         uint256 price
     ) external;
     function cancelLimitOrder(uint256 orderIndex) external;
+    function executeLimitOrder(
+        address account,
+        uint256 orderIndex,
+        IQuoter.Answer[] memory answers
+    ) external payable;
     function createTriggerOrder(
         address adapter,
         address collateral,
@@ -55,6 +63,11 @@ interface IWarehouse {
         uint256 slPrice
     ) external;
     function cancelTriggerOrder(bytes32 positionKey, uint256 id) external;
+    function executeTriggerOrder(
+        address account,
+        bytes32 positionKey,
+        uint256 id
+    ) external payable;
 
     // function getLimitOrderIndex(address account) external view returns (uint256);
     // function getLimitOrder(address account, uint256 orderIndex) external view returns (IExchange.LimitOrder memory);

@@ -65,7 +65,32 @@ interface IExchange {
     event FeeSet(Fee fee);
 
     function account(address wallet) external view returns (address);
+    function totalAccount() external view returns (uint256);
     function warehouse() external view returns (address);
+    function isMarginKeeper(address keeper) external view returns (bool);
+    function getAllRegisteredAdapters() external view returns (address[] memory);
+    function getAllRegisteredTokens() external view returns (address[] memory);
+    function isRegisteredToken(address token) external view returns (bool);
+    function isRegisteredAdapter(address adapter) external view returns (bool);
+    function fee() external view returns (Fee memory);
 
+    function setFee(Fee memory newFee) external;
+    function quoteExactInputSingle(
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn
+    ) external returns (uint256 amountOut);
+    function quoteExactOutputSingle(
+        address tokenIn,
+        address tokenOut,
+        uint256 amountOut
+    ) external returns (uint256 amountIn);
     function swap(address tokenIn, address tokenOut, uint256 amount) payable external returns (uint256);
+    function createAccount() external returns (address);
+    function createAccountAndDeposit(address token, uint256 amount) payable external returns (address);
+    function setMarginKeeper(address keeper, bool status) external;
+    function registerAdapter(address adapter) external;
+    function unregisterAdapter(address adapter) external;
+    function registerToken(address token) external;
+    function unregisterToken(address token) external;
 }

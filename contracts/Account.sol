@@ -8,14 +8,16 @@ import { IExchange } from "./interfaces/IExchange.sol";
 import { IWarehouse } from  "./interfaces/IWarehouse.sol";
 
 contract Account is IAccount {
+    // todo: remove this
     address constant private ETH = address(0);
     address constant private WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
 
     address private _owner;
     address private _exchange;
-    // todo
+
     mapping(address => uint256) private _lockedBalances;
-    // mapping(address => uint256) private _collateralBalance?
+
+    receive() external payable {}
 
     constructor(address owner_, address exchange_) {
         _owner = owner_;
@@ -30,17 +32,15 @@ contract Account is IAccount {
         _;
     }
 
-    receive() external payable {}
+    function owner() override public view returns (address) { return _owner; }
 
-    function owner() public view returns (address) { return _owner; }
-
-    function exchange() public view returns (address) { return _exchange; }
+    function exchange() override public view returns (address) { return _exchange; }
 
     function getPositions(
         address adapter,
         address[] memory collaterals,
         address[] memory indexs
-    ) public view returns (IAdapter.Position[] memory) {
+    ) override public view returns (IAdapter.Position[] memory) {
         bool[] memory isLongs = new bool[](2);
         isLongs[0] = true;
         isLongs[1] = false;
@@ -64,7 +64,7 @@ contract Account is IAccount {
         address collateral,
         address index,
         bool isLong
-    ) public view returns (IAdapter.Position memory) {
+    ) override public view returns (IAdapter.Position memory) {
         return IAdapter(adapter).getPosition(address(this), collateral, index, isLong);
     }
 
@@ -76,7 +76,7 @@ contract Account is IAccount {
         }
     }
 
-    function getLockedBalance(address token) public view returns (uint256) {
+    function getLockedBalance(address token) override public view returns (uint256) {
         return _lockedBalances[token];
     }
 
@@ -193,6 +193,20 @@ contract Account is IAccount {
         }
     }
 
+    function _validateCollateralAmount(address collateral, uint256 collateralAmount) private view returns (bool) {
+        uint256 balance;
+        uint256 lockedBalance;
+        if (collateral == WETH) {
+            balance = getBalance(ETH);
+            lockedBalance = getLockedBalance(ETH);
+        } else {
+            balance = getBalance(collateral);
+            lockedBalance = getLockedBalance(collateral);
+        }
+
+        return balance - lockedBalance >= collateralAmount;
+    }
+
     function createLimitOrder(
         address collateral,
         address index,
@@ -200,21 +214,18 @@ contract Account is IAccount {
         uint256 size,
         bool isLong,
         uint256 price
-    ) public onlyOwner {
-        // todo: fix
+    ) override public onlyOwner {
+        require(
+            _validateCollateralAmount(collateral, collateralAmount),
+            "invalid collateral amount"
+        );
         if (collateral == WETH) {
-            collateral = ETH;
+            _lockedBalances[ETH] += collateralAmount;
+        } else {
+            _lockedBalances[collateral] += collateralAmount;
         }
-        uint256 balance = getBalance(collateral);
-        uint256 lockedBalance = getLockedBalance(collateral);
-        require(balance - lockedBalance >= collateralAmount, "INSUFFICIENT_BALANCE");
 
         address warehouse = IExchange(_exchange).warehouse();
-        if (collateral == ETH) {
-            collateral = WETH;
-        }
-
-        _lockedBalances[collateral] += collateralAmount;
         IWarehouse(warehouse).createLimitOrder(
             collateral,
             index,
@@ -225,12 +236,16 @@ contract Account is IAccount {
         );
     }
 
-    function cancelLimitOrder(uint256 orderIndex) public onlyOwner {
+    function cancelLimitOrder(uint256 orderIndex) override public onlyOwner {
         address warehouse = IExchange(_exchange).warehouse();
         IExchange.LimitOrder memory limitOrder = IWarehouse(warehouse).getLimitOrder(address(this), orderIndex);
-        require(limitOrder.size > 0, "NOT_EXISTENT_LIMIT_ORDER");
+        require(limitOrder.size > 0, "Warehouse: non-existent limit order");
 
-        _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
+        if (limitOrder.collateral == WETH) {
+            _lockedBalances[ETH] -= limitOrder.collateralAmount;
+        } else {
+            _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
+        }
 
         IWarehouse(warehouse).cancelLimitOrder(orderIndex);
     }
@@ -248,7 +263,11 @@ contract Account is IAccount {
         }
 
         address collateral = orders[0].path[orders[0].path.length - 1];
-        _lockedBalances[collateral] -= collateralAmount;
+        if (collateral == WETH) {
+            _lockedBalances[ETH] -= collateralAmount;
+        } else {
+            _lockedBalances[collateral] -= collateralAmount;
+        }
 
         for (uint256 i = 0; i < adapters.length; i++) {
             (bool success, bytes memory data) = _createMarketOrder(
@@ -267,7 +286,7 @@ contract Account is IAccount {
         uint256 size,
         uint256 tpPrice,
         uint256 slPrice
-    ) public onlyOwner {
+    ) override public onlyOwner {
         address warehouse = IExchange(_exchange).warehouse();
         IWarehouse(warehouse).createTriggerOrder(
             adapter,
@@ -280,7 +299,7 @@ contract Account is IAccount {
         );
     }
 
-    function cancelTriggerOrder(bytes32 positionKey, uint256 id) public onlyOwner {
+    function cancelTriggerOrder(bytes32 positionKey, uint256 id) override public onlyOwner {
         address warehouse = IExchange(_exchange).warehouse();
         IWarehouse(warehouse).cancelTriggerOrder(positionKey, id);
     }

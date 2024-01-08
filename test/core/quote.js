@@ -1,7 +1,6 @@
 const { ethers } = require("hardhat");
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
-const { deploy } = require("./fixture/setup");
-const axios = require("axios");
+const { deploy } = require("../fixture/setup");
 
 describe("Quoter", () => {
   it("scenario", async () => {

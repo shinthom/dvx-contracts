@@ -118,10 +118,6 @@ contract GMXV1 is IAdapter {
             availableLiquidityUsd / IVault(VAULT).getMinPrice(index) * (10 ** indexDecimals);
     }
 
-    function minExcutionFeeUsd() external view returns (uint256) {
-        return IPositionRouter(POSITION_ROUTER).minExecutionFee();
-    }
-
     function getPosition(
         address account,
         address collateral,

@@ -30,7 +30,7 @@ describe("limitOrder", () => {
     const size = ethers.parseEther("10");
     const isLong = true;
     const price = ethers.parseUnits("2000", 18);
-    expect(
+    await expect(
       account
         .connect(user)
         .createLimitOrder(
@@ -41,14 +41,15 @@ describe("limitOrder", () => {
           isLong,
           price
         )
-    ).to.be.revertedWith("INSUFFICIENT_BALANCE");
+    ).to.be.revertedWith("invalid collateral amount");
     await account.deposit(ETH, collateralAmount, { value: collateralAmount });
     await account.connect(user).createLimitOrder(collateral, index, collateralAmount, size, isLong, price); // prettier-ignore
     const limitOrderIndex = await warehouse.getLimitOrderIndex(account.target); // prettier-ignore
     expect(limitOrderIndex).to.be.equal(1);
     const limitOrder = await warehouse.getLimitOrder(account.target, limitOrderIndex - 1n); // prettier-ignore
-    expect(await account.getLockedBalance(collateral)).to.be.equal(collateralAmount); // prettier-ignore
-    expect(
+    expect(await account.getLockedBalance(ETH)).to.be.equal(collateralAmount); // prettier-ignore
+    expect(await account.getBalance(ETH)).to.be.equal(collateralAmount); // prettier-ignore
+    await expect(
       account
         .connect(user)
         .createLimitOrder(
@@ -59,7 +60,7 @@ describe("limitOrder", () => {
           isLong,
           price
         )
-    ).to.be.revertedWith("INSUFFICIENT_BALANCE");
+    ).to.be.revertedWith("invalid collateral amount");
   });
 
   it("cancel", async () => {
@@ -74,11 +75,11 @@ describe("limitOrder", () => {
     await account.connect(user).createLimitOrder(collateral, index, collateralAmount, size, isLong, price); // prettier-ignore
     const limitOrderIndex = await warehouse.getLimitOrderIndex(account.target); // prettier-ignore
     expect(limitOrderIndex).to.be.equal(1);
-    expect(await account.getLockedBalance(collateral)).to.be.equal(collateralAmount); // prettier-ignore
+    expect(await account.getLockedBalance(ETH)).to.be.equal(collateralAmount); // prettier-ignore
 
     await account.connect(user).cancelLimitOrder(0);
-    expect(await account.getLockedBalance(collateral)).to.be.equal(0); // prettier-ignore
-    expect(account.connect(user).cancelLimitOrder(0)).to.be.revertedWith("Warehouse: non-existent limit order"); // prettier-ignore
+    expect(await account.getLockedBalance(ETH)).to.be.equal(0); // prettier-ignore
+    await expect(account.connect(user).cancelLimitOrder(0)).to.be.revertedWith("Warehouse: non-existent limit order"); // prettier-ignore
   });
 
   it("execute", async () => {
@@ -93,7 +94,7 @@ describe("limitOrder", () => {
     await account.connect(user).createLimitOrder(collateral, index, collateralAmount, size, isLong, price); // prettier-ignore
     const limitOrderIndex = await warehouse.getLimitOrderIndex(account.target); // prettier-ignore
     expect(limitOrderIndex).to.be.equal(1);
-    expect(await account.getLockedBalance(collateral)).to.be.equal(collateralAmount); // prettier-ignore
+    expect(await account.getLockedBalance(ETH)).to.be.equal(collateralAmount); // prettier-ignore
 
     const request = { collateral, index, collateralAmount, size, isLong };
     const answers = await quoter.quote(
@@ -102,12 +103,14 @@ describe("limitOrder", () => {
       request
     );
     const answer = toObj(answers[0]);
-    expect(
+    await expect(
       warehouse.executeLimitOrder(account.target, 0, [answer])
     ).to.be.revertedWith("Warehouse: not order keeper");
     await warehouse.setOrderKeeper(positionKeeper.address, true);
-    await warehouse.executeLimitOrder(account.target, 0, [answer]);
+    await warehouse
+      .connect(positionKeeper)
+      .executeLimitOrder(account.target, 0, [answer]);
     await fillPositionOrder();
-    expect(await account.getLockedBalance(collateral)).to.be.equal(0); // prettier-ignore
+    expect(await account.getLockedBalance(ETH)).to.be.equal(0); // prettier-ignore
   });
 });

@@ -33,12 +33,12 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
-    function setOrderKeeper(address keeper, bool status) external onlyOwner {
+    function setOrderKeeper(address keeper, bool status) override external onlyOwner {
         _orderKeepers[keeper] = status;
         emit OrderKeeperSet(keeper, status);
     }
 
-    function isOrderKeeper(address keeper) public view returns (bool) { return _orderKeepers[keeper]; }
+    function isOrderKeeper(address keeper) override public view returns (bool) { return _orderKeepers[keeper]; }
 
     function getLimitOrderIndex(address account) override public view returns (uint256) { return _limitOrderIndex[account]; }
 
@@ -91,7 +91,7 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         address account,
         uint256 orderIndex,
         IQuoter.Answer[] memory answers
-    ) external payable onlyOrderKeeper {
+    ) override external payable onlyOrderKeeper {
         IExchange.LimitOrder storage limitOrder = _limitOrders[account][orderIndex];
         require(
             limitOrder.index != address(0),
@@ -198,7 +198,7 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         address account,
         bytes32 positionKey,
         uint256 id
-    ) external payable onlyOrderKeeper {
+    ) override external payable onlyOrderKeeper {
         IExchange.TriggerOrder memory triggerOrder = _triggerOrders[positionKey][id];
         require(
             triggerOrder.size > 0,

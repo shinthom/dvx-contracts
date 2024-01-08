@@ -22,6 +22,11 @@ interface IAdapter {
         IExchange.PositionOrder memory positionOrder
     ) external view returns (uint256);
 
+    function getPositionFee(
+        address index,
+        uint256 size
+    ) external view returns (uint256);
+
     function getFundingFee(
         address collateral,
         address index,
@@ -30,20 +35,7 @@ interface IAdapter {
         bool isLong
     ) external view returns (uint256);
 
-    function getPositionFee(
-        address index,
-        uint256 size
-    ) external view returns (uint256);
-
     function getAvailableLiquidity(address index, bool isLong) external view returns (uint256);
-
-    function makePositionOrder(
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 leverage,
-        bool isLong
-    ) external view returns (IExchange.PositionOrder memory);
 
     function getPosition(
         address account,
@@ -59,18 +51,25 @@ interface IAdapter {
         bool isLong
     ) external view returns (Position memory);
 
+    function makePositionOrder(
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        uint256 leverage,
+        bool isLong
+    ) external view returns (IExchange.PositionOrder memory);
+
     function increasePosition(
         address[] memory path,
         address index,
         uint256 collateralAmount,
-        uint256 size, // TODO: considering using leverage instead of size (it could be more easy to calcualte size from leverage)
+        uint256 size,
         bool isLong
     ) payable external;
 
     function decreasePosition(
         address collateral,
         address index,
-        // uint256 collateralAmount,
         uint256 size,
         bool isLong
     ) payable external;

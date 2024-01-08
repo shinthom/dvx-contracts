@@ -30,83 +30,6 @@ contract MUX is IAdapter {
         return PRICE_DECIMALS;
     }
 
-    function _getSubAccountId(
-        address account,
-        address collateral,
-        address index,
-        bool isLong
-    ) private view returns (bytes32) {
-        uint8 collateralId = _getIdFromTokenAddress(collateral);
-        uint8 indexId = _getIdFromTokenAddress(index);
-
-        return _assembleSubAccountId(
-            account,
-            collateralId,
-            indexId,
-            isLong
-        );
-    }
-
-    function getPosition(
-        address account,
-        address collateral,
-        address index,
-        bool isLong
-    ) override public view returns (IAdapter.Position memory) {
-        bytes32 subAccountId = _getSubAccountId(account, collateral, index, isLong);
-        (
-            uint256 collateralAmount,
-            uint256 size,
-            uint256 lastIncreasedTime,
-            uint256 price,
-            uint256 fundingRate
-        ) = ILiquidityPool(LIQUIDITY_POOL).getSubAccount(subAccountId);
-
-        return IAdapter.Position(
-            collateralAmount,
-            size,
-            lastIncreasedTime,
-            price,
-            fundingRate,
-            isLong
-        );
-    }
-
-    function getWrapPosition(
-        address account,
-        address collateral,
-        address index,
-        bool isLong
-    ) override public view returns (IAdapter.Position memory) {
-        bytes32 subAccountId = _getSubAccountId(account, collateral, index, isLong);
-        (
-            uint256 collateralAmount,
-            uint256 size,
-            uint256 lastIncreasedTime,
-            uint256 price,
-            uint256 fundingRate
-        ) = ILiquidityPool(LIQUIDITY_POOL).getSubAccount(subAccountId);
-
-        uint8 collateralDecimals = IERC20(collateral).decimals();
-        collateralAmount = collateralAmount / (10 ** (PRICE_DECIMALS - collateralDecimals));
-
-        return IAdapter.Position(
-            collateralAmount,
-            size,
-            lastIncreasedTime,
-            price,
-            fundingRate,
-            isLong
-        );
-    }
-
-    function getDepositFee(
-        address /* account */,
-        IExchange.PositionOrder memory /* positionOrder */
-    ) override public pure returns (uint256) {
-        return 0;
-    }
-
     function getPrice(address token, bool /* isLong */) override public view returns (uint256) {
         uint8 tokenId = _getIdFromTokenAddress(token);
         ILiquidityPool.Asset memory asset = ILiquidityPool(LIQUIDITY_POOL).getAssetInfo(tokenId);
@@ -116,6 +39,13 @@ contract MUX is IAdapter {
         price *= 1e10; // decimals 8 => 18
 
         return uint256(price);
+    }
+
+    function getDepositFee(
+        address /* account */,
+        IExchange.PositionOrder memory /* positionOrder */
+    ) override public pure returns (uint256) {
+        return 0;
     }
 
     function getPositionFee(
@@ -178,6 +108,59 @@ contract MUX is IAdapter {
         return availableLiquidity / (10 ** (PRICE_DECIMALS - indexDecimals));
     }
 
+    function getPosition(
+        address account,
+        address collateral,
+        address index,
+        bool isLong
+    ) override public view returns (IAdapter.Position memory) {
+        bytes32 subAccountId = _getSubAccountId(account, collateral, index, isLong);
+        (
+            uint256 collateralAmount,
+            uint256 size,
+            uint256 lastIncreasedTime,
+            uint256 price,
+            uint256 fundingRate
+        ) = ILiquidityPool(LIQUIDITY_POOL).getSubAccount(subAccountId);
+
+        return IAdapter.Position(
+            collateralAmount,
+            size,
+            lastIncreasedTime,
+            price,
+            fundingRate,
+            isLong
+        );
+    }
+
+    function getWrapPosition(
+        address account,
+        address collateral,
+        address index,
+        bool isLong
+    ) override public view returns (IAdapter.Position memory) {
+        bytes32 subAccountId = _getSubAccountId(account, collateral, index, isLong);
+        (
+            uint256 collateralAmount,
+            uint256 size,
+            uint256 lastIncreasedTime,
+            uint256 price,
+            uint256 fundingRate
+        ) = ILiquidityPool(LIQUIDITY_POOL).getSubAccount(subAccountId);
+
+        uint8 collateralDecimals = IERC20(collateral).decimals();
+        collateralAmount = collateralAmount / (10 ** (PRICE_DECIMALS - collateralDecimals));
+
+        return IAdapter.Position(
+            collateralAmount,
+            size,
+            lastIncreasedTime,
+            price,
+            fundingRate,
+            isLong
+        );
+    }
+
     function makePositionOrder(
         address collateral,
         address index,
@@ -196,16 +179,6 @@ contract MUX is IAdapter {
             size: size,
             isLong: isLong
         });
-    }
-
-    function _getIdFromTokenAddress(address tokenAddress) private view returns (uint8) {
-        ILiquidityPool.Asset[] memory assets = ILiquidityPool(LIQUIDITY_POOL).getAllAssetInfo();
-        for (uint256 i = 0; i < assets.length; i++) {
-            if (assets[i].tokenAddress == tokenAddress) {
-                return assets[i].id;
-            }
-        }
-        revert("NOT_FOUND");
     }
 
     function increasePosition(
@@ -335,6 +308,33 @@ contract MUX is IAdapter {
             11, // profitTokenId (11 is USDC)
             false // isProfit
         );
+    }
+
+    function _getSubAccountId(
+        address account,
+        address collateral,
+        address index,
+        bool isLong
+    ) private view returns (bytes32) {
+        uint8 collateralId = _getIdFromTokenAddress(collateral);
+        uint8 indexId = _getIdFromTokenAddress(index);
+
+        return _assembleSubAccountId(
+            account,
+            collateralId,
+            indexId,
+            isLong
+        );
+    }
+
+    function _getIdFromTokenAddress(address tokenAddress) private view returns (uint8) {
+        ILiquidityPool.Asset[] memory assets = ILiquidityPool(LIQUIDITY_POOL).getAllAssetInfo();
+        for (uint256 i = 0; i < assets.length; i++) {
+            if (assets[i].tokenAddress == tokenAddress) {
+                return assets[i].id;
+            }
+        }
+        revert("NOT_FOUND");
     }
 
     function _assembleSubAccountId(

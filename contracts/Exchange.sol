@@ -37,19 +37,19 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
-    function warehouse() override public view returns (address) { return _warehouse; }
-
-    function totalAccount() public view returns (uint256) { return _totalAccounts; }
-
     function account(address wallet) override public view returns (address) { return _accounts[wallet]; }
 
-    function isMarginKeeper(address keeper) public view returns (bool) { return _marginKeepers[keeper]; }
+    function totalAccount() override public view returns (uint256) { return _totalAccounts; }
 
-    function getAllRegisteredTokens() public view returns (address[] memory) { return _registeredTokens; }
+    function warehouse() override public view returns (address) { return _warehouse; }
 
-    function getAllRegisteredAdapters() public view returns (address[] memory) { return _registeredAdapters; }
+    function isMarginKeeper(address keeper) override public view returns (bool) { return _marginKeepers[keeper]; }
 
-    function isRegisteredToken(address token) public view returns (bool) {
+    function getAllRegisteredTokens() override public view returns (address[] memory) { return _registeredTokens; }
+
+    function getAllRegisteredAdapters() override public view returns (address[] memory) { return _registeredAdapters; }
+
+    function isRegisteredToken(address token) override public view returns (bool) {
         for (uint256 i = 0; i < _registeredTokens.length; i++) {
             if (_registeredTokens[i] == token) {
                 return true;
@@ -57,7 +57,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         }
         return false;
     }
-    function isRegisteredAdapter(address adapter) public view returns (bool) {
+    function isRegisteredAdapter(address adapter) override public view returns (bool) {
         for (uint256 i = 0; i < _registeredAdapters.length; i++) {
             if (_registeredAdapters[i] == adapter) {
                 return true;
@@ -66,9 +66,9 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         return false;
     }
 
-    function fee() public view returns (Fee memory) { return _fee; }
+    function fee() override public view returns (Fee memory) { return _fee; }
 
-    function setFee(Fee memory newFee) external onlyOwner {
+    function setFee(Fee memory newFee) override external onlyOwner {
         _fee = newFee;
         emit FeeSet(newFee);
     }
@@ -77,7 +77,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address tokenIn,
         address tokenOut,
         uint256 amountIn
-    ) external returns (uint256) {
+    ) override external returns (uint256) {
         if (tokenIn == address(0)) {
             tokenIn = WETH;
         }
@@ -102,7 +102,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address tokenIn,
         address tokenOut,
         uint256 amountOut
-    ) external returns (uint256) {
+    ) override external returns (uint256) {
         if (tokenIn == address(0)) {
             tokenIn = WETH;
         }
@@ -179,20 +179,13 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         return amountOut;
     }
 
-    function _createAccount() private returns (Account newAccount) {
-        newAccount = new Account(msg.sender, address(this));
-        emit AccountCreated(msg.sender, address(newAccount));
-
-        _accounts[msg.sender] = address(newAccount);
-        _totalAccounts++;
-    }
-
-    function createAccount() external returns (address) {
+    function createAccount() override external returns (address) {
         Account newAccount = _createAccount();
         return address(newAccount);
     }
 
     function createAccountAndDeposit(address token, uint256 amount)
+        override
         external
         payable
         returns (address)
@@ -204,12 +197,12 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         return address(newAccount);
     }
 
-    function setMarginKeeper(address keeper, bool status) external onlyOwner {
+    function setMarginKeeper(address keeper, bool status) override external onlyOwner {
         _marginKeepers[keeper] = status;
         emit MarginKeeperSet(keeper, status);
     }
 
-    function registerAdapter(address adapter) external onlyOwner {
+    function registerAdapter(address adapter) override external onlyOwner {
         for (uint256 i = 0; i < _registeredAdapters.length; i++) {
             require(_registeredAdapters[i] != adapter, "Exchange: ALREADY_REGISTERED");
         }
@@ -218,7 +211,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         emit AdapterRegistered(adapter);
     }
 
-    function unregisterAdapter(address adapter) external onlyOwner {
+    function unregisterAdapter(address adapter) override external onlyOwner {
         for (uint256 i = 0; i < _registeredAdapters.length; i++) {
             if (_registeredAdapters[i] == adapter) {
                 _registeredAdapters[i] = _registeredAdapters[_registeredAdapters.length - 1];
@@ -231,7 +224,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         revert("Exchange: NOT_REGISTERED");
     }
 
-    function registerToken(address token) external onlyOwner {
+    function registerToken(address token) override external onlyOwner {
         for (uint256 i = 0; i < _registeredTokens.length; i++) {
             require(_registeredTokens[i] != token, "Exchange: ALREADY_REGISTERED");
         }
@@ -240,7 +233,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         emit TokenRegistered(token);
     }
 
-    function unregisterToken(address token) external onlyOwner {
+    function unregisterToken(address token) override external onlyOwner {
         for (uint256 i = 0; i < _registeredTokens.length; i++) {
             if (_registeredTokens[i] == token) {
                 _registeredTokens[i] = _registeredTokens[_registeredTokens.length - 1];
@@ -251,5 +244,13 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             }
         }
         revert("Exchange: NOT_REGISTERED");
+    }
+
+    function _createAccount() private returns (Account newAccount) {
+        newAccount = new Account(msg.sender, address(this));
+        emit AccountCreated(msg.sender, address(newAccount));
+
+        _accounts[msg.sender] = address(newAccount);
+        _totalAccounts++;
     }
 }

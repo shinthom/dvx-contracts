@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import "./IExchange.sol";
+import { IAdapter } from "./IAdapter.sol";
+import { IExchange } from "./IExchange.sol";
 
 interface IAccount {
     event Deposited(address indexed account, address indexed token, uint256 amount);
@@ -16,13 +17,48 @@ interface IAccount {
     event TriggerOrderCanceled(address indexed account, uint256 triggerOrderId);
     event TriggerOrderExecuted(address indexed keeper, address indexed account, uint256 triggerOrderId);
 
+    function owner() external view returns (address);
+    function exchange() external view returns (address);
+    function getPositions(
+        address adapter,
+        address[] memory collaterals,
+        address[] memory indexs
+    ) external view returns (IAdapter.Position[] memory);
+    function getPosition(
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong
+    ) external view returns (IAdapter.Position memory);
     function getBalance(address token) external view returns (uint256);
+    function getLockedBalance(address token) external view returns (uint256);
 
     function deposit(address token, uint256 amount) payable external;
     function withdraw(address token, uint256 amount) external;
     function swap(address tokenIn, address tokenOut, uint256 amount) external returns (uint256 amountOut);
-
     function createMarketOrders(address[] calldata adapters, IExchange.PositionOrder[] calldata orders) payable external;
-    function executeLimitOrder(address[] memory adapters, IExchange.PositionOrder[] calldata orders) payable external;
+    function createLimitOrder(
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        uint256 size,
+        bool isLong,
+        uint256 price
+    ) external;
+    function cancelLimitOrder(uint256 orderIndex) external;
+    function executeLimitOrder(
+        address[] memory adapters,
+        IExchange.PositionOrder[] calldata orders
+    ) payable external;
+    function createTriggerOrder(
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong,
+        uint256 size,
+        uint256 tpPrice,
+        uint256 slPrice
+    ) external;
+    function cancelTriggerOrder(bytes32 positionKey, uint256 id) external;
     function executeTriggerOrder(address adapter, IExchange.PositionOrder calldata order) payable external;
 }
