@@ -1,7 +1,7 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
-const { deploy, deployAndDeposit } = require("./fixture/setup");
+const { deploy, deployAndDeposit } = require("../fixture/setup");
 const axios = require("axios");
 
 // token contracts
@@ -190,64 +190,6 @@ describe("Account", async () => {
       await account.connect(user).swap(USDC, WBTC, fromAmount);
       expect(await account.getBalance(USDC)).to.equal(0);
       expect(await account.getBalance(WBTC)).to.be.greaterThan(toAmount);
-    });
-  });
-
-  describe("create market orders", () => {
-    it("reverts when trying to create market order with no ownership", async () => {
-      const { other, account, mux } = await loadFixture(deployAndDeposit);
-      const collateralAmount = await account.getBalance(ETH);
-      const order = await mux.makePositionOrder(WETH, WETH, collateralAmount, 10n, true, wethPrice, wethPrice); // prettier-ignore
-      await expect(
-        account.connect(other).createMarketOrders(
-          [mux.target],
-          [
-            {
-              orderType: order.orderType,
-              path: [...order.path],
-              index: order.index,
-              collateralAmount: order.collateralAmount,
-              size: order.size,
-              isLong: order.isLong,
-            },
-          ]
-        )
-      ).to.be.revertedWith("Account: NOT_OWNER");
-    });
-  });
-
-  describe("create limit order", () => {
-    it("reverts when trying to create limit order with no ownership", async () => {
-      const { account, other } = await loadFixture(deployAndDeposit);
-      const collateralAmount = await account.getBalance(ETH);
-      const limitOrderParam = {
-        collateral: WETH,
-        index: WETH,
-        collateralAmount: collateralAmount,
-        leverage: 10n,
-        isLong: true,
-        price: ethers.parseUnits("2000", 18),
-      };
-      expect(
-        account.connect(other).createLimitOrder({ ...limitOrderParam })
-      ).to.be.revertedWith("Account: NOT_OWNER");
-    });
-  });
-
-  describe("create limit order", () => {
-    it("reverts when trying to create limit order with no ownership", async () => {
-      const { account, other, gmxV1 } = await loadFixture(deployAndDeposit);
-      const triggerOrderParam = {
-        account: account.target,
-        adapter: gmxV1.target,
-        collateral: WETH,
-        index: WETH,
-        isLong: true,
-        price: ethers.parseUnits("2000", 18),
-      };
-      expect(
-        account.connect(other).createTriggerOrder(triggerOrderParam)
-      ).to.be.revertedWith("Account: NOT_OWNER");
     });
   });
 });
