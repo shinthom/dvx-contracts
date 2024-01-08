@@ -30,21 +30,55 @@ contract MUX is IAdapter {
         return PRICE_DECIMALS;
     }
 
+    function _getSubAccountId(
+        address account,
+        address collateral,
+        address index,
+        bool isLong
+    ) private view returns (bytes32) {
+        uint8 collateralId = _getIdFromTokenAddress(collateral);
+        uint8 indexId = _getIdFromTokenAddress(index);
+
+        return _assembleSubAccountId(
+            account,
+            collateralId,
+            indexId,
+            isLong
+        );
+    }
+
     function getPosition(
         address account,
         address collateral,
         address index,
         bool isLong
     ) override public view returns (IAdapter.Position memory) {
-        uint8 collateralId = _getIdFromTokenAddress(collateral);
-        uint8 indexId = _getIdFromTokenAddress(index);
+        bytes32 subAccountId = _getSubAccountId(account, collateral, index, isLong);
+        (
+            uint256 collateralAmount,
+            uint256 size,
+            uint256 lastIncreasedTime,
+            uint256 price,
+            uint256 fundingRate
+        ) = ILiquidityPool(LIQUIDITY_POOL).getSubAccount(subAccountId);
 
-        bytes32 subAccountId = _assembleSubAccountId(
-            account,
-            collateralId,
-            indexId,
+        return IAdapter.Position(
+            collateralAmount,
+            size,
+            lastIncreasedTime,
+            price,
+            fundingRate,
             isLong
         );
+    }
+
+    function getWrapPosition(
+        address account,
+        address collateral,
+        address index,
+        bool isLong
+    ) override public view returns (IAdapter.Position memory) {
+        bytes32 subAccountId = _getSubAccountId(account, collateral, index, isLong);
         (
             uint256 collateralAmount,
             uint256 size,

@@ -52,6 +52,13 @@ interface IAdapter {
         bool isLong
     ) external view returns (Position memory);
 
+    function getWrapPosition(
+        address account,
+        address collateral,
+        address index,
+        bool isLong
+    ) external view returns (Position memory);
+
     function increasePosition(
         address[] memory path,
         address index,

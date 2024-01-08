@@ -47,7 +47,7 @@ contract Reader {
                                 collateral: collaterals[j],
                                 index: indexs[k],
                                 position: IAdapter(
-                                    adapters[i]).getPosition(account, collaterals[j], indexs[k], isLongs[l]
+                                    adapters[i]).getWrapPosition(account, collaterals[j], indexs[k], isLongs[l]
                                 )
                             });
                     }

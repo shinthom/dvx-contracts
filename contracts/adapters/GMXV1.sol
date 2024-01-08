@@ -146,6 +146,50 @@ contract GMXV1 is IAdapter {
         });
     }
 
+    function getWrapPosition(
+        address account,
+        address collateral,
+        address index,
+        bool isLong
+    ) override public view returns (IAdapter.Position memory) {
+        IAdapter.Position memory position
+            = getPosition(account, collateral, index, isLong);
+
+        if (position.size == 0) {
+            return IAdapter.Position({
+                collateralAmount: position.collateralAmount,
+                size: position.size,
+                lastIncreasedTime: position.lastIncreasedTime,
+                price: position.price,
+                fundingRate: position.fundingRate,
+                isLong: isLong
+            });
+        }
+
+        if (isLong) {
+            uint8 indexDecimals = IERC20(index).decimals();
+            return IAdapter.Position({
+                collateralAmount: position.collateralAmount * (10 ** indexDecimals) / position.price,
+                size: position.size * (10 ** indexDecimals) / position.price,
+                lastIncreasedTime: position.lastIncreasedTime,
+                price: position.price,
+                fundingRate: position.fundingRate,
+                isLong: isLong
+            });
+        } else {
+            uint8 collateralDecimals = IERC20(collateral).decimals();
+            uint8 indexDecimals = IERC20(index).decimals();
+            return IAdapter.Position({
+                collateralAmount: position.collateralAmount / (10 ** (PRICE_DECIMALS - collateralDecimals)),
+                size: position.size * (10 ** indexDecimals) / position.price,
+                lastIncreasedTime: position.lastIncreasedTime,
+                price: position.price,
+                fundingRate: position.fundingRate,
+                isLong: isLong
+            });
+        }
+    }
+
     function makePositionOrder(
         address collateral,
         address index,
