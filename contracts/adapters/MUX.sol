@@ -33,12 +33,7 @@ contract MUX is IAdapter {
     function getPrice(address token, bool /* isLong */) override public view returns (uint256) {
         uint8 tokenId = _getIdFromTokenAddress(token);
         ILiquidityPool.Asset memory asset = ILiquidityPool(LIQUIDITY_POOL).getAssetInfo(tokenId);
-
-        address referenceOracle = asset.referenceOracle;
-        int256 price = IChainlink(referenceOracle).latestAnswer();
-        price *= 1e10; // decimals 8 => 18
-
-        return uint256(price);
+        return _getPrice(asset.referenceOracle);
     }
 
     function getDepositFee(
@@ -55,11 +50,9 @@ contract MUX is IAdapter {
         uint8 indexId = _getIdFromTokenAddress(index);
         ILiquidityPool.Asset memory asset = ILiquidityPool(LIQUIDITY_POOL).getAssetInfo(indexId);
 
-        int256 price = IChainlink(asset.referenceOracle).latestAnswer();
-        price *= 1e10; // decimals 8 => 18
-
+        uint256 price = _getPrice(asset.referenceOracle);
         uint256 decimals = IERC20(index).decimals();
-        return ((uint256(price) * asset.positionFeeRate) * size) / 1e5 / (10 ** decimals);
+        return ((price * asset.positionFeeRate) * size) / 1e5 / (10 ** decimals);
     }
 
     function getFundingFee(
@@ -201,7 +194,6 @@ contract MUX is IAdapter {
             isLong
         );
 
-        // ETH
         if (collateralId == 3) {
             IOrderBook(ORDER_BOOK).placePositionOrder3{value: collateralAmount}(
                 subAccountId,
@@ -308,6 +300,12 @@ contract MUX is IAdapter {
             11, // profitTokenId (11 is USDC)
             false // isProfit
         );
+    }
+
+    function _getPrice(address referenceOracle) private view returns (uint256) {
+        int256 price = IChainlink(referenceOracle).latestAnswer();
+        price *= 1e10; // decimals 8 => 18
+        return uint256(price);
     }
 
     function _getSubAccountId(

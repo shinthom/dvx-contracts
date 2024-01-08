@@ -10,7 +10,6 @@ describe("makePositionOrder", () => {
     var ethPrice = ethers.parseUnits("2000", 30);
     await replaceFastPriceFeedAndSetPrice(WETH, ethPrice, ethPrice);
 
-    // long
     var collateral = WETH;
     var index = WETH;
     var collateralAmount = ethers.parseEther("1");
@@ -55,7 +54,6 @@ describe("makePositionOrder", () => {
     expect(positionOrder.size).to.be.equal((size * ethPrice) / 10n ** 18n);
     expect(positionOrder.isLong).to.be.equal(isLong);
 
-    // short
     var collateral = USDC;
     var index = WETH;
     var collateralAmount = ethers.parseUnits("100", 6);
@@ -102,9 +100,8 @@ describe("makePositionOrder", () => {
   });
 
   it("mux", async () => {
-    const { mux, WETH, WBTC, USDC, replaceFastPriceFeedAndSetPrice } = await loadFixture(deploy); // prettier-ignore
+    const { mux, WETH, WBTC, USDC } = await loadFixture(deploy); // prettier-ignore
 
-    // long
     var collateral = WETH;
     var index = WETH;
     var collateralAmount = ethers.parseEther("1");
@@ -147,7 +144,6 @@ describe("makePositionOrder", () => {
     expect(positionOrder.size).to.be.equal(size);
     expect(positionOrder.isLong).to.be.equal(isLong);
 
-    // short
     var collateral = USDC;
     var index = WETH;
     var collateralAmount = ethers.parseUnits("100", 6);

@@ -253,7 +253,8 @@ contract GMXV1 is IAdapter {
                 = IExchange(EXCHANGE).swap(path[0], path[1], collateralAmount);
         }
 
-        uint256 price = getPrice(index, isLong);
+        // todo: check if GMX keepers execute this position.
+        uint256 price = isLong ? type(uint256).max : 0;
         uint256 fee = IPositionRouter(POSITION_ROUTER).minExecutionFee();
 
         // initialize path variable

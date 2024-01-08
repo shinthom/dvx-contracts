@@ -15,7 +15,6 @@ describe("getDepositFee", () => {
       minExecutionFee,
       replaceFastPriceFeedAndSetPrice,
       executeIncreasePosition,
-      updateCumulativeFundingRate,
     } = await loadFixture(deploy);
     const collateral = WETH;
     const index = WETH;
