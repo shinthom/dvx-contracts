@@ -8,10 +8,13 @@ import { IExchange } from "./interfaces/IExchange.sol";
 import { IWarehouse } from  "./interfaces/IWarehouse.sol";
 
 contract Account is IAccount {
+    address constant private ETH = address(0);
+    address constant private WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
+
     address private _owner;
     address private _exchange;
     // todo
-    // mapping(address => uint256) private _lockedBalances;
+    mapping(address => uint256) private _lockedBalances;
     // mapping(address => uint256) private _collateralBalance?
 
     constructor(address owner_, address exchange_) {
@@ -71,6 +74,10 @@ contract Account is IAccount {
         } else {
             return IERC20(token).balanceOf(address(this));
         }
+    }
+
+    function getLockedBalance(address token) public view returns (uint256) {
+        return _lockedBalances[token];
     }
 
     function deposit(address token, uint256 amount) override external payable {
@@ -186,35 +193,71 @@ contract Account is IAccount {
         }
     }
 
-    // function createLimitOrder(
-    //     IExchange.LimitOrder memory order
-    // ) public onlyOwner {
-    //     address warehouse = IExchange(_exchange).warehouse();
-    //     IWarehouse(warehouse).createLimitOrder(order);
+    function createLimitOrder(
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        uint256 size,
+        bool isLong,
+        uint256 price
+    ) public onlyOwner {
+        // todo: fix
+        if (collateral == WETH) {
+            collateral = ETH;
+        }
+        uint256 balance = getBalance(collateral);
+        uint256 lockedBalance = getLockedBalance(collateral);
+        require(balance - lockedBalance >= collateralAmount, "INSUFFICIENT_BALANCE");
 
-    //     // todo: send tokens? or lock tokens?
-    // }
+        address warehouse = IExchange(_exchange).warehouse();
+        if (collateral == ETH) {
+            collateral = WETH;
+        }
 
-    // function cancelLimitOrder(uint256 orderIndex) public onlyOwner {
-    //     address warehouse = IExchange(_exchange).warehouse();
-    //     IWarehouse(warehouse).cancelLimitOrder(orderIndex);
-    // }
+        _lockedBalances[collateral] += collateralAmount;
+        IWarehouse(warehouse).createLimitOrder(
+            collateral,
+            index,
+            collateralAmount,
+            size,
+            isLong,
+            price
+        );
+    }
 
-    // function executeLimitOrder(
-    //     address[] calldata adapters,
-    //     IExchange.PositionOrder[] calldata orders
-    // ) override public payable {
-    //     address warehouse = IExchange(_exchange).warehouse();
-    //     require(msg.sender == warehouse, "NOT_WAREHOUSE");
+    function cancelLimitOrder(uint256 orderIndex) public onlyOwner {
+        address warehouse = IExchange(_exchange).warehouse();
+        IExchange.LimitOrder memory limitOrder = IWarehouse(warehouse).getLimitOrder(address(this), orderIndex);
+        require(limitOrder.size > 0, "NOT_EXISTENT_LIMIT_ORDER");
 
-    //     for (uint256 i = 0; i < adapters.length; i++) {
-    //         (bool success, bytes memory data) = _createMarketOrder(
-    //             adapters[i],
-    //             orders[i]
-    //         );
-    //         require(success, string(data));
-    //     }
-    // }
+        _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
+
+        IWarehouse(warehouse).cancelLimitOrder(orderIndex);
+    }
+
+    function executeLimitOrder(
+        address[] calldata adapters,
+        IExchange.PositionOrder[] calldata orders
+    ) override public payable {
+        address warehouse = IExchange(_exchange).warehouse();
+        require(msg.sender == warehouse, "NOT_WAREHOUSE");
+
+        uint256 collateralAmount;
+        for (uint256 i = 0; i < orders.length; i++) {
+            collateralAmount += orders[i].collateralAmount;
+        }
+
+        address collateral = orders[0].path[orders[0].path.length - 1];
+        _lockedBalances[collateral] -= collateralAmount;
+
+        for (uint256 i = 0; i < adapters.length; i++) {
+            (bool success, bytes memory data) = _createMarketOrder(
+                adapters[i],
+                orders[i]
+            );
+            require(success, string(data));
+        }
+    }
 
     function createTriggerOrder(
         address adapter,

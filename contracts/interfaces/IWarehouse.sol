@@ -24,17 +24,27 @@ interface IWarehouse {
     event TriggerOrderExecuted(address indexed account, bytes32 indexed positionKey, uint256 indexed id);
     event OrderKeeperSet(address indexed orderKeeper, bool status);
 
-    // function createLimitOrder(IExchange.LimitOrder memory) external;
-    // function cancelLimitOrder(uint256 orderIndex) external;
     function getPositionKey(
         address adapter,
         address collateral,
         address index,
         bool isLong
     ) external view returns (bytes32);
+    function getLimitOrderIndex(address account) external view returns (uint256);
+    function getLimitOrder(address account, uint256 orderIndex) external view returns (IExchange.LimitOrder memory);
+    function getLimitOrders(address account) external view returns (IExchange.LimitOrder[] memory);
     function getTriggerOrders(bytes32 positionKey) external view returns (IExchange.TriggerOrder[] memory);
     function getTriggerOrder(bytes32 positionKey, uint256 id) external view returns (IExchange.TriggerOrder memory);
     function getTriggerOrderSize(bytes32 positionKey) external view returns (uint256);
+    function createLimitOrder(
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        uint256 size,
+        bool isLong,
+        uint256 price
+    ) external;
+    function cancelLimitOrder(uint256 orderIndex) external;
     function createTriggerOrder(
         address adapter,
         address collateral,

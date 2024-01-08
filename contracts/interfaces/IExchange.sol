@@ -34,7 +34,7 @@ interface IExchange {
         address collateral;
         address index;
         uint256 collateralAmount;
-        uint256 leverage;
+        uint256 size;
         bool isLong;
         uint256 price; // trigger
         // todo: slippageTolerance

@@ -89,4 +89,43 @@ contract Reader {
 
         return pendingTriggerOrders;
     }
+
+    function getLimitOrders(
+        address warehouse,
+        address account
+    ) public view returns (IExchange.LimitOrder[] memory) {
+        uint256 limitOrderIndex = IWarehouse(warehouse).getLimitOrderIndex(account);
+
+        IExchange.LimitOrder[] memory limitOrders = new IExchange.LimitOrder[](limitOrderIndex);
+        for (uint256 i = 0; i < limitOrderIndex; i++) {
+            limitOrders[i] = IWarehouse(warehouse).getLimitOrder(account, i);
+        }
+
+        return limitOrders;
+    }
+
+    function getPendingLimitOrders(
+        address warehouse,
+        address account
+    ) external view returns (IExchange.LimitOrder[] memory) {
+        IExchange.LimitOrder[] memory limitOrders = getLimitOrders(warehouse, account);
+
+        uint256 numPendingLimitOrder;
+        for (uint256 i = 0; i < limitOrders.length; i++) {
+            if (limitOrders[i].size > 0) {
+                numPendingLimitOrder++;
+            }
+        }
+
+        IExchange.LimitOrder[] memory pendingLimitOrders = new IExchange.LimitOrder[](numPendingLimitOrder);
+        uint256 idx;
+        for (uint256 i = 0; i < limitOrders.length; i++) {
+            if (limitOrders[i].size > 0) {
+                pendingLimitOrders[idx] = limitOrders[i];
+                idx++;
+            }
+        }
+
+        return pendingLimitOrders;
+    }
 }

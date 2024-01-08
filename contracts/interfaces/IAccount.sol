@@ -23,6 +23,6 @@ interface IAccount {
     function swap(address tokenIn, address tokenOut, uint256 amount) external returns (uint256 amountOut);
 
     function createMarketOrders(address[] calldata adapters, IExchange.PositionOrder[] calldata orders) payable external;
-    // function executeLimitOrder(address[] memory adapters, IExchange.PositionOrder[] calldata orders) payable external;
+    function executeLimitOrder(address[] memory adapters, IExchange.PositionOrder[] calldata orders) payable external;
     function executeTriggerOrder(address adapter, IExchange.PositionOrder calldata order) payable external;
 }

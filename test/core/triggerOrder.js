@@ -144,11 +144,9 @@ describe("triggerOrder", () => {
     expect(await warehouse.getTriggerOrderSize(positionKey)).to.be.equal(size);
 
     expect(
-      warehouse
-        .connect(positionKeeper)
-        .executeTriggerOrder(account.target, positionKey, 0, {
-          value: minExecutionFee,
-        })
+      warehouse.executeTriggerOrder(account.target, positionKey, 0, {
+        value: minExecutionFee,
+      })
     ).to.be.revertedWith("Warehouse: not order keeper");
     await warehouse.setOrderKeeper(positionKeeper.address, true);
     await warehouse
