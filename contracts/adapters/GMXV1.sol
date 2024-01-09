@@ -116,9 +116,7 @@ contract GMXV1 is IAdapter {
             IPositionRouter(POSITION_ROUTER).maxGlobalShortSizes(index) - IVault(VAULT).globalShortSizes(index);
 
         uint8 indexDecimals = IERC20(index).decimals();
-        return isLong ?
-            availableLiquidityUsd / IVault(VAULT).getMaxPrice(index) * (10 ** indexDecimals):
-            availableLiquidityUsd / IVault(VAULT).getMinPrice(index) * (10 ** indexDecimals);
+        return availableLiquidityUsd * (10 ** indexDecimals) / getPrice(index, isLong);
     }
 
     function getPosition(
