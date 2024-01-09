@@ -49,6 +49,9 @@ contract GMXV1 is IAdapter {
         address account,
         IExchange.PositionOrder memory positionOrder
     ) override public view returns (uint256) {
+        if (!positionOrder.isLong) {
+            return 0;
+        }
         address collateral = positionOrder.path[positionOrder.path.length - 1];
         IAdapter.Position memory position
             = getPosition(account, collateral, positionOrder.index, positionOrder.isLong);
@@ -124,6 +127,13 @@ contract GMXV1 is IAdapter {
         address index,
         bool isLong
     ) override public view returns (IAdapter.Position memory) {
+        if (isLong && collateral != index) {
+            collateral = index;
+        }
+        if (!isLong && collateral != USDC) {
+            collateral = USDC;
+        }
+
         bytes32 positionKey = IVault(VAULT).getPositionKey(
             account,
             collateral,

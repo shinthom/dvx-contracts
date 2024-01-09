@@ -38,6 +38,7 @@ let vault;
 let positionRouter;
 let fastPriceFeed;
 let vaultPriceFeed;
+let secondaryPriceFeedMock;
 // mux contracts
 let orderBook;
 let liquidityPool;
@@ -88,6 +89,7 @@ const deploy = async (noAccount) => {
     .connect(impersonatedAdmin)
     .setPositionKeeper(impersonatedPositionKeeper.address, true); // execution reverted: 403
   await positionRouter.connect(impersonatedAdmin).setDelayValues(0, 0, 100); // execution reverted: delay
+  secondaryPriceFeedMock = await ethers.deployContract("SecondPriceFeedMock"); // prettier-ignore
   orderBook = await ethers.getContractAt("IOrderBook", OrderBook); // mux order book
   liquidityPool = await ethers.getContractAt("ILiquidityPool", LiquidityPool); // mux liquidity pool
 
@@ -219,10 +221,14 @@ stable:
     const newGov = "0x" + (await ethers.provider.getStorage(vaultPriceFeed.target, "0x0")).slice(26); // prettier-ignore
     // console.log(`owner: ${oldGov} -> ${newGov}`);
 
-    const secondaryPriceFeed = await ethers.deployContract("SecondPriceFeedMock"); // prettier-ignore
-    await vaultPriceFeed.connect(impersonatedGov).setSecondaryPriceFeed(secondaryPriceFeed.target); // prettier-ignore
-    await secondaryPriceFeed.setMinPrice(tokenAddress, tokenMinPrice);
-    await secondaryPriceFeed.setMaxPrice(tokenAddress, tokenMaxPrice);
+    await vaultPriceFeed.connect(impersonatedGov).setSecondaryPriceFeed(secondaryPriceFeedMock.target); // prettier-ignore
+    await secondaryPriceFeedMock.setMinPrice(tokenAddress, tokenMinPrice);
+    await secondaryPriceFeedMock.setMaxPrice(tokenAddress, tokenMaxPrice);
+  };
+
+  const setPrice = async (tokenAddress, tokenMinPrice, tokenMaxPrice) => {
+    await secondaryPriceFeedMock.setMinPrice(tokenAddress, tokenMinPrice);
+    await secondaryPriceFeedMock.setMaxPrice(tokenAddress, tokenMaxPrice);
   };
 
   const replaceOracleReferenceAndSetPrice = async (
@@ -401,6 +407,7 @@ stable:
     updateFundingState,
     replaceOracleReferenceAndSetPrice,
     replaceFastPriceFeedAndSetPrice,
+    setPrice,
   };
 };
 
