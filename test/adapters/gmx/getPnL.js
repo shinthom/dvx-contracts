@@ -2,23 +2,27 @@ const { ethers } = require("hardhat");
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 const { deploy } = require("../../fixture/setup");
 
-describe("mux: marketOrder", () => {
+describe("gmxV1: getPnL", () => {
   it("long: eth -> eth", async () => {
     const {
-      mux,
+      gmxV1,
       user,
       account,
       orderType,
       ETH,
       WETH,
-      fillPositionOrder,
-      fillWithdrawalOrder,
-      replaceOracleReferenceAndSetPrice,
+      minExecutionFee,
+      executeIncreasePosition,
+      executeDecreasePosition,
+      replaceFastPriceFeedAndSetPrice,
+      setPrice,
+      checkBalance,
       printPosition,
     } = await loadFixture(deploy);
 
-    const price = ethers.parseUnits("2000", 8);
-    await replaceOracleReferenceAndSetPrice(WETH, price);
+    var minPrice = ethers.parseUnits("2000", 30);
+    var maxPrice = ethers.parseUnits("2000", 30);
+    await replaceFastPriceFeedAndSetPrice(WETH, minPrice, maxPrice);
 
     const collateral = WETH;
     const index = WETH;
@@ -28,9 +32,9 @@ describe("mux: marketOrder", () => {
 
     {
       await account.deposit(ETH, collateralAmount, { value: collateralAmount });
-      const positionOrder = await mux.makePositionOrder(collateral, index, collateralAmount, size, isLong); // prettier-ignore
+      const positionOrder = await gmxV1.makePositionOrder(collateral, index, collateralAmount, size, isLong); // prettier-ignore
       await account.connect(user).createMarketOrders(
-        [mux.target],
+        [gmxV1.target],
         [
           {
             orderType: positionOrder.orderType,
@@ -40,15 +44,20 @@ describe("mux: marketOrder", () => {
             size: positionOrder.size,
             isLong: positionOrder.isLong,
           },
-        ]
+        ],
+        { value: minExecutionFee }
       );
-      await fillPositionOrder();
-      await printPosition(mux.target, collateral, index, isLong);
+      await executeIncreasePosition(account.target);
+      await checkBalance(account);
+      await printPosition(gmxV1.target, collateral, index, isLong);
     }
+    var minPrice = ethers.parseUnits("2200", 30);
+    var maxPrice = ethers.parseUnits("2200", 30);
+    await setPrice(WETH, minPrice, maxPrice);
     {
       await account.deposit(ETH, collateralAmount, { value: collateralAmount });
       await account.connect(user).createMarketOrders(
-        [mux.target],
+        [gmxV1.target],
         [
           {
             orderType: orderType.increaseCollateral,
@@ -58,13 +67,16 @@ describe("mux: marketOrder", () => {
             size: 0,
             isLong: isLong,
           },
-        ]
+        ],
+        { value: minExecutionFee }
       );
-      await printPosition(mux.target, collateral, index, isLong);
+      await executeIncreasePosition(account.target);
+      await checkBalance(account);
+      await printPosition(gmxV1.target, collateral, index, isLong);
     }
     {
       await account.connect(user).createMarketOrders(
-        [mux.target],
+        [gmxV1.target],
         [
           {
             orderType: orderType.decreaseCollateral,
@@ -74,15 +86,17 @@ describe("mux: marketOrder", () => {
             size: 0,
             isLong: isLong,
           },
-        ]
+        ],
+        { value: minExecutionFee }
       );
-      await fillWithdrawalOrder();
-      await printPosition(mux.target, collateral, index, isLong);
+      await executeDecreasePosition(account.target);
+      await checkBalance(account);
+      await printPosition(gmxV1.target, collateral, index, isLong);
     }
     {
-      const position = await account.getPosition(mux.target, collateral, index, isLong); // prettier-ignore
+      const position = await account.getPosition(gmxV1.target, collateral, index, isLong); // prettier-ignore
       await account.connect(user).createMarketOrders(
-        [mux.target],
+        [gmxV1.target],
         [
           {
             orderType: orderType.decreasePosition,
@@ -92,33 +106,39 @@ describe("mux: marketOrder", () => {
             size: position.size,
             isLong: isLong,
           },
-        ]
+        ],
+        { value: minExecutionFee }
       );
-      await fillPositionOrder();
-      await printPosition(mux.target, collateral, index, isLong);
+      await executeDecreasePosition(account.target);
+      await checkBalance(account);
+      await printPosition(gmxV1.target, collateral, index, isLong);
     }
   });
 
   it("short: usdc -> eth", async () => {
     const {
-      mux,
+      gmxV1,
       user,
       account,
       orderType,
       WETH,
       USDC,
       usdc,
+      minExecutionFee,
       faucet,
-      fillPositionOrder,
-      fillWithdrawalOrder,
-      replaceOracleReferenceAndSetPrice,
+      executeIncreasePosition,
+      executeDecreasePosition,
+      replaceFastPriceFeedAndSetPrice,
+      setPrice,
+      checkBalance,
       printPosition,
     } = await loadFixture(deploy);
 
-    const usdcPrice = ethers.parseUnits("1", 8);
-    await replaceOracleReferenceAndSetPrice(USDC, usdcPrice);
-    const ethPrice = ethers.parseUnits("2000", 8);
-    await replaceOracleReferenceAndSetPrice(WETH, ethPrice);
+    var ethMinPrice = ethers.parseUnits("2000", 30);
+    var ethMaxPrice = ethers.parseUnits("2000", 30);
+    await replaceFastPriceFeedAndSetPrice(WETH, ethMinPrice, ethMaxPrice);
+    const usdcPrice = ethers.parseUnits("1", 30);
+    await setPrice(USDC, usdcPrice, usdcPrice);
 
     const collateral = USDC;
     const index = WETH;
@@ -130,9 +150,9 @@ describe("mux: marketOrder", () => {
       await faucet(USDC, collateralAmount);
       await usdc.connect(user).approve(account.target, collateralAmount);
       await account.connect(user).deposit(USDC, collateralAmount);
-      const positionOrder = await mux.makePositionOrder(collateral, index, collateralAmount, size, isLong); // prettier-ignore
+      const positionOrder = await gmxV1.makePositionOrder(collateral, index, collateralAmount, size, isLong); // prettier-ignore
       await account.connect(user).createMarketOrders(
-        [mux.target],
+        [gmxV1.target],
         [
           {
             orderType: positionOrder.orderType,
@@ -142,17 +162,22 @@ describe("mux: marketOrder", () => {
             size: positionOrder.size,
             isLong: positionOrder.isLong,
           },
-        ]
+        ],
+        { value: minExecutionFee }
       );
-      await fillPositionOrder();
-      await printPosition(mux.target, collateral, index, isLong);
+      await executeIncreasePosition(account.target);
+      await checkBalance(account);
+      await printPosition(gmxV1.target, collateral, index, isLong);
     }
+    var ethMinPrice = ethers.parseUnits("1800", 30);
+    var ethMaxPrice = ethers.parseUnits("1800", 30);
+    await setPrice(WETH, ethMinPrice, ethMaxPrice);
     {
       await faucet(USDC, collateralAmount);
       await usdc.connect(user).approve(account.target, collateralAmount);
       await account.connect(user).deposit(USDC, collateralAmount);
       await account.connect(user).createMarketOrders(
-        [mux.target],
+        [gmxV1.target],
         [
           {
             orderType: orderType.increaseCollateral,
@@ -162,13 +187,16 @@ describe("mux: marketOrder", () => {
             size: 0,
             isLong: isLong,
           },
-        ]
+        ],
+        { value: minExecutionFee }
       );
-      await printPosition(mux.target, collateral, index, isLong);
+      await executeIncreasePosition(account.target);
+      await checkBalance(account);
+      await printPosition(gmxV1.target, collateral, index, isLong);
     }
     {
       await account.connect(user).createMarketOrders(
-        [mux.target],
+        [gmxV1.target],
         [
           {
             orderType: orderType.decreaseCollateral,
@@ -178,15 +206,17 @@ describe("mux: marketOrder", () => {
             size: 0,
             isLong: isLong,
           },
-        ]
+        ],
+        { value: minExecutionFee }
       );
-      await fillWithdrawalOrder();
-      await printPosition(mux.target, collateral, index, isLong);
+      await executeDecreasePosition(account.target);
+      await checkBalance(account);
+      await printPosition(gmxV1.target, collateral, index, isLong);
     }
     {
-      const position = await account.getPosition(mux.target, collateral, index, isLong); // prettier-ignore
+      const position = await account.getPosition(gmxV1.target, collateral, index, isLong); // prettier-ignore
       await account.connect(user).createMarketOrders(
-        [mux.target],
+        [gmxV1.target],
         [
           {
             orderType: orderType.decreasePosition,
@@ -196,10 +226,12 @@ describe("mux: marketOrder", () => {
             size: position.size,
             isLong: isLong,
           },
-        ]
+        ],
+        { value: minExecutionFee }
       );
-      await fillPositionOrder();
-      await printPosition(mux.target, collateral, index, isLong);
+      await executeDecreasePosition(account.target);
+      await checkBalance(account);
+      await printPosition(gmxV1.target, collateral, index, isLong);
     }
   });
 });
