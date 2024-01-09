@@ -125,13 +125,6 @@ contract GMXV1 is IAdapter {
         address index,
         bool isLong
     ) override public view returns (IAdapter.Position memory) {
-        if (isLong && collateral != index) {
-            collateral = index;
-        }
-        if (!isLong && collateral != USDC) {
-            collateral = USDC;
-        }
-
         bytes32 positionKey = IVault(VAULT).getPositionKey(
             account,
             collateral,

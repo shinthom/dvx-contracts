@@ -1,10 +1,6 @@
 const { ethers } = require("hardhat");
 const { deploy } = require("../test/fixture/setup");
 
-const wethPrice = ethers.parseUnits("2000", 18);
-const wbtcPrice = ethers.parseUnits("40000", 18);
-const usdcPrice = ethers.parseUnits("1", 18);
-
 async function main() {
   const {
     user,
@@ -118,20 +114,20 @@ async function main() {
   };
 
   // long weth market
-  await depositAndIncreasePosition(WETH, WETH, ethers.parseEther("1"),      ethers.parseEther("10"), true, "long: weth -> weth") // prettier-ignore
-  await depositAndIncreasePosition(WBTC, WETH, ethers.parseUnits("0.1", 8), ethers.parseEther("10"), true, "long: wbtc -> weth") // prettier-ignore
+  await depositAndIncreasePosition(WETH, WETH, ethers.parseEther("1"),       ethers.parseEther("10"), true, "long: weth -> weth") // prettier-ignore
+  await depositAndIncreasePosition(WBTC, WETH, ethers.parseUnits("0.1", 8),  ethers.parseEther("10"), true, "long: wbtc -> weth") // prettier-ignore
   await depositAndIncreasePosition(USDC, WETH, ethers.parseUnits("1000", 6), ethers.parseEther("10"), true, "long: usdc -> weth") // prettier-ignore
   // short weth market
-  await depositAndIncreasePosition(WETH, WETH, ethers.parseEther("10"),     ethers.parseEther("10"), false, "short: weth -> weth") // prettier-ignore
-  await depositAndIncreasePosition(WBTC, WETH, ethers.parseUnits("0.1", 8), ethers.parseEther("10"), false, "short: wbtc -> weth") // prettier-ignore
+  await depositAndIncreasePosition(WETH, WETH, ethers.parseEther("10"),      ethers.parseEther("10"), false, "short: weth -> weth") // prettier-ignore
+  await depositAndIncreasePosition(WBTC, WETH, ethers.parseUnits("0.1", 8),  ethers.parseEther("10"), false, "short: wbtc -> weth") // prettier-ignore
   await depositAndIncreasePosition(USDC, WETH, ethers.parseUnits("1000", 6), ethers.parseEther("10"), false, "short: usdc -> weth") // prettier-ignore
   // long wbtc market
-  await depositAndIncreasePosition(WETH, WBTC, ethers.parseEther("1"),      ethers.parseUnits("1", 8), true, "long: weth -> wbtc") // prettier-ignore
-  await depositAndIncreasePosition(WBTC, WBTC, ethers.parseUnits("0.1", 8), ethers.parseUnits("1", 8), true, "long: wbtc -> wbtc") // prettier-ignore
+  await depositAndIncreasePosition(WETH, WBTC, ethers.parseEther("1"),       ethers.parseUnits("1", 8), true, "long: weth -> wbtc") // prettier-ignore
+  await depositAndIncreasePosition(WBTC, WBTC, ethers.parseUnits("0.1", 8),  ethers.parseUnits("1", 8), true, "long: wbtc -> wbtc") // prettier-ignore
   await depositAndIncreasePosition(USDC, WBTC, ethers.parseUnits("1000", 6), ethers.parseUnits("1", 8), true, "long: usdc -> wbtc") // prettier-ignore
   // short wbtc market
-  await depositAndIncreasePosition(WETH, WBTC, ethers.parseEther("10"),     ethers.parseUnits("1", 8), false, "short: weth -> wbtc") // prettier-ignore
-  await depositAndIncreasePosition(WBTC, WBTC, ethers.parseUnits("0.1", 8), ethers.parseUnits("1", 8), false, "short: wbtc -> wbtc") // prettier-ignore
+  await depositAndIncreasePosition(WETH, WBTC, ethers.parseEther("10"),      ethers.parseUnits("1", 8), false, "short: weth -> wbtc") // prettier-ignore
+  await depositAndIncreasePosition(WBTC, WBTC, ethers.parseUnits("0.1", 8),  ethers.parseUnits("1", 8), false, "short: wbtc -> wbtc") // prettier-ignore
   await depositAndIncreasePosition(USDC, WBTC, ethers.parseUnits("1000", 6), ethers.parseUnits("1", 8), false, "short: usdc -> wbtc") // prettier-ignore
 
   const positions = await reader.getPositions(
