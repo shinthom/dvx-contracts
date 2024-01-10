@@ -120,7 +120,7 @@ const deploy = async (noAccount) => {
   ]);
   mux = await ethers.deployContract("MUX", [OrderBook, LiquidityPool]);
 
-  reader = await ethers.deployContract("Reader");
+  reader = await ethers.deployContract("Reader", [warehouse.target]);
   quoter = await ethers.deployContract("Quoter");
 
   const minExecutionFee = await positionRouter.minExecutionFee();

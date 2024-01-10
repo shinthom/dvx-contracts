@@ -7,11 +7,46 @@ import { IAdapter } from  "./interfaces/IAdapter.sol";
 import { IWarehouse } from "./interfaces/IWarehouse.sol";
 
 contract Reader {
+    address immutable public warehouse;
+
+    constructor(address _warehouse) {
+        warehouse = _warehouse;
+    }
+
     struct Position {
         address adapter;
         address collateral;
         address index;
         IAdapter.Position position;
+        IExchange.TriggerOrder[] pendingTriggerOrders;
+    }
+
+    struct TokenAmountInUseAsCollateral {
+        address token;
+        uint256 totalAmount;
+    }
+
+    function getTokenAmountInUseAsCollateral (
+        address account,
+        address[] memory adapters,
+        address[] memory collaterals,
+        address[] memory indexs
+    ) external view returns (TokenAmountInUseAsCollateral[] memory tokenAmountInUseAsCollaterals) {
+        Position[] memory positions = getPositions(account, adapters, collaterals, indexs);
+
+        tokenAmountInUseAsCollaterals = new TokenAmountInUseAsCollateral[](collaterals.length);
+        for (uint256 i = 0; i < collaterals.length; i++) {
+            uint256 totalAmount;
+            for (uint256 j = 0; j < positions.length; j++) {
+                if (positions[j].collateral == collaterals[i]) {
+                    totalAmount += positions[j].position.collateralAmount;
+                }
+            }
+            tokenAmountInUseAsCollaterals[i] = TokenAmountInUseAsCollateral({
+                token: collaterals[i],
+                totalAmount: totalAmount
+            });
+        }
     }
 
     function getPositions(
@@ -19,7 +54,7 @@ contract Reader {
         address[] memory adapters,
         address[] memory collaterals,
         address[] memory indexs
-    ) external view returns (Position[] memory) {
+    ) public view returns (Position[] memory) {
         bool[] memory isLongs = new bool[](2);
         isLongs[0] = true;
         isLongs[1] = false;
@@ -41,6 +76,12 @@ contract Reader {
                                 index: indexs[k],
                                 position: IAdapter(
                                     adapters[i]).getWrapPosition(account, collaterals[j], indexs[k], isLongs[l]
+                                ),
+                                pendingTriggerOrders: getPendingTriggerOrders(
+                                    adapters[i],
+                                    collaterals[j],
+                                    indexs[k],
+                                    isLongs[l]
                                 )
                             });
                     }
@@ -51,7 +92,6 @@ contract Reader {
     }
 
     function getTriggerOrders(
-        address warehouse,
         address adapter,
         address collateral,
         address index,
@@ -63,13 +103,12 @@ contract Reader {
     }
 
     function getPendingTriggerOrders(
-        address warehouse,
         address adapter,
         address collateral,
         address index,
         bool isLong
-    ) external view returns (IExchange.TriggerOrder[] memory) {
-        IExchange.TriggerOrder[] memory triggerOrders = getTriggerOrders(warehouse, adapter, collateral, index, isLong);
+    ) public view returns (IExchange.TriggerOrder[] memory) {
+        IExchange.TriggerOrder[] memory triggerOrders = getTriggerOrders(adapter, collateral, index, isLong);
 
         uint256 numPendingTriggerOrder;
         for (uint256 i = 0; i < triggerOrders.length; i++) {
@@ -91,7 +130,6 @@ contract Reader {
     }
 
     function getLimitOrders(
-        address warehouse,
         address account
     ) public view returns (IExchange.LimitOrder[] memory) {
         uint256 limitOrderIndex = IWarehouse(warehouse).getLimitOrderIndex(account);
@@ -105,10 +143,9 @@ contract Reader {
     }
 
     function getPendingLimitOrders(
-        address warehouse,
         address account
     ) external view returns (IExchange.LimitOrder[] memory) {
-        IExchange.LimitOrder[] memory limitOrders = getLimitOrders(warehouse, account);
+        IExchange.LimitOrder[] memory limitOrders = getLimitOrders(account);
 
         uint256 numPendingLimitOrder;
         for (uint256 i = 0; i < limitOrders.length; i++) {
