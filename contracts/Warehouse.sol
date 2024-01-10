@@ -137,30 +137,47 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
     function validateTpSlPriceBound(
         bool isLong,
         uint256 tpPrice,
-        uint256 slPrice,
         uint256 tpPriceBound,
+        uint256 slPrice,
         uint256 slPriceBound
     ) public pure returns (bool) {
+        if (tpPrice == 0 && slPrice == 0) return false;
         if (tpPrice != 0 && slPrice != 0) {
-            if (isLong && tpPrice < slPrice) {
-                return false;
-            }
-            if (!isLong && tpPrice > slPrice) {
-                return false;
+            if (isLong) {
+                if (tpPrice < slPrice) {
+                    return false;
+                }
+            } else {
+                if (tpPrice > slPrice) {
+                    return false;
+                }
             }
         }
 
-        if (tpPrice != 0) {
-            if (tpPriceBound == 0) {
-                return false;
+        if (tpPrice > 0) {
+            if (tpPriceBound == 0) return false;
+            if (isLong) {
+                if (tpPrice < tpPriceBound) {
+                    return false;
+                }
+            } else {
+                if (tpPrice > tpPriceBound) {
+                    return false;
+                }
             }
-            return isLong ? tpPrice >= tpPriceBound : tpPrice <= tpPriceBound;
         }
-        if (slPrice != 0) {
-            if (slPriceBound == 0) {
-                return false;
+
+        if (slPrice > 0) {
+            if (slPriceBound == 0) return false;
+            if (isLong) {
+                if (slPrice < slPriceBound) {
+                    return false;
+                }
+            } else {
+                if (slPrice > slPriceBound) {
+                    return false;
+                }
             }
-            return isLong ? slPrice >= slPriceBound : slPrice <= slPriceBound;
         }
         return true;
     }
@@ -198,12 +215,12 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         bool isLong,
         uint256 size,
         uint256 tpPrice,
-        uint256 slPrice,
         uint256 tpPriceBound,
+        uint256 slPrice,
         uint256 slPriceBound
     ) override public payable {
         require(
-            validateTpSlPriceBound(isLong, tpPrice, slPrice, tpPriceBound, slPriceBound),
+            validateTpSlPriceBound(isLong, tpPrice, tpPriceBound, slPrice, slPriceBound),
             "Warehouse: INVALID_TP_SL_PRICE_BOUND"
         );
 
@@ -233,8 +250,8 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
             isLong: isLong,
             size: size,
             tpPrice: tpPrice,
-            slPrice: slPrice,
             tpPriceBound: tpPriceBound,
+            slPrice: slPrice,
             slPriceBound: slPriceBound,
             createdAt: block.timestamp
         }));

@@ -141,6 +141,15 @@ async function main() {
   for (const position of positions) {
     console.log(`- ${position}`);
   }
+
+  const tokenAmountInUseAsCollateral =
+    await reader.getTokenAmountInUseAsCollateral(
+      account.target,
+      [gmxV1.target, mux.target],
+      [WETH, WBTC, USDC],
+      [WETH, WBTC]
+    );
+  console.log(tokenAmountInUseAsCollateral);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

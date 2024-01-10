@@ -133,14 +133,16 @@ async function main() {
   await depositAndIncreasePosition(WETH, WBTC, ethers.parseEther("1"),       ethers.parseUnits("1", 8), true, "long: weth -> wbtc") // prettier-ignore
   await depositAndIncreasePosition(WBTC, WBTC, ethers.parseUnits("0.1", 8),  ethers.parseUnits("1", 8), true, "long: wbtc -> wbtc") // prettier-ignore
   await depositAndIncreasePosition(USDC, WBTC, ethers.parseUnits("1000", 6), ethers.parseUnits("1", 8), true, "long: usdc -> wbtc") // prettier-ignore
-  // // short weth market
-  // await depositAndIncreasePosition(WETH, WETH, ethers.parseEther("10"),      ethers.parseEther("10"), false, "short: weth -> weth") // prettier-ignore
-  // await depositAndIncreasePosition(WBTC, WETH, ethers.parseUnits("0.1", 8),  ethers.parseEther("10"), false, "short: wbtc -> weth") // prettier-ignore
-  // await depositAndIncreasePosition(USDC, WETH, ethers.parseUnits("1000", 6), ethers.parseEther("10"), false, "short: usdc -> weth") // prettier-ignore
-  // // short wbtc market
-  // await depositAndIncreasePosition(WETH, WBTC, ethers.parseEther("10"),      ethers.parseUnits("1", 8), false, "short: weth -> wbtc") // prettier-ignore
-  // await depositAndIncreasePosition(WBTC, WBTC, ethers.parseUnits("0.1", 8),  ethers.parseUnits("1", 8), false, "short: wbtc -> wbtc") // prettier-ignore
-  // await depositAndIncreasePosition(USDC, WBTC, ethers.parseUnits("1000", 6), ethers.parseUnits("1", 8), false, "short: usdc -> wbtc") // prettier-ignore
+  // short weth market
+  await depositAndIncreasePosition(WETH, WETH, ethers.parseEther("10"),      ethers.parseEther("10"), false, "short: weth -> weth") // prettier-ignore
+  await depositAndIncreasePosition(WBTC, WETH, ethers.parseUnits("0.1", 8),  ethers.parseEther("10"), false, "short: wbtc -> weth") // prettier-ignore
+  await depositAndIncreasePosition(USDC, WETH, ethers.parseUnits("1000", 6), ethers.parseEther("10"), false, "short: usdc -> weth") // prettier-ignore
+  // short wbtc market
+  await depositAndIncreasePosition(WETH, WBTC, ethers.parseEther("10"),      ethers.parseUnits("1", 8), false, "short: weth -> wbtc") // prettier-ignore
+  await depositAndIncreasePosition(WBTC, WBTC, ethers.parseUnits("0.1", 8),  ethers.parseUnits("1", 8), false, "short: wbtc -> wbtc") // prettier-ignore
+  await depositAndIncreasePosition(USDC, WBTC, ethers.parseUnits("1000", 6), ethers.parseUnits("1", 8), false, "short: usdc -> wbtc") // prettier-ignore
+
+  // multiple pending trigger orders.
 
   // gmx V1
   var tpPrice = ethers.parseUnits("2000", 30) + 1n;
@@ -148,14 +150,16 @@ async function main() {
   var tpPriceBound = tpPrice - 1n;
   var slPriceBound = slPrice - 1n;
   await account.connect(user).createTriggerOrder(gmxV1.target, WETH, WETH, true, ethers.parseEther("10"), tpPrice, tpPriceBound, slPrice, slPriceBound, minExecutionFee, { value: minExecutionFee }); // prettier-ignore
-  // mux
+  await account.connect(user).createTriggerOrder(gmxV1.target, WETH, WETH, true, ethers.parseEther("10"), tpPrice, tpPriceBound, 0, 0, minExecutionFee, { value: minExecutionFee }); // prettier-ignore
+  await account.connect(user).createTriggerOrder(gmxV1.target, WETH, WETH, true, ethers.parseEther("10"), 0, 0, slPrice, slPriceBound, minExecutionFee, { value: minExecutionFee }); // prettier-ignore
+  // // mux
   var tpPrice = ethers.parseUnits("2000", 18) + 1n;
   var slPrice = ethers.parseUnits("2000", 18) - 1n;
   var tpPriceBound = tpPrice - 1n;
   var slPriceBound = slPrice - 1n;
   await account.connect(user).createTriggerOrder(mux.target, WETH, WETH, true, ethers.parseEther("10"), tpPrice, tpPriceBound, slPrice, slPriceBound, minExecutionFee, { value: minExecutionFee }); // prettier-ignore
-  await account.connect(user).createTriggerOrder(mux.target, WBTC, WETH, true, ethers.parseEther("10"), tpPrice, tpPriceBound, slPrice, slPriceBound, minExecutionFee, { value: minExecutionFee }); // prettier-ignore
-  await account.connect(user).createTriggerOrder(mux.target, USDC, WETH, true, ethers.parseEther("10"), tpPrice, tpPriceBound, slPrice, slPriceBound, minExecutionFee, { value: minExecutionFee }); // prettier-ignore
+  await account.connect(user).createTriggerOrder(mux.target, WBTC, WETH, true, ethers.parseEther("10"), tpPrice, tpPriceBound, 0, 0, minExecutionFee, { value: minExecutionFee }); // prettier-ignore
+  await account.connect(user).createTriggerOrder(mux.target, USDC, WETH, true, ethers.parseEther("10"), 0, 0, slPrice, slPriceBound, minExecutionFee, { value: minExecutionFee }); // prettier-ignore
 
   const positions = await reader.getPositions(
     account.target,
