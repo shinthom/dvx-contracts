@@ -34,8 +34,8 @@ async function main() {
   `);
 
   console.log("`faucet`");
-  await faucet(WBTC, ethers.parseEther("10"));
-  await faucet(USDC, ethers.parseEther("10"));
+  await faucet(WBTC, ethers.parseUnits("100", 8));
+  await faucet(USDC, ethers.parseUnits("1000000", 6));
 
   const depositAndIncreasePosition = async (
     collateral,
