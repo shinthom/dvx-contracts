@@ -319,7 +319,7 @@ contract GMXV1 is IAdapter {
         uint256 size,
         bool isLong
     ) private {
-        uint256 price = getPrice(index, isLong);
+        uint256 price = isLong ? 0 : type(uint256).max;
         uint256 fee = IPositionRouter(POSITION_ROUTER).minExecutionFee();
 
         address[] memory path = new address[](1);
