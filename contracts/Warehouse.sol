@@ -21,7 +21,7 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
     modifier onlyOrderKeeper() {
         require(
           _orderKeepers[_msgSender()],
-          "Warehouse: not order keeper"
+          "Warehouse: NOT_ORDER_KEEPER"
         );
         _;
     }
@@ -126,6 +126,10 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         return _triggerOrders[positionKey][id];
     }
 
+    function getTriggerOrderLength(bytes32 positionKey) override public view returns (uint256) {
+        return _triggerOrders[positionKey].length;
+    }
+
     function getTriggerOrderSize(bytes32 positionKey) override public view returns (uint256) {
         return _triggerOrderSize[positionKey];
     }
@@ -138,7 +142,7 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         uint256 size,
         uint256 tpPrice,
         uint256 slPrice
-    ) override public {
+    ) override public payable {
         IAdapter.Position memory position = IAdapter(adapter).getPosition(
             msg.sender,
             collateral,
@@ -169,7 +173,6 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
             createdAt: block.timestamp
         }));
         emit TriggerOrderCreated(msg.sender, positionKey, id);
-
         _triggerOrderSize[positionKey] += size;
     }
 
@@ -190,7 +193,6 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
 
         triggerOrder.state = IExchange.TriggerOrderState.Canceled;
         emit TriggerOrderCanceled(msg.sender, positionKey, id);
-
         _triggerOrderSize[positionKey] -= triggerOrder.size;
     }
 
@@ -199,25 +201,39 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         bytes32 positionKey,
         uint256 id
     ) override external payable onlyOrderKeeper {
+        require(
+            _triggerOrders[positionKey].length > id,
+            "Warehouse: ORDER_NOT_EXIST"
+        );
+
         IExchange.TriggerOrder memory triggerOrder = _triggerOrders[positionKey][id];
         require(
-            triggerOrder.size > 0,
-            "Warehouse: non-existent trigger order"
-        );
-        require(
             triggerOrder.state == IExchange.TriggerOrderState.Pending,
-            "Warehouse: non-existent trigger order"
+            "Warehouse: ORDER_NOT_PENDING"
         );
+
+        uint256 minExecutionFee = IAdapter(triggerOrder.adapter).getMinExecutionFee();
+        require(
+            address(this).balance >= minExecutionFee,
+            "Warehouse: INSUFFICIENT_FEE"
+        );
+
+        // if (triggerOrder.tpPrice != 0) {
+        //     require()
+        // }
+        // if (triggerOrder.slPrice != 0) {
+        //     require()
+        // }
 
         triggerOrder.state = IExchange.TriggerOrderState.Executed;
         emit TriggerOrderExecuted(account, positionKey, id);
-
         _triggerOrderSize[positionKey] -= triggerOrder.size;
+
+        address[] memory path = new address[](1);
+        path[0] = triggerOrder.collateral;
 
         IAdapter.Position memory position
             = IAdapter(triggerOrder.adapter).getPosition(account, triggerOrder.collateral, triggerOrder.index, triggerOrder.isLong);
-        address[] memory path = new address[](1);
-        path[0] = triggerOrder.collateral;
         IExchange.PositionOrder memory positionOrder
             = IExchange.PositionOrder({
                 orderType: IExchange.OrderType.DecreasePosition,
@@ -227,6 +243,11 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
                 size: position.size,
                 isLong: triggerOrder.isLong
             });
-        IAccount(account).executeTriggerOrder{value: msg.value}(triggerOrder.adapter, positionOrder);
+
+        IAccount(account).executeTriggerOrder{value: minExecutionFee}(triggerOrder.adapter, positionOrder);
+    }
+
+    function withdraw(address keeper) external onlyOwner {
+        payable(keeper).transfer(address(this).balance);
     }
 }

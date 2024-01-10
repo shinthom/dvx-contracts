@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import { IPositionRouter } from "../interfaces/exchanges/GMXV1/IPositionRouter.sol";
 import { IRouter } from "../interfaces/exchanges/GMXV1/IRouter.sol";
 import { IVault } from "../interfaces/exchanges/GMXV1/IVault.sol";
+import { IGMXOrderBook } from "../interfaces/exchanges/GMXV1/IGMXOrderBook.sol";
 import { IERC20 } from "../interfaces/tokens/IERC20.sol";
 import { IExchange } from "../interfaces/IExchange.sol";
 import { IAdapter } from "../interfaces/IAdapter.sol";
@@ -32,6 +33,10 @@ contract GMXV1 is IAdapter {
         ROUTER = router;
         VAULT = vault;
         EXCHANGE = exchange;
+    }
+
+    function getMinExecutionFee() override public view returns (uint256) {
+        return IPositionRouter(POSITION_ROUTER).minExecutionFee();
     }
 
     function getPriceDecimals() override public pure returns (uint256) {

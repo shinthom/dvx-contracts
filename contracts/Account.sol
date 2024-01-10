@@ -285,10 +285,17 @@ contract Account is IAccount {
         bool isLong,
         uint256 size,
         uint256 tpPrice,
-        uint256 slPrice
-    ) override public onlyOwner {
+        uint256 slPrice,
+        uint256 executionFee
+    ) override public payable onlyOwner {
+        require(msg.value == executionFee, "Account: FEE_MISMATCH");
+        require(
+            executionFee >= IAdapter(adapter).getMinExecutionFee(),
+            "Account: INSUFFICIENT_FEE"
+        );
+
         address warehouse = IExchange(_exchange).warehouse();
-        IWarehouse(warehouse).createTriggerOrder(
+        IWarehouse(warehouse).createTriggerOrder{value: executionFee}(
             adapter,
             collateral,
             index,

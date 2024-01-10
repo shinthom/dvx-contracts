@@ -57,8 +57,9 @@ interface IAccount {
         bool isLong,
         uint256 size,
         uint256 tpPrice,
-        uint256 slPrice
-    ) external;
+        uint256 slPrice,
+        uint256 executionFee
+    ) external payable;
     function cancelTriggerOrder(bytes32 positionKey, uint256 id) external;
     function executeTriggerOrder(address adapter, IExchange.PositionOrder calldata order) payable external;
 }

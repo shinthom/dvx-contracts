@@ -13,6 +13,8 @@ interface IAdapter {
         bool isLong;
     }
 
+    function getMinExecutionFee() external view returns (uint256);
+
     function getPriceDecimals() external view returns (uint256);
 
     function getPrice(address collateral, bool isLong) external view returns (uint256);
@@ -65,26 +67,26 @@ interface IAdapter {
         uint256 collateralAmount,
         uint256 size,
         bool isLong
-    ) payable external;
+    ) external payable;
 
     function decreasePosition(
         address collateral,
         address index,
         uint256 size,
         bool isLong
-    ) payable external;
+    ) external payable;
 
     function increaseCollateral(
         address[] memory path,
         address index,
         uint256 collateralAmount,
         bool isLong
-    ) payable external;
+    ) external payable;
 
     function decreaseCollateral(
         address collateral,
         address index,
         uint256 collateralAmount,
         bool isLong
-    ) payable external;
+    ) external payable;
 }

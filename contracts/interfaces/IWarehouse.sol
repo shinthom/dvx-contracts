@@ -24,6 +24,7 @@ interface IWarehouse {
     function getLimitOrders(address account) external view returns (IExchange.LimitOrder[] memory);
     function getTriggerOrders(bytes32 positionKey) external view returns (IExchange.TriggerOrder[] memory);
     function getTriggerOrder(bytes32 positionKey, uint256 id) external view returns (IExchange.TriggerOrder memory);
+    function getTriggerOrderLength(bytes32 positionKey) external view returns (uint256);
     function getTriggerOrderSize(bytes32 positionKey) external view returns (uint256);
     function isOrderKeeper(address keeper) external view returns (bool);
     function setOrderKeeper(address keeper, bool status) external;
@@ -49,7 +50,7 @@ interface IWarehouse {
         uint256 size,
         uint256 tpPrice,
         uint256 slPrice
-    ) external;
+    ) external payable;
     function cancelTriggerOrder(bytes32 positionKey, uint256 id) external;
     function executeTriggerOrder(
         address account,

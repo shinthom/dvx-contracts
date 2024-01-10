@@ -26,6 +26,10 @@ contract MUX is IAdapter {
         LIQUIDITY_POOL = liquidityPool;
     }
 
+    function getMinExecutionFee() override public view returns (uint256) {
+        return 0;
+    }
+
     function getPriceDecimals() override public pure returns (uint256) {
         return PRICE_DECIMALS;
     }
