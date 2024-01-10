@@ -49,7 +49,9 @@ interface IWarehouse {
         bool isLong,
         uint256 size,
         uint256 tpPrice,
-        uint256 slPrice
+        uint256 slPrice,
+        uint256 tpPriceBound,
+        uint256 slPriceBound
     ) external payable;
     function cancelTriggerOrder(bytes32 positionKey, uint256 id) external;
     function executeTriggerOrder(

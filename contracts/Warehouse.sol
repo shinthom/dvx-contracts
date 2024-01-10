@@ -134,6 +134,66 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         return _triggerOrderSize[positionKey];
     }
 
+    function validateTpSlPriceBound(
+        bool isLong,
+        uint256 tpPrice,
+        uint256 slPrice,
+        uint256 tpPriceBound,
+        uint256 slPriceBound
+    ) public pure returns (bool) {
+        if (tpPrice != 0 && slPrice != 0) {
+            if (isLong && tpPrice < slPrice) {
+                return false;
+            }
+            if (!isLong && tpPrice > slPrice) {
+                return false;
+            }
+        }
+
+        if (tpPrice != 0) {
+            if (tpPriceBound == 0) {
+                return false;
+            }
+            return isLong ? tpPrice >= tpPriceBound : tpPrice <= tpPriceBound;
+        }
+        if (slPrice != 0) {
+            if (slPriceBound == 0) {
+                return false;
+            }
+            return isLong ? slPrice >= slPriceBound : slPrice <= slPriceBound;
+        }
+        return true;
+    }
+
+    function validateTpSlPrice(
+        address adapter,
+        address index,
+        bool isLong,
+        uint256 tpPriceBound,
+        uint256 slPriceBound
+    ) public view returns (bool) {
+        uint256 price = IAdapter(adapter).getPrice(index, isLong);
+        console.log(price);
+        console.log(tpPriceBound);
+        console.log(slPriceBound);
+        if (isLong) {
+            if (tpPriceBound != 0 && price < tpPriceBound) {
+                return false;
+            }
+            if (slPriceBound != 0 && price < slPriceBound) {
+                return false;
+            }
+        } else {
+            if (tpPriceBound != 0 && price > tpPriceBound) {
+                return false;
+            }
+            if (slPriceBound != 0 && price > slPriceBound) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     function createTriggerOrder(
         address adapter,
         address collateral,
@@ -141,8 +201,15 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         bool isLong,
         uint256 size,
         uint256 tpPrice,
-        uint256 slPrice
+        uint256 slPrice,
+        uint256 tpPriceBound,
+        uint256 slPriceBound
     ) override public payable {
+        require(
+            validateTpSlPriceBound(isLong, tpPrice, slPrice, tpPriceBound, slPriceBound),
+            "Warehouse: INVALID_TP_SL_PRICE_BOUND"
+        );
+
         IAdapter.Position memory position = IAdapter(adapter).getPosition(
             msg.sender,
             collateral,
@@ -170,6 +237,8 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
             size: size,
             tpPrice: tpPrice,
             slPrice: slPrice,
+            tpPriceBound: tpPriceBound,
+            slPriceBound: slPriceBound,
             createdAt: block.timestamp
         }));
         emit TriggerOrderCreated(msg.sender, positionKey, id);
@@ -218,12 +287,16 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
             "Warehouse: INSUFFICIENT_FEE"
         );
 
-        // if (triggerOrder.tpPrice != 0) {
-        //     require()
-        // }
-        // if (triggerOrder.slPrice != 0) {
-        //     require()
-        // }
+        require(
+            validateTpSlPrice(
+                triggerOrder.adapter,
+                triggerOrder.index,
+                triggerOrder.isLong,
+                triggerOrder.tpPriceBound,
+                triggerOrder.slPriceBound
+            ),
+            "Warehouse: INVALID_TP_SL_PRICE"
+        );
 
         triggerOrder.state = IExchange.TriggerOrderState.Executed;
         emit TriggerOrderExecuted(account, positionKey, id);

@@ -25,8 +25,6 @@ describe("triggerOrder", () => {
       replaceFastPriceFeedAndSetPrice,
     } = await loadFixture(deploy);
 
-    const minTriggerOrderExecutionFee = await gmxV1.getMinExecutionFee();
-
     const collateral = WETH;
     const index = WETH;
     const collateralAmount = ethers.parseEther("1");
@@ -36,7 +34,33 @@ describe("triggerOrder", () => {
     const price = ethers.parseUnits("2000", 30);
     await replaceFastPriceFeedAndSetPrice(WETH, price, price);
 
+    var tpPrice = ethers.parseUnits("2000", 30) + 1n;
+    var slPrice = ethers.parseUnits("2000", 30) - 1n;
+    var tpPriceBound = tpPrice - 1n;
+    var slPriceBound = slPrice - 1n;
+
+    await expect(
+      account
+        .connect(user)
+        .createTriggerOrder(
+          gmxV1.target,
+          collateral,
+          index,
+          isLong,
+          size,
+          tpPrice,
+          slPrice,
+          tpPriceBound,
+          slPriceBound,
+          minExecutionFee,
+          { value: minExecutionFee }
+        )
+    ).to.be.revertedWith("Warehouse: NO_POSITION");
+
     await account.deposit(ETH, collateralAmount, { value: collateralAmount });
+    const positionOrder = await gmxV1.makePositionOrder(collateral, index, collateralAmount, size, isLong); // prettier-ignore
+    await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: positionOrder.orderType, path: [...positionOrder.path], index: positionOrder.index, collateralAmount: positionOrder.collateralAmount, size: positionOrder.size, isLong: positionOrder.isLong }], { value: minExecutionFee }); // prettier-ignore
+    await executeIncreasePosition(account.target);
 
     await expect(
       account.createTriggerOrder(
@@ -45,10 +69,12 @@ describe("triggerOrder", () => {
         index,
         isLong,
         size,
-        price + 1n,
-        price - 1n,
-        minTriggerOrderExecutionFee,
-        { value: minTriggerOrderExecutionFee }
+        tpPrice,
+        slPrice,
+        tpPriceBound,
+        slPriceBound,
+        minExecutionFee,
+        { value: minExecutionFee }
       )
     ).to.be.revertedWith("Account: NOT_OWNER");
     await expect(
@@ -60,9 +86,11 @@ describe("triggerOrder", () => {
           index,
           isLong,
           size,
-          price + 1n,
-          price - 1n,
-          minTriggerOrderExecutionFee
+          tpPrice,
+          slPrice,
+          tpPriceBound,
+          slPriceBound,
+          minExecutionFee
         )
     ).to.be.revertedWith("Account: FEE_MISMATCH");
     await expect(
@@ -74,36 +102,19 @@ describe("triggerOrder", () => {
           index,
           isLong,
           size,
-          price + 1n,
-          price - 1n,
+          tpPrice,
+          slPrice,
+          tpPriceBound,
+          slPriceBound,
           1,
           { value: 1 }
         )
     ).to.be.revertedWith("Account: INSUFFICIENT_FEE");
-    await expect(
-      account
-        .connect(user)
-        .createTriggerOrder(
-          gmxV1.target,
-          collateral,
-          index,
-          isLong,
-          size,
-          price + 1n,
-          price - 1n,
-          minTriggerOrderExecutionFee,
-          { value: minTriggerOrderExecutionFee }
-        )
-    ).to.be.revertedWith("Warehouse: NO_POSITION");
-
-    const positionOrder = await gmxV1.makePositionOrder(collateral, index, collateralAmount, size, isLong); // prettier-ignore
-    await account.connect(user).createMarketOrders([gmxV1.target], [{ orderType: positionOrder.orderType, path: [...positionOrder.path], index: positionOrder.index, collateralAmount: positionOrder.collateralAmount, size: positionOrder.size, isLong: positionOrder.isLong }], { value: minExecutionFee }); // prettier-ignore
-    await executeIncreasePosition(account.target);
 
     const position = await account.getPosition(gmxV1.target, collateral, index, isLong); // prettier-ignore
     const triggerOrderSize = position.size / 2n;
-    await account.connect(user).createTriggerOrder(gmxV1.target, collateral, index, isLong, triggerOrderSize, price + 1n, price - 1n, minTriggerOrderExecutionFee, { value: minTriggerOrderExecutionFee }); // prettier-ignore
-    await account.connect(user).createTriggerOrder(gmxV1.target, collateral, index, isLong, triggerOrderSize, price + 1n, price - 1n, minTriggerOrderExecutionFee, { value: minTriggerOrderExecutionFee }); // prettier-ignore
+    await account.connect(user).createTriggerOrder(gmxV1.target, collateral, index, isLong, triggerOrderSize, tpPrice, slPrice, tpPriceBound, slPriceBound, minExecutionFee, { value: minExecutionFee }); // prettier-ignore
+    await account.connect(user).createTriggerOrder(gmxV1.target, collateral, index, isLong, triggerOrderSize, tpPrice, slPrice, tpPriceBound, slPriceBound, minExecutionFee, { value: minExecutionFee }); // prettier-ignore
     const positionKey = await warehouse.getPositionKey(gmxV1.target, collateral, index, isLong); // prettier-ignore
     expect(await warehouse.getTriggerOrder(positionKey, 0)).to.eql((await warehouse.getTriggerOrders(positionKey))[0]); // prettier-ignore
     expect(await warehouse.getTriggerOrder(positionKey, 1)).to.eql((await warehouse.getTriggerOrders(positionKey))[1]); // prettier-ignore
@@ -117,10 +128,12 @@ describe("triggerOrder", () => {
           index,
           isLong,
           1n,
-          price + 1n,
-          price - 1n,
-          minTriggerOrderExecutionFee,
-          { value: minTriggerOrderExecutionFee }
+          tpPrice,
+          slPrice,
+          tpPriceBound,
+          slPriceBound,
+          minExecutionFee,
+          { value: minExecutionFee }
         )
     ).to.be.revertedWith("Warehouse: EXCEED_SIZE");
 
@@ -159,10 +172,9 @@ describe("triggerOrder", () => {
       minExecutionFee,
       ETH,
       WETH,
+      replaceOracleReferenceAndSetPrice,
       fillPositionOrder,
     } = await loadFixture(deploy);
-
-    const minTriggerOrderExecutionFee = await mux.getMinExecutionFee();
 
     const collateral = WETH;
     const index = WETH;
@@ -170,21 +182,14 @@ describe("triggerOrder", () => {
     const size = ethers.parseEther("10");
     const isLong = true;
 
-    await account.deposit(ETH, collateralAmount, { value: collateralAmount });
-
     const price = ethers.parseUnits("2000", 8);
-    await expect(
-      account.createTriggerOrder(
-        mux.target,
-        collateral,
-        index,
-        isLong,
-        size,
-        price + 1n,
-        price - 1n,
-        0
-      )
-    ).to.be.revertedWith("Account: NOT_OWNER");
+    await replaceOracleReferenceAndSetPrice(WETH, price);
+
+    var tpPrice = ethers.parseUnits("2000", 18) + 1n;
+    var slPrice = ethers.parseUnits("2000", 18) - 1n;
+    var tpPriceBound = tpPrice - 1n;
+    var slPriceBound = slPrice - 1n;
+
     await expect(
       account
         .connect(user)
@@ -194,20 +199,40 @@ describe("triggerOrder", () => {
           index,
           isLong,
           size,
-          price + 1n,
-          price - 1n,
+          tpPrice,
+          slPrice,
+          tpPriceBound,
+          slPriceBound,
           0
         )
     ).to.be.revertedWith("Warehouse: NO_POSITION");
 
+    await account
+      .connect(user)
+      .deposit(ETH, collateralAmount, { value: collateralAmount });
     const positionOrder = await mux.makePositionOrder(collateral, index, collateralAmount, size, isLong); // prettier-ignore
     await account.connect(user).createMarketOrders([mux.target], [{ orderType: positionOrder.orderType, path: [...positionOrder.path], index: positionOrder.index, collateralAmount: positionOrder.collateralAmount, size: positionOrder.size, isLong: positionOrder.isLong }], { value: minExecutionFee }); // prettier-ignore
     await fillPositionOrder();
 
+    await expect(
+      account.createTriggerOrder(
+        mux.target,
+        collateral,
+        index,
+        isLong,
+        size,
+        tpPrice,
+        slPrice,
+        tpPriceBound,
+        slPriceBound,
+        0
+      )
+    ).to.be.revertedWith("Account: NOT_OWNER");
+
     const position = await account.getPosition(mux.target, collateral, index, isLong); // prettier-ignore
     const triggerOrderSize = position.size / 2n;
-    await account.connect(user).createTriggerOrder(mux.target, collateral, index, isLong, triggerOrderSize, price + 1n, price - 1n, minTriggerOrderExecutionFee, { value: minTriggerOrderExecutionFee }); // prettier-ignore
-    await account.connect(user).createTriggerOrder(mux.target, collateral, index, isLong, triggerOrderSize, price + 1n, price - 1n, minTriggerOrderExecutionFee, { value: minTriggerOrderExecutionFee }); // prettier-ignore
+    await account.connect(user).createTriggerOrder(mux.target, collateral, index, isLong, triggerOrderSize, tpPrice, slPrice, tpPriceBound, slPriceBound, 0); // prettier-ignore
+    await account.connect(user).createTriggerOrder(mux.target, collateral, index, isLong, triggerOrderSize, tpPrice, slPrice, tpPriceBound, slPriceBound, 0); // prettier-ignore
     const positionKey = await warehouse.getPositionKey(mux.target, collateral, index, isLong); // prettier-ignore
     expect(await warehouse.getTriggerOrder(positionKey, 0)).to.eql((await warehouse.getTriggerOrders(positionKey))[0]); // prettier-ignore
     expect(await warehouse.getTriggerOrder(positionKey, 1)).to.eql((await warehouse.getTriggerOrders(positionKey))[1]); // prettier-ignore
@@ -221,8 +246,10 @@ describe("triggerOrder", () => {
           index,
           isLong,
           1n,
-          price + 1n,
-          price - 1n,
+          tpPrice,
+          slPrice,
+          tpPriceBound,
+          slPriceBound,
           0
         )
     ).to.be.revertedWith("Warehouse: EXCEED_SIZE");

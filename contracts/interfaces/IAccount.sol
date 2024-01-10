@@ -58,6 +58,8 @@ interface IAccount {
         uint256 size,
         uint256 tpPrice,
         uint256 slPrice,
+        uint256 tpPriceBound,
+        uint256 slPriceBound,
         uint256 executionFee
     ) external payable;
     function cancelTriggerOrder(bytes32 positionKey, uint256 id) external;

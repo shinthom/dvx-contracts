@@ -49,9 +49,10 @@ interface IExchange {
         address index;
         bool isLong;
         uint256 size;
-        uint256 tpPrice; // trigger
-        uint256 slPrice; // trigger
-        // todo: slippageTolerance
+        uint256 tpPrice;
+        uint256 slPrice;
+        uint256 tpPriceBound;
+        uint256 slPriceBound;
         uint256 createdAt;
     }
 

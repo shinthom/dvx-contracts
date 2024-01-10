@@ -286,6 +286,8 @@ contract Account is IAccount {
         uint256 size,
         uint256 tpPrice,
         uint256 slPrice,
+        uint256 tpPriceBound,
+        uint256 slPriceBound,
         uint256 executionFee
     ) override public payable onlyOwner {
         require(msg.value == executionFee, "Account: FEE_MISMATCH");
@@ -302,7 +304,9 @@ contract Account is IAccount {
             isLong,
             size,
             tpPrice,
-            slPrice
+            slPrice,
+            tpPriceBound,
+            slPriceBound
         );
     }
 
