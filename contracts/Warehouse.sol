@@ -173,9 +173,6 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         uint256 slPriceBound
     ) public view returns (bool) {
         uint256 price = IAdapter(adapter).getPrice(index, isLong);
-        console.log(price);
-        console.log(tpPriceBound);
-        console.log(slPriceBound);
         if (isLong) {
             if (tpPriceBound != 0 && price < tpPriceBound) {
                 return false;

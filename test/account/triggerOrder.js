@@ -113,8 +113,36 @@ describe("triggerOrder", () => {
 
     const position = await account.getPosition(gmxV1.target, collateral, index, isLong); // prettier-ignore
     const triggerOrderSize = position.size / 2n;
-    await account.connect(user).createTriggerOrder(gmxV1.target, collateral, index, isLong, triggerOrderSize, tpPrice, slPrice, tpPriceBound, slPriceBound, minExecutionFee, { value: minExecutionFee }); // prettier-ignore
-    await account.connect(user).createTriggerOrder(gmxV1.target, collateral, index, isLong, triggerOrderSize, tpPrice, slPrice, tpPriceBound, slPriceBound, minExecutionFee, { value: minExecutionFee }); // prettier-ignore
+    await account
+      .connect(user)
+      .createTriggerOrder(
+        gmxV1.target,
+        collateral,
+        index,
+        isLong,
+        triggerOrderSize,
+        tpPrice,
+        slPrice,
+        tpPriceBound,
+        slPriceBound,
+        minExecutionFee,
+        { value: minExecutionFee }
+      );
+    await account
+      .connect(user)
+      .createTriggerOrder(
+        gmxV1.target,
+        collateral,
+        index,
+        isLong,
+        triggerOrderSize,
+        tpPrice,
+        slPrice,
+        tpPriceBound,
+        slPriceBound,
+        minExecutionFee,
+        { value: minExecutionFee }
+      );
     const positionKey = await warehouse.getPositionKey(gmxV1.target, collateral, index, isLong); // prettier-ignore
     expect(await warehouse.getTriggerOrder(positionKey, 0)).to.eql((await warehouse.getTriggerOrders(positionKey))[0]); // prettier-ignore
     expect(await warehouse.getTriggerOrder(positionKey, 1)).to.eql((await warehouse.getTriggerOrders(positionKey))[1]); // prettier-ignore
@@ -231,8 +259,34 @@ describe("triggerOrder", () => {
 
     const position = await account.getPosition(mux.target, collateral, index, isLong); // prettier-ignore
     const triggerOrderSize = position.size / 2n;
-    await account.connect(user).createTriggerOrder(mux.target, collateral, index, isLong, triggerOrderSize, tpPrice, slPrice, tpPriceBound, slPriceBound, 0); // prettier-ignore
-    await account.connect(user).createTriggerOrder(mux.target, collateral, index, isLong, triggerOrderSize, tpPrice, slPrice, tpPriceBound, slPriceBound, 0); // prettier-ignore
+    await account
+      .connect(user)
+      .createTriggerOrder(
+        mux.target,
+        collateral,
+        index,
+        isLong,
+        triggerOrderSize,
+        tpPrice,
+        slPrice,
+        tpPriceBound,
+        slPriceBound,
+        0
+      );
+    await account
+      .connect(user)
+      .createTriggerOrder(
+        mux.target,
+        collateral,
+        index,
+        isLong,
+        triggerOrderSize,
+        tpPrice,
+        slPrice,
+        tpPriceBound,
+        slPriceBound,
+        0
+      );
     const positionKey = await warehouse.getPositionKey(mux.target, collateral, index, isLong); // prettier-ignore
     expect(await warehouse.getTriggerOrder(positionKey, 0)).to.eql((await warehouse.getTriggerOrders(positionKey))[0]); // prettier-ignore
     expect(await warehouse.getTriggerOrder(positionKey, 1)).to.eql((await warehouse.getTriggerOrders(positionKey))[1]); // prettier-ignore
