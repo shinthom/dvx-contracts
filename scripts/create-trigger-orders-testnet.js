@@ -145,8 +145,8 @@ async function main() {
   // multiple pending trigger orders.
 
   const triggerOrderType = { takeProfit: 0, stopLoss: 1 };
+  const size = ethers.parseEther("10");
   // gmx V1
-  var position = await account.getPosition(gmxV1.target, WETH, WETH, true);
   var triggerPrice = ethers.parseUnits("2000", 30);
   var acceptablePrice = ethers.parseUnits("1800", 30);
   await account
@@ -156,7 +156,7 @@ async function main() {
       WETH,
       WETH,
       true,
-      position.size,
+      size,
       triggerOrderType.takeProfit,
       triggerPrice,
       acceptablePrice,
@@ -174,7 +174,7 @@ async function main() {
       WETH,
       WETH,
       true,
-      position.size / 2n,
+      size / 2n,
       triggerOrderType.takeProfit,
       triggerPrice,
       acceptablePrice,
@@ -189,7 +189,7 @@ async function main() {
       WBTC,
       WETH,
       true,
-      position.size,
+      size,
       triggerOrderType.takeProfit,
       triggerPrice,
       acceptablePrice,
@@ -204,7 +204,7 @@ async function main() {
       USDC,
       WETH,
       true,
-      position.size / 3n,
+      size / 3n,
       triggerOrderType.takeProfit,
       triggerPrice,
       acceptablePrice,

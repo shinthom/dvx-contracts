@@ -8,6 +8,7 @@ import { IGMXOrderBook } from "../interfaces/exchanges/GMXV1/IGMXOrderBook.sol";
 import { IERC20 } from "../interfaces/tokens/IERC20.sol";
 import { IExchange } from "../interfaces/IExchange.sol";
 import { IAdapter } from "../interfaces/IAdapter.sol";
+import "hardhat/console.sol";
 
 contract GMXV1 is IAdapter {
     address constant private WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
@@ -367,11 +368,20 @@ contract GMXV1 is IAdapter {
         uint256 size,
         bool isLong
     ) override public payable {
+        Position memory position
+            = getPosition(address(this), collateral, index, isLong);
+        uint256 sizeUsd
+            = position.price * size / (10 ** IERC20(index).decimals());
+
+        if (position.collateralAmount > position.size - sizeUsd) {
+            sizeUsd = position.size;
+        }
+
         _decrease(
             collateral,
             index,
             0,
-            size,
+            sizeUsd,
             isLong
         );
     }

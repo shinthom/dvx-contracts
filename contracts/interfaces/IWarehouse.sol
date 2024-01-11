@@ -11,7 +11,7 @@ interface IWarehouse {
         address index;
         bool isLong;
         uint256 size;
-        IWarehouse.TriggerOrderType orderType;
+        TriggerOrderType orderType;
         uint256 triggerPrice;
         uint256 acceptablePrice;
         uint256 createdAt;
@@ -25,7 +25,6 @@ interface IWarehouse {
     }
     function getTriggerOrders(bytes32 key) external view returns (TriggerOrder[] memory);
     function getTriggerOrder(bytes32 key, uint256 id) external view returns (TriggerOrder memory);
-    function getTriggerOrderSize(bytes32 key) external view returns (uint256);
     function getPositionKey(
         address account,
         address adapter,

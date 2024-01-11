@@ -86,7 +86,6 @@ describe("gmxV1: marketOrder", () => {
       await printPosition(gmxV1.target, collateral, index, isLong);
     }
     {
-      const position = await account.getPosition(gmxV1.target, collateral, index, isLong); // prettier-ignore
       await account.connect(user).createMarketOrders(
         [gmxV1.target],
         [
@@ -95,7 +94,7 @@ describe("gmxV1: marketOrder", () => {
             path: [collateral],
             index: index,
             collateralAmount: 0,
-            size: position.size,
+            size: (size * 99n) / 100n,
             isLong: isLong,
           },
         ],
@@ -200,7 +199,6 @@ describe("gmxV1: marketOrder", () => {
       await printPosition(gmxV1.target, collateral, index, isLong);
     }
     {
-      const position = await account.getPosition(gmxV1.target, collateral, index, isLong); // prettier-ignore
       await account.connect(user).createMarketOrders(
         [gmxV1.target],
         [
@@ -209,7 +207,7 @@ describe("gmxV1: marketOrder", () => {
             path: [collateral],
             index: index,
             collateralAmount: 0,
-            size: position.size,
+            size: size,
             isLong: isLong,
           },
         ],

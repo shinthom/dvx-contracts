@@ -80,7 +80,6 @@ describe("mux: marketOrder", () => {
       await printPosition(mux.target, collateral, index, isLong);
     }
     {
-      const position = await account.getPosition(mux.target, collateral, index, isLong); // prettier-ignore
       await account.connect(user).createMarketOrders(
         [mux.target],
         [
@@ -89,7 +88,7 @@ describe("mux: marketOrder", () => {
             path: [collateral],
             index: index,
             collateralAmount: 0,
-            size: position.size,
+            size: size,
             isLong: isLong,
           },
         ]
@@ -184,7 +183,6 @@ describe("mux: marketOrder", () => {
       await printPosition(mux.target, collateral, index, isLong);
     }
     {
-      const position = await account.getPosition(mux.target, collateral, index, isLong); // prettier-ignore
       await account.connect(user).createMarketOrders(
         [mux.target],
         [
@@ -193,7 +191,7 @@ describe("mux: marketOrder", () => {
             path: [collateral],
             index: index,
             collateralAmount: 0,
-            size: position.size,
+            size: size,
             isLong: isLong,
           },
         ]

@@ -22,7 +22,6 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
     uint256 private _priceMinDeviation;
 
     mapping(bytes32 => IWarehouse.TriggerOrder[]) private _triggerOrders;
-    mapping(bytes32 => uint256) private _triggerOrderSize;
 
     modifier onlyOrderKeeper() {
         require(
@@ -39,8 +38,6 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
     function getTriggerOrders(bytes32 key) override public view returns (TriggerOrder[] memory) { return _triggerOrders[key]; }
 
     function getTriggerOrder(bytes32 key, uint256 id) override public view returns (TriggerOrder memory) { return _triggerOrders[key][id]; }
-
-    function getTriggerOrderSize(bytes32 key) override public view returns (uint256) { return _triggerOrderSize[key]; }
 
     function getPositionKey(
         address account,
@@ -105,12 +102,6 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         require(position.size > 0, "Warehouse: no position exist");
 
         bytes32 positionKey = getPositionKey(msg.sender, adapter, collateral, index, isLong);
-        uint256 triggerOrderSize = _triggerOrderSize[positionKey];
-        require(
-            triggerOrderSize + size <= position.size,
-            "Warehouse: triggerOrderSize is greater than position size"
-        );
-
         uint256 id = _triggerOrders[positionKey].length;
         _triggerOrders[positionKey].push(TriggerOrder({
             id: id,
@@ -127,11 +118,9 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
             createdAt: block.timestamp
         }));
         emit TriggerOrderCreated(msg.sender, positionKey, id);
-        _triggerOrderSize[positionKey] += size;
     }
 
     function cancelTriggerOrder(bytes32 positionKey, uint256 id) override external {
-        require(id < _triggerOrders[positionKey].length, "Warehouse: invalid id");
         TriggerOrder storage triggerOrder = _triggerOrders[positionKey][id];
         require(
             triggerOrder.account == msg.sender,
@@ -144,7 +133,6 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
 
         triggerOrder.state = TriggerOrderState.Canceled;
         emit TriggerOrderCanceled(msg.sender, positionKey, id);
-        _triggerOrderSize[positionKey] -= triggerOrder.size;
     }
 
     function executeTriggerOrder(
@@ -180,8 +168,6 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         triggerOrder.state = TriggerOrderState.Executed;
         emit TriggerOrderExecuted(account, positionKey, id);
 
-        _triggerOrderSize[positionKey] -= triggerOrder.size;
-
         _executeTriggerOrder(triggerOrder, minExecutionFee);
     }
 
@@ -192,20 +178,13 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         address[] memory path = new address[](1);
         path[0] = triggerOrder.collateral;
 
-        IAdapter.Position memory position
-            = IAdapter(triggerOrder.adapter).getPosition(
-                triggerOrder.account,
-                triggerOrder.collateral,
-                triggerOrder.index,
-                triggerOrder.isLong
-            );
         IExchange.PositionOrder memory positionOrder
             = IExchange.PositionOrder({
                 orderType: IExchange.OrderType.DecreasePosition,
                 path: path,
                 index: triggerOrder.index,
                 collateralAmount: 0,
-                size: position.size,
+                size: triggerOrder.size,
                 isLong: triggerOrder.isLong
             });
 
