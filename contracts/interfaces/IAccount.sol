@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import { IAdapter } from "./IAdapter.sol";
+import { IWarehouse } from "./IWarehouse.sol";
 import { IExchange } from "./IExchange.sol";
 
 interface IAccount {
@@ -37,31 +38,30 @@ interface IAccount {
     function withdraw(address token, uint256 amount) external;
     function swap(address tokenIn, address tokenOut, uint256 amount) external returns (uint256 amountOut);
     function createMarketOrders(address[] calldata adapters, IExchange.PositionOrder[] calldata orders) payable external;
-    function createLimitOrder(
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 size,
-        bool isLong,
-        uint256 price
-    ) external;
-    function cancelLimitOrder(uint256 orderIndex) external;
-    function executeLimitOrder(
-        address[] memory adapters,
-        IExchange.PositionOrder[] calldata orders
-    ) payable external;
+    // function createLimitOrder(
+    //     address collateral,
+    //     address index,
+    //     uint256 collateralAmount,
+    //     uint256 size,
+    //     bool isLong,
+    //     uint256 price
+    // ) external;
+    // function cancelLimitOrder(uint256 orderIndex) external;
+    // function executeLimitOrder(
+    //     address[] memory adapters,
+    //     IExchange.PositionOrder[] calldata orders
+    // ) payable external;
     function createTriggerOrder(
         address adapter,
         address collateral,
         address index,
         bool isLong,
         uint256 size,
-        uint256 tpPrice,
-        uint256 slPrice,
-        uint256 tpPriceBound,
-        uint256 slPriceBound,
+        IWarehouse.TriggerOrderType orderType,
+        uint256 triggerPrice,
+        uint256 acceptablePrice,
         uint256 executionFee
     ) external payable;
     function cancelTriggerOrder(bytes32 positionKey, uint256 id) external;
-    function executeTriggerOrder(address adapter, IExchange.PositionOrder calldata order) payable external;
+    function executeTriggerOrder(address adapter, IExchange.PositionOrder calldata order) external payable;
 }

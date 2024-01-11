@@ -144,22 +144,73 @@ async function main() {
 
   // multiple pending trigger orders.
 
+  const triggerOrderType = { takeProfit: 0, stopLoss: 1 };
   // gmx V1
-  var tpPrice = ethers.parseUnits("2000", 30) + 1n;
-  var slPrice = ethers.parseUnits("2000", 30) - 1n;
-  var tpPriceBound = tpPrice - 1n;
-  var slPriceBound = slPrice - 1n;
-  await account.connect(user).createTriggerOrder(gmxV1.target, WETH, WETH, true, ethers.parseEther("10"), tpPrice, tpPriceBound, slPrice, slPriceBound, minExecutionFee, { value: minExecutionFee }); // prettier-ignore
-  await account.connect(user).createTriggerOrder(gmxV1.target, WETH, WETH, true, ethers.parseEther("10"), tpPrice, tpPriceBound, 0, 0, minExecutionFee, { value: minExecutionFee }); // prettier-ignore
-  await account.connect(user).createTriggerOrder(gmxV1.target, WETH, WETH, true, ethers.parseEther("10"), 0, 0, slPrice, slPriceBound, minExecutionFee, { value: minExecutionFee }); // prettier-ignore
-  // // mux
-  var tpPrice = ethers.parseUnits("2000", 18) + 1n;
-  var slPrice = ethers.parseUnits("2000", 18) - 1n;
-  var tpPriceBound = tpPrice - 1n;
-  var slPriceBound = slPrice - 1n;
-  await account.connect(user).createTriggerOrder(mux.target, WETH, WETH, true, ethers.parseEther("10"), tpPrice, tpPriceBound, slPrice, slPriceBound, minExecutionFee, { value: minExecutionFee }); // prettier-ignore
-  await account.connect(user).createTriggerOrder(mux.target, WBTC, WETH, true, ethers.parseEther("10"), tpPrice, tpPriceBound, 0, 0, minExecutionFee, { value: minExecutionFee }); // prettier-ignore
-  await account.connect(user).createTriggerOrder(mux.target, USDC, WETH, true, ethers.parseEther("10"), 0, 0, slPrice, slPriceBound, minExecutionFee, { value: minExecutionFee }); // prettier-ignore
+  var position = await account.getPosition(gmxV1.target, WETH, WETH, true);
+  var triggerPrice = ethers.parseUnits("2000", 30);
+  var acceptablePrice = ethers.parseUnits("1800", 30);
+  await account
+    .connect(user)
+    .createTriggerOrder(
+      gmxV1.target,
+      WETH,
+      WETH,
+      true,
+      position.size,
+      triggerOrderType.takeProfit,
+      triggerPrice,
+      acceptablePrice,
+      minExecutionFee,
+      { value: minExecutionFee }
+    );
+  // mux
+  var triggerPrice = ethers.parseUnits("2000", 18);
+  var acceptablePrice = ethers.parseUnits("1800", 18);
+  var position = await account.getPosition(mux.target, WETH, WETH, true);
+  await account
+    .connect(user)
+    .createTriggerOrder(
+      mux.target,
+      WETH,
+      WETH,
+      true,
+      position.size / 2n,
+      triggerOrderType.takeProfit,
+      triggerPrice,
+      acceptablePrice,
+      0,
+      { value: 0 }
+    );
+  var position = await account.getPosition(mux.target, WBTC, WETH, true);
+  await account
+    .connect(user)
+    .createTriggerOrder(
+      mux.target,
+      WBTC,
+      WETH,
+      true,
+      position.size,
+      triggerOrderType.takeProfit,
+      triggerPrice,
+      acceptablePrice,
+      0,
+      { value: 0 }
+    );
+  var position = await account.getPosition(mux.target, USDC, WETH, true);
+  await account
+    .connect(user)
+    .createTriggerOrder(
+      mux.target,
+      USDC,
+      WETH,
+      true,
+      position.size / 3n,
+      triggerOrderType.takeProfit,
+      triggerPrice,
+      acceptablePrice,
+      0,
+      { value: 0 }
+    );
 
   const positions = await reader.getPositions(
     account.target,

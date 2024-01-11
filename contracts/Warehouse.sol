@@ -5,25 +5,51 @@ import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/O
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { IAdapter } from "./interfaces/IAdapter.sol";
 import { IAccount } from "./interfaces/IAccount.sol";
-import { IQuoter } from "./interfaces/IQuoter.sol";
 import { IExchange } from "./interfaces/IExchange.sol";
 import { IWarehouse } from "./interfaces/IWarehouse.sol";
 import "hardhat/console.sol";
 
 contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
+    event OrderKeeperSet(address indexed keeper, bool status);
+    event PriceMinDeviationSet(uint256 deviation);
+    event TriggerOrderCreated(address indexed account, bytes32 indexed positionKey, uint256 indexed id);
+    event TriggerOrderCanceled(address indexed account, bytes32 indexed positionKey, uint256 indexed id);
+    event TriggerOrderExecuted(address indexed account, bytes32 indexed positionKey, uint256 indexed id);
+
     mapping(address => bool) private _orderKeepers;
 
-    mapping(address => uint256) private _limitOrderIndex;
-    mapping(address => mapping(uint256 => IExchange.LimitOrder)) private _limitOrders;
-    mapping(bytes32 => IExchange.TriggerOrder[]) private _triggerOrders;
+    uint256 public constant BASIS_POINTS_DIVISOR = 10000;
+    uint256 private _priceMinDeviation;
+
+    mapping(bytes32 => IWarehouse.TriggerOrder[]) private _triggerOrders;
     mapping(bytes32 => uint256) private _triggerOrderSize;
 
     modifier onlyOrderKeeper() {
         require(
           _orderKeepers[_msgSender()],
-          "Warehouse: NOT_ORDER_KEEPER"
+          "Warehouse: not order keeper"
         );
         _;
+    }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+    function priceMinDeviation() public view returns (uint256) { return _priceMinDeviation; }
+
+    function getTriggerOrders(bytes32 key) override public view returns (TriggerOrder[] memory) { return _triggerOrders[key]; }
+
+    function getTriggerOrder(bytes32 key, uint256 id) override public view returns (TriggerOrder memory) { return _triggerOrders[key][id]; }
+
+    function getTriggerOrderSize(bytes32 key) override public view returns (uint256) { return _triggerOrderSize[key]; }
+
+    function getPositionKey(
+        address account,
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong
+    ) override public pure returns (bytes32) {
+        return keccak256(abi.encodePacked(account, adapter, collateral, index, isLong));
     }
 
     function initialize() public initializer {
@@ -31,181 +57,18 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         __UUPSUpgradeable_init();
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+    function setPriceMinDeviation(uint256 deviation) external onlyOwner {
+        require(
+            deviation <= BASIS_POINTS_DIVISOR,
+            "Warehouse: invalid price min deviation"
+        );
+        _priceMinDeviation = deviation;
+        emit PriceMinDeviationSet(deviation);
+    }
 
-    function setOrderKeeper(address keeper, bool status) override external onlyOwner {
+    function setOrderKeeper(address keeper, bool status) external onlyOwner {
         _orderKeepers[keeper] = status;
         emit OrderKeeperSet(keeper, status);
-    }
-
-    function isOrderKeeper(address keeper) override public view returns (bool) { return _orderKeepers[keeper]; }
-
-    function getLimitOrderIndex(address account) override public view returns (uint256) { return _limitOrderIndex[account]; }
-
-    function getLimitOrder(address account, uint256 orderIndex) override public view returns (IExchange.LimitOrder memory) {
-        return _limitOrders[account][orderIndex];
-    }
-
-    function getLimitOrders(address account) override public view returns (IExchange.LimitOrder[] memory) {
-        uint256 orderIndex = _limitOrderIndex[account];
-        IExchange.LimitOrder[] memory limitOrders = new IExchange.LimitOrder[](orderIndex);
-        for (uint256 i = 0; i < orderIndex; i++) {
-            limitOrders[i] = _limitOrders[account][i];
-        }
-        return limitOrders;
-    }
-
-    function createLimitOrder(
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 size,
-        bool isLong,
-        uint256 price
-    ) override public {
-        uint256 orderIndex = _limitOrderIndex[msg.sender];
-        _limitOrderIndex[msg.sender] = orderIndex + 1;
-        _limitOrders[msg.sender][orderIndex] = IExchange.LimitOrder({
-            collateral: collateral,
-            index: index,
-            collateralAmount: collateralAmount,
-            size: size,
-            isLong: isLong,
-            price: price,
-            createdAt: block.timestamp
-        });
-        // emit LimitOrderCreated(msg.sender, orderIndex);
-    }
-
-    function cancelLimitOrder(uint256 orderIndex) override external {
-        IExchange.LimitOrder storage limitOrder = _limitOrders[msg.sender][orderIndex];
-        require(
-            limitOrder.index != address(0),
-            "Warehouse: non-existent limit order"
-        );
-        delete _limitOrders[msg.sender][orderIndex];
-        emit LimitOrderCanceled(msg.sender, orderIndex);
-    }
-
-    function executeLimitOrder(
-        address account,
-        uint256 orderIndex,
-        IQuoter.Answer[] memory answers
-    ) override external payable onlyOrderKeeper {
-        IExchange.LimitOrder storage limitOrder = _limitOrders[account][orderIndex];
-        require(
-            limitOrder.index != address(0),
-            "Warehouse: non-existent limit order"
-        );
-        delete _limitOrders[account][orderIndex];
-        emit LimitOrderExecuted(account, orderIndex);
-
-        address[] memory adapters = new address[](answers.length);
-        IExchange.PositionOrder[] memory positionOrders = new IExchange.PositionOrder[](answers.length);
-        for (uint256 i = 0; i < answers.length; i++) {
-            adapters[i] = answers[i].adapter;
-            positionOrders[i] = answers[i].positionOrder;
-        }
-        IAccount(account).executeLimitOrder{value: msg.value}(adapters, positionOrders);
-    }
-
-    function getPositionKey(
-        address adapter,
-        address collateral,
-        address index,
-        bool isLong
-    ) override public pure returns (bytes32) {
-        return keccak256(abi.encodePacked(adapter, collateral, index, isLong));
-    }
-
-    function getTriggerOrders(bytes32 positionKey) override public view returns (IExchange.TriggerOrder[] memory) {
-        return _triggerOrders[positionKey];
-    }
-
-    function getTriggerOrder(bytes32 positionKey, uint256 id) override public view returns (IExchange.TriggerOrder memory) {
-        return _triggerOrders[positionKey][id];
-    }
-
-    function getTriggerOrderLength(bytes32 positionKey) override public view returns (uint256) {
-        return _triggerOrders[positionKey].length;
-    }
-
-    function getTriggerOrderSize(bytes32 positionKey) override public view returns (uint256) {
-        return _triggerOrderSize[positionKey];
-    }
-
-    function validateTpSlPriceBound(
-        bool isLong,
-        uint256 tpPrice,
-        uint256 tpPriceBound,
-        uint256 slPrice,
-        uint256 slPriceBound
-    ) public pure returns (bool) {
-        if (tpPrice == 0 && slPrice == 0) return false;
-        if (tpPrice != 0 && slPrice != 0) {
-            if (isLong) {
-                if (tpPrice < slPrice) {
-                    return false;
-                }
-            } else {
-                if (tpPrice > slPrice) {
-                    return false;
-                }
-            }
-        }
-
-        if (tpPrice > 0) {
-            if (tpPriceBound == 0) return false;
-            if (isLong) {
-                if (tpPrice < tpPriceBound) {
-                    return false;
-                }
-            } else {
-                if (tpPrice > tpPriceBound) {
-                    return false;
-                }
-            }
-        }
-
-        if (slPrice > 0) {
-            if (slPriceBound == 0) return false;
-            if (isLong) {
-                if (slPrice < slPriceBound) {
-                    return false;
-                }
-            } else {
-                if (slPrice > slPriceBound) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    function validateTpSlPrice(
-        address adapter,
-        address index,
-        bool isLong,
-        uint256 tpPriceBound,
-        uint256 slPriceBound
-    ) public view returns (bool) {
-        uint256 price = IAdapter(adapter).getPrice(index, isLong);
-        if (isLong) {
-            if (tpPriceBound != 0 && price < tpPriceBound) {
-                return false;
-            }
-            if (slPriceBound != 0 && price < slPriceBound) {
-                return false;
-            }
-        } else {
-            if (tpPriceBound != 0 && price > tpPriceBound) {
-                return false;
-            }
-            if (slPriceBound != 0 && price > slPriceBound) {
-                return false;
-            }
-        }
-        return true;
     }
 
     function createTriggerOrder(
@@ -214,15 +77,24 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         address index,
         bool isLong,
         uint256 size,
-        uint256 tpPrice,
-        uint256 tpPriceBound,
-        uint256 slPrice,
-        uint256 slPriceBound
-    ) override public payable {
+        IWarehouse.TriggerOrderType orderType,
+        uint256 triggerPrice,
+        uint256 acceptablePrice
+    ) override external payable {
         require(
-            validateTpSlPriceBound(isLong, tpPrice, tpPriceBound, slPrice, slPriceBound),
-            "Warehouse: INVALID_TP_SL_PRICE_BOUND"
+            isLong && triggerPrice >= acceptablePrice ||
+            !isLong && triggerPrice <= acceptablePrice,
+            "Warehouse: invalid acceptable price"
         );
+
+        if (_priceMinDeviation > 0) {
+            uint256 minDeviation = triggerPrice * _priceMinDeviation / BASIS_POINTS_DIVISOR;
+            require(
+                isLong && triggerPrice - acceptablePrice >= minDeviation ||
+                !isLong && acceptablePrice - triggerPrice >= minDeviation,
+                "Warehouse: acceptable price less than min deviation"
+            );
+        }
 
         IAdapter.Position memory position = IAdapter(adapter).getPosition(
             msg.sender,
@@ -230,29 +102,28 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
             index,
             isLong
         );
-        require(position.size > 0, "Warehouse: NO_POSITION");
+        require(position.size > 0, "Warehouse: no position exist");
 
-        bytes32 positionKey = getPositionKey(adapter, collateral, index, isLong);
+        bytes32 positionKey = getPositionKey(msg.sender, adapter, collateral, index, isLong);
         uint256 triggerOrderSize = _triggerOrderSize[positionKey];
         require(
             triggerOrderSize + size <= position.size,
-            "Warehouse: EXCEED_SIZE"
+            "Warehouse: triggerOrderSize is greater than position size"
         );
 
         uint256 id = _triggerOrders[positionKey].length;
-        _triggerOrders[positionKey].push(IExchange.TriggerOrder({
+        _triggerOrders[positionKey].push(TriggerOrder({
             id: id,
-            state: IExchange.TriggerOrderState.Pending,
+            state: IWarehouse.TriggerOrderState.Pending,
             account: msg.sender,
             adapter: adapter,
             collateral: collateral,
             index: index,
             isLong: isLong,
             size: size,
-            tpPrice: tpPrice,
-            tpPriceBound: tpPriceBound,
-            slPrice: slPrice,
-            slPriceBound: slPriceBound,
+            orderType: orderType,
+            triggerPrice: triggerPrice,
+            acceptablePrice: acceptablePrice,
             createdAt: block.timestamp
         }));
         emit TriggerOrderCreated(msg.sender, positionKey, id);
@@ -260,21 +131,18 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function cancelTriggerOrder(bytes32 positionKey, uint256 id) override external {
-        IExchange.TriggerOrder storage triggerOrder = _triggerOrders[positionKey][id];
+        require(id < _triggerOrders[positionKey].length, "Warehouse: invalid id");
+        TriggerOrder storage triggerOrder = _triggerOrders[positionKey][id];
         require(
             triggerOrder.account == msg.sender,
-            "Warehouse: NOT_OWNER"
+            "Warehouse: not trigger order owner"
         );
         require(
-            triggerOrder.size > 0,
-            "Warehouse: NO_TRIGGER_ORDER"
-        );
-        require(
-            triggerOrder.state == IExchange.TriggerOrderState.Pending,
-            "Warehouse: NOT_PENDING"
+            triggerOrder.state == TriggerOrderState.Pending,
+            "Warehouse: not pending state"
         );
 
-        triggerOrder.state = IExchange.TriggerOrderState.Canceled;
+        triggerOrder.state = TriggerOrderState.Canceled;
         emit TriggerOrderCanceled(msg.sender, positionKey, id);
         _triggerOrderSize[positionKey] -= triggerOrder.size;
     }
@@ -284,43 +152,53 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         bytes32 positionKey,
         uint256 id
     ) override external payable onlyOrderKeeper {
+        TriggerOrder memory triggerOrder = _triggerOrders[positionKey][id];
         require(
-            _triggerOrders[positionKey].length > id,
-            "Warehouse: ORDER_NOT_EXIST"
+            triggerOrder.state == TriggerOrderState.Pending,
+            "Warehouse: not pending state"
+        );
+        require(
+            account == triggerOrder.account,
+            "Warehouse: not trigger order owner"
         );
 
-        IExchange.TriggerOrder memory triggerOrder = _triggerOrders[positionKey][id];
-        require(
-            triggerOrder.state == IExchange.TriggerOrderState.Pending,
-            "Warehouse: ORDER_NOT_PENDING"
-        );
-
-        uint256 minExecutionFee = IAdapter(triggerOrder.adapter).getMinExecutionFee();
+        IAdapter adapter = IAdapter(triggerOrder.adapter);
+        uint256 minExecutionFee = adapter.getMinExecutionFee();
         require(
             address(this).balance >= minExecutionFee,
-            "Warehouse: INSUFFICIENT_FEE"
+            "Warehouse: insufficient fee"
         );
 
+        uint256 markPrice
+            = adapter.getPrice(triggerOrder.index, triggerOrder.isLong);
         require(
-            validateTpSlPrice(
-                triggerOrder.adapter,
-                triggerOrder.index,
-                triggerOrder.isLong,
-                triggerOrder.tpPriceBound,
-                triggerOrder.slPriceBound
-            ),
-            "Warehouse: INVALID_TP_SL_PRICE"
+            triggerOrder.isLong && markPrice >= triggerOrder.acceptablePrice ||
+            !triggerOrder.isLong && markPrice <= triggerOrder.acceptablePrice,
+            "Warehouse: current price is not acceptable"
         );
 
-        triggerOrder.state = IExchange.TriggerOrderState.Executed;
+        triggerOrder.state = TriggerOrderState.Executed;
         emit TriggerOrderExecuted(account, positionKey, id);
+
         _triggerOrderSize[positionKey] -= triggerOrder.size;
 
+        _executeTriggerOrder(triggerOrder, minExecutionFee);
+    }
+
+    function _executeTriggerOrder(
+        TriggerOrder memory triggerOrder,
+        uint256 minExecutionFee
+    ) private {
         address[] memory path = new address[](1);
         path[0] = triggerOrder.collateral;
 
         IAdapter.Position memory position
-            = IAdapter(triggerOrder.adapter).getPosition(account, triggerOrder.collateral, triggerOrder.index, triggerOrder.isLong);
+            = IAdapter(triggerOrder.adapter).getPosition(
+                triggerOrder.account,
+                triggerOrder.collateral,
+                triggerOrder.index,
+                triggerOrder.isLong
+            );
         IExchange.PositionOrder memory positionOrder
             = IExchange.PositionOrder({
                 orderType: IExchange.OrderType.DecreasePosition,
@@ -331,10 +209,11 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
                 isLong: triggerOrder.isLong
             });
 
-        IAccount(account).executeTriggerOrder{value: minExecutionFee}(triggerOrder.adapter, positionOrder);
+        IAccount(triggerOrder.account).executeTriggerOrder
+            {value: minExecutionFee}(triggerOrder.adapter, positionOrder);
     }
 
-    function withdraw(address keeper) external onlyOwner {
-        payable(keeper).transfer(address(this).balance);
+    function withdraw(address account, uint256 amount) external onlyOwner {
+        payable(account).transfer(amount);
     }
 }

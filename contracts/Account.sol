@@ -207,76 +207,76 @@ contract Account is IAccount {
         return balance - lockedBalance >= collateralAmount;
     }
 
-    function createLimitOrder(
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 size,
-        bool isLong,
-        uint256 price
-    ) override public onlyOwner {
-        require(
-            _validateCollateralAmount(collateral, collateralAmount),
-            "invalid collateral amount"
-        );
-        if (collateral == WETH) {
-            _lockedBalances[ETH] += collateralAmount;
-        } else {
-            _lockedBalances[collateral] += collateralAmount;
-        }
+    // function createLimitOrder(
+    //     address collateral,
+    //     address index,
+    //     uint256 collateralAmount,
+    //     uint256 size,
+    //     bool isLong,
+    //     uint256 price
+    // ) override public onlyOwner {
+    //     require(
+    //         _validateCollateralAmount(collateral, collateralAmount),
+    //         "invalid collateral amount"
+    //     );
+    //     if (collateral == WETH) {
+    //         _lockedBalances[ETH] += collateralAmount;
+    //     } else {
+    //         _lockedBalances[collateral] += collateralAmount;
+    //     }
 
-        address warehouse = IExchange(_exchange).warehouse();
-        IWarehouse(warehouse).createLimitOrder(
-            collateral,
-            index,
-            collateralAmount,
-            size,
-            isLong,
-            price
-        );
-    }
+    //     address warehouse = IExchange(_exchange).warehouse();
+    //     IWarehouse(warehouse).createLimitOrder(
+    //         collateral,
+    //         index,
+    //         collateralAmount,
+    //         size,
+    //         isLong,
+    //         price
+    //     );
+    // }
 
-    function cancelLimitOrder(uint256 orderIndex) override public onlyOwner {
-        address warehouse = IExchange(_exchange).warehouse();
-        IExchange.LimitOrder memory limitOrder = IWarehouse(warehouse).getLimitOrder(address(this), orderIndex);
-        require(limitOrder.size > 0, "Warehouse: non-existent limit order");
+    // function cancelLimitOrder(uint256 orderIndex) override public onlyOwner {
+    //     address warehouse = IExchange(_exchange).warehouse();
+    //     IExchange.LimitOrder memory limitOrder = IWarehouse(warehouse).getLimitOrder(address(this), orderIndex);
+    //     require(limitOrder.size > 0, "Warehouse: non-existent limit order");
 
-        if (limitOrder.collateral == WETH) {
-            _lockedBalances[ETH] -= limitOrder.collateralAmount;
-        } else {
-            _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
-        }
+    //     if (limitOrder.collateral == WETH) {
+    //         _lockedBalances[ETH] -= limitOrder.collateralAmount;
+    //     } else {
+    //         _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
+    //     }
 
-        IWarehouse(warehouse).cancelLimitOrder(orderIndex);
-    }
+    //     IWarehouse(warehouse).cancelLimitOrder(orderIndex);
+    // }
 
-    function executeLimitOrder(
-        address[] calldata adapters,
-        IExchange.PositionOrder[] calldata orders
-    ) override public payable {
-        address warehouse = IExchange(_exchange).warehouse();
-        require(msg.sender == warehouse, "NOT_WAREHOUSE");
+    // function executeLimitOrder(
+    //     address[] calldata adapters,
+    //     IExchange.PositionOrder[] calldata orders
+    // ) override public payable {
+    //     address warehouse = IExchange(_exchange).warehouse();
+    //     require(msg.sender == warehouse, "NOT_WAREHOUSE");
 
-        uint256 collateralAmount;
-        for (uint256 i = 0; i < orders.length; i++) {
-            collateralAmount += orders[i].collateralAmount;
-        }
+    //     uint256 collateralAmount;
+    //     for (uint256 i = 0; i < orders.length; i++) {
+    //         collateralAmount += orders[i].collateralAmount;
+    //     }
 
-        address collateral = orders[0].path[orders[0].path.length - 1];
-        if (collateral == WETH) {
-            _lockedBalances[ETH] -= collateralAmount;
-        } else {
-            _lockedBalances[collateral] -= collateralAmount;
-        }
+    //     address collateral = orders[0].path[orders[0].path.length - 1];
+    //     if (collateral == WETH) {
+    //         _lockedBalances[ETH] -= collateralAmount;
+    //     } else {
+    //         _lockedBalances[collateral] -= collateralAmount;
+    //     }
 
-        for (uint256 i = 0; i < adapters.length; i++) {
-            (bool success, bytes memory data) = _createMarketOrder(
-                adapters[i],
-                orders[i]
-            );
-            require(success, string(data));
-        }
-    }
+    //     for (uint256 i = 0; i < adapters.length; i++) {
+    //         (bool success, bytes memory data) = _createMarketOrder(
+    //             adapters[i],
+    //             orders[i]
+    //         );
+    //         require(success, string(data));
+    //     }
+    // }
 
     function createTriggerOrder(
         address adapter,
@@ -284,12 +284,13 @@ contract Account is IAccount {
         address index,
         bool isLong,
         uint256 size,
-        uint256 tpPrice,
-        uint256 slPrice,
-        uint256 tpPriceBound,
-        uint256 slPriceBound,
+        IWarehouse.TriggerOrderType orderType,
+        uint256 triggerPrice,
+        uint256 acceptablePrice,
         uint256 executionFee
     ) override public payable onlyOwner {
+        require(size > 0, "Account: ZERO_SIZE");
+
         require(msg.value == executionFee, "Account: FEE_MISMATCH");
         require(
             executionFee >= IAdapter(adapter).getMinExecutionFee(),
@@ -303,10 +304,9 @@ contract Account is IAccount {
             index,
             isLong,
             size,
-            tpPrice,
-            slPrice,
-            tpPriceBound,
-            slPriceBound
+            orderType,
+            triggerPrice,
+            acceptablePrice
         );
     }
 
