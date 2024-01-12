@@ -13,6 +13,7 @@ describe("getPrice", () => {
     const expectedPrice = ethers.parseUnits("2000", 30);
     expect(await gmxV1.getPrice(WETH, true)).to.be.equal(expectedPrice);
     expect(await gmxV1.getPrice(WETH, false)).to.be.equal(expectedPrice);
+    console.log("gmxV1 -> price:", expectedPrice);
   });
 
   it("mux", async () => {
@@ -24,5 +25,6 @@ describe("getPrice", () => {
     const expectedPrice = ethers.parseUnits("2000", 18);
     expect(await mux.getPrice(WETH, true)).to.be.equal(expectedPrice);
     expect(await mux.getPrice(WETH, false)).to.be.equal(expectedPrice);
+    console.log("mux -> price:", expectedPrice);
   });
 });

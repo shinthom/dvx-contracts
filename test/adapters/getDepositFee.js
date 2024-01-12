@@ -71,5 +71,6 @@ describe("getDepositFee", () => {
         isLong: positionOrder.isLong,
       })
     ).to.be.equal(expectedDepositFee);
+    console.log("depositFee:", expectedDepositFee);
   });
 });

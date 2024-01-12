@@ -4,17 +4,17 @@ const { deploy } = require("../fixture/setup");
 describe("getAvailableLiquidity", () => {
   it("gmx v1", async () => {
     const { gmxV1, WETH, WBTC } = await loadFixture(deploy);
-    console.log(await gmxV1.getAvailableLiquidity(WETH, true));
-    console.log(await gmxV1.getAvailableLiquidity(WETH, false));
-    console.log(await gmxV1.getAvailableLiquidity(WBTC, true));
-    console.log(await gmxV1.getAvailableLiquidity(WBTC, false));
+    console.log("gmxV1 -> ETH, long:", await gmxV1.getAvailableLiquidity(WETH, true)); // prettier-ignore
+    console.log("gmxV1 -> ETH, short:", await gmxV1.getAvailableLiquidity(WETH, false)); // prettier-ignore
+    console.log("gmxV1 -> BTC, short:", await gmxV1.getAvailableLiquidity(WBTC, true)); // prettier-ignore
+    console.log("gmxV1 -> BTC, short:", await gmxV1.getAvailableLiquidity(WBTC, false)); // prettier-ignore
   });
 
   it("mux", async () => {
     const { mux, WETH, WBTC } = await loadFixture(deploy);
-    console.log(await mux.getAvailableLiquidity(WETH, true));
-    console.log(await mux.getAvailableLiquidity(WETH, false));
-    console.log(await mux.getAvailableLiquidity(WBTC, true));
-    console.log(await mux.getAvailableLiquidity(WBTC, false));
+    console.log("mux -> ETH, long:", await mux.getAvailableLiquidity(WETH, true)); // prettier-ignore
+    console.log("mux -> ETH, short:", await mux.getAvailableLiquidity(WETH, false)); // prettier-ignore
+    console.log("mux -> BTC, long:", await mux.getAvailableLiquidity(WBTC, true)); // prettier-ignore
+    console.log("mux -> BTC, short:", await mux.getAvailableLiquidity(WBTC, false)); // prettier-ignore
   });
 });

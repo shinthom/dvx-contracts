@@ -44,6 +44,7 @@ describe("getFundingFee", () => {
     const expectedFundingFee = (position.size * fundingRate) / 1000000n;
     var fundingFee = await gmxV1.getFundingFee(collateral, index, position.size, position.fundingRate, isLong); // prettier-ignore
     expect(fundingFee).to.be.equal(expectedFundingFee);
+    console.log("gmxV1 -> fundingFee:", expectedFundingFee);
   });
 
   it("mux, long", async () => {
@@ -87,6 +88,7 @@ describe("getFundingFee", () => {
     const expectedFundingFee = (cumulativeFundingRate * position.size) / 10n ** 18n; // prettier-ignore
     var fundingFee = await mux.getFundingFee(collateral, index, size, position.fundingRate, isLong); // prettier-ignore
     expect(fundingFee).to.be.equal(expectedFundingFee);
+    console.log("mux -> long, fundingFee:", expectedFundingFee);
   });
 
   it("mux, short", async () => {
@@ -129,5 +131,6 @@ describe("getFundingFee", () => {
     const expectedFundingFee = (cumulativeFundingRate * position.size) / 10n ** 18n; // prettier-ignore
     var fundingFee = await mux.getFundingFee(collateral, index, size, position.fundingRate, isLong); // prettier-ignore
     expect(fundingFee).to.be.equal(expectedFundingFee);
+    console.log("mux -> short, fundingFee:", expectedFundingFee);
   });
 });

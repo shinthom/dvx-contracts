@@ -4,11 +4,9 @@ pragma solidity ^0.8.0;
 import { IPositionRouter } from "../interfaces/exchanges/GMXV1/IPositionRouter.sol";
 import { IRouter } from "../interfaces/exchanges/GMXV1/IRouter.sol";
 import { IVault } from "../interfaces/exchanges/GMXV1/IVault.sol";
-import { IGMXOrderBook } from "../interfaces/exchanges/GMXV1/IGMXOrderBook.sol";
 import { IERC20 } from "../interfaces/tokens/IERC20.sol";
 import { IExchange } from "../interfaces/IExchange.sol";
 import { IAdapter } from "../interfaces/IAdapter.sol";
-import "hardhat/console.sol";
 
 contract GMXV1 is IAdapter {
     address constant private WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
