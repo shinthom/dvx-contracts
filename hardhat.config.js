@@ -13,7 +13,7 @@ task("unset-automine", "Unset automine").setAction(async (_args, hre) => {
   });
 });
 
-// hardhat execute-order:increase --account 0x6053cA02DCd3D71B0987b4DC2a39b3dDA04647C7 --network local
+// hardhat execute-order:increase --network local --account 0x015A5D4Fa70b60e5F40A1975db22FfbEDf9C729B
 task("execute-order:increase", "Execute GMX V1 increase order")
   .addParam("account", "Account address")
   .setAction(async ({ account }, { ethers }) => {
@@ -40,7 +40,7 @@ task("execute-order:increase", "Execute GMX V1 increase order")
       .executeIncreasePosition(requestKey, user.address);
   });
 
-// hardhat execute-order:decrease --account 0x988aa44e12c7bce07e449a4156b4a269d6642b3a --network local
+// hardhat execute-order:decrease --network local --account 0x015A5D4Fa70b60e5F40A1975db22FfbEDf9C729B
 task("execute-order:decrease", "Execute GMX V1 decrease order")
   .addParam("account", "Account address")
   .setAction(async ({ account }, { ethers }) => {
@@ -67,45 +67,41 @@ task("execute-order:decrease", "Execute GMX V1 decrease order")
       .executeDecreasePosition(requestKey, user.address);
   });
 
-// hardhat fill-order:increase --network local
-task("fill-order:increase", "Execute MUX order").setAction(
-  async (_, { ethers }) => {
-    const OrderBook = "0xa19fD5aB6C8DCffa2A295F78a5Bb4aC543AAF5e3";
-    const orderBook = await ethers.getContractAt("IOrderBook", OrderBook);
-    const orderId = (await orderBook.nextOrderId()) - 1n;
+// hardhat fill-order --network local
+task("fill-order", "Execute MUX order").setAction(async (_, { ethers }) => {
+  const OrderBook = "0xa19fD5aB6C8DCffa2A295F78a5Bb4aC543AAF5e3";
+  const orderBook = await ethers.getContractAt("IOrderBook", OrderBook);
+  const orderId = (await orderBook.nextOrderId()) - 1n;
 
-    const impersonatedBroker = await ethers.getImpersonatedSigner(
-      "0x988aa44e12c7bce07e449a4156b4a269d6642b3a" // mux broker
-    );
-    await orderBook.connect(impersonatedBroker).fillPositionOrder(
-      orderId,
-      1, // collateralPrice
-      1, // assetPrice
-      1 // profitAssetPrice
-    );
-  }
-);
+  const impersonatedBroker = await ethers.getImpersonatedSigner(
+    "0x988aa44e12c7bce07e449a4156b4a269d6642b3a" // mux broker
+  );
+  await orderBook.connect(impersonatedBroker).fillPositionOrder(
+    orderId,
+    1, // collateralPrice
+    1, // assetPrice
+    1 // profitAssetPrice
+  );
+});
 
-// hardhat fill-order:decrease --network local
-task("fill-order:decrease", "Execute MUX order").setAction(
-  async (_, { ethers }) => {
-    const OrderBook = "0xa19fD5aB6C8DCffa2A295F78a5Bb4aC543AAF5e3";
-    const orderBook = await ethers.getContractAt("IOrderBook", OrderBook);
-    const orderId = (await orderBook.nextOrderId()) - 1n;
+// hardhat withdraw-order --network local
+task("withdraw-order", "Execute MUX order").setAction(async (_, { ethers }) => {
+  const OrderBook = "0xa19fD5aB6C8DCffa2A295F78a5Bb4aC543AAF5e3";
+  const orderBook = await ethers.getContractAt("IOrderBook", OrderBook);
+  const orderId = (await orderBook.nextOrderId()) - 1n;
 
-    const impersonatedBroker = await ethers.getImpersonatedSigner(
-      "0x988aa44e12c7bce07e449a4156b4a269d6642b3a" // mux broker
-    );
-    await orderBook.connect(impersonatedBroker).fillWithdrawalOrder(
-      orderId,
-      1, // collateralPrice
-      1, // assetPrice
-      1 // profitAssetPrice
-    );
-  }
-);
+  const impersonatedBroker = await ethers.getImpersonatedSigner(
+    "0x988aa44e12c7bce07e449a4156b4a269d6642b3a" // mux broker
+  );
+  await orderBook.connect(impersonatedBroker).fillWithdrawalOrder(
+    orderId,
+    1, // collateralPrice
+    1, // assetPrice
+    1 // profitAssetPrice
+  );
+});
 
-// hardhat position-index:increase --account 0x6053cA02DCd3D71B0987b4DC2a39b3dDA04647C7 --network local
+// hardhat position-index:increase --network local --account 0x6053cA02DCd3D71B0987b4DC2a39b3dDA04647C7
 task("position-index:increase", "Get increase position index")
   .addParam("account", "Account address")
   .setAction(async ({ account }, { ethers }) => {
@@ -118,7 +114,7 @@ task("position-index:increase", "Get increase position index")
     console.log(await positionRouter.increasePositionsIndex(account));
   });
 
-// hardhat position-index:decrease --account 0x988aa44e12c7bce07e449a4156b4a269d6642b3a --network local
+// hardhat position-index:decrease --network local --account 0x6053cA02DCd3D71B0987b4DC2a39b3dDA04647C7
 task("position-index:decrease", "Get decrease position index")
   .addParam("account", "Account address")
   .setAction(async ({ account }, { ethers }) => {
