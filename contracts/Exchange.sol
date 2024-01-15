@@ -23,16 +23,24 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
     address[] private _registeredTokens;
     address[] private _registeredAdapters;
+    mapping(address => bool) private _stableTokens;
 
     // todo: optimization
     Fee private _fee;
 
     receive() external payable {}
 
-    function initialize(address warehouse_) external virtual initializer {
+    function initialize(
+        address warehouse_,
+        address[] calldata stableTokens
+    ) external virtual initializer {
         _warehouse = warehouse_;
         __Ownable_init();
         __UUPSUpgradeable_init();
+
+        for (uint256 i = 0; i < stableTokens.length; i++) {
+            _stableTokens[stableTokens[i]] = true;
+        }
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
@@ -48,6 +56,8 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     function getAllRegisteredTokens() override public view returns (address[] memory) { return _registeredTokens; }
 
     function getAllRegisteredAdapters() override public view returns (address[] memory) { return _registeredAdapters; }
+
+    function isStableToken(address token) override public view returns (bool) { return _stableTokens[token]; }
 
     function isRegisteredToken(address token) override public view returns (bool) {
         for (uint256 i = 0; i < _registeredTokens.length; i++) {
@@ -244,6 +254,14 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             }
         }
         revert("Exchange: NOT_REGISTERED");
+    }
+
+    function registerStableToken(address token) external onlyOwner {
+        _stableTokens[token] = true;
+    }
+
+    function unregisterStableToken(address token) external onlyOwner {
+        _stableTokens[token] = true;
     }
 
     function _createAccount() private returns (Account newAccount) {

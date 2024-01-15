@@ -15,8 +15,11 @@ const LiquidityPool = "0x3e0199792ce69dc29a0a36146bfa68bd7c8d6633";
 // token contracts
 const ETH = ethers.ZeroAddress;
 const WETH = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1";
-const USDC = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
 const WBTC = "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f";
+// stable tokens
+const USDC = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
+const USDT = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9";
+const USDCe = "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8";
 
 let deployer;
 let user;
@@ -31,8 +34,10 @@ let impersonatedBroker;
 let impersonatedOwner;
 // tokens
 let weth;
-let usdc;
 let wbtc;
+let usdc;
+let usdce;
+let usdt;
 // gmx contracts
 let vault;
 let positionRouter;
@@ -94,8 +99,10 @@ const deploy = async (noAccount) => {
   liquidityPool = await ethers.getContractAt("ILiquidityPool", LiquidityPool); // mux liquidity pool
 
   weth = await ethers.getContractAt("IERC20", WETH);
-  usdc = await ethers.getContractAt("IERC20", USDC);
   wbtc = await ethers.getContractAt("IERC20", WBTC);
+  usdc = await ethers.getContractAt("IERC20", USDC);
+  usdce = await ethers.getContractAt("IERC20", USDCe);
+  usdt = await ethers.getContractAt("IERC20", USDT);
 
   const warehouseImpl = await ethers.deployContract("Warehouse");
   const warehouseProxy = await ethers.deployContract("ERC1967Proxy", [
@@ -111,7 +118,7 @@ const deploy = async (noAccount) => {
     "0x",
   ]);
   exchange = await ethers.getContractAt("Exchange", exchangeProxy.target);
-  await exchange.initialize(warehouse.target);
+  await exchange.initialize(warehouse.target, [USDC, USDT, USDCe]);
   gmxV1 = await ethers.deployContract("GMXV1", [
     PositionRouter,
     Router,
@@ -146,12 +153,8 @@ non-stable:
 - WETH  : ${await account.getBalance(WETH)}
 - WBTC  : ${await account.getBalance(WBTC)}
 stable:
-- USDC.e: ${await account.getBalance(
-      "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8"
-    )}
-- USDT  : ${await account.getBalance(
-      "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9"
-    )}
+- USDC.e: ${await account.getBalance(USDCe)}
+- USDT  : ${await account.getBalance(USDT)}
 - DAI   : ${await account.getBalance(
       "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1"
     )}
@@ -161,6 +164,24 @@ stable:
 
   const printPosition = async (adapter, collateral, index, isLong) => {
     const position = await account.getPosition(
+      adapter,
+      collateral,
+      index,
+      isLong
+    );
+    console.log(`position:
+- collateralAmount : ${position.collateralAmount}
+- size             : ${position.size}
+- lastIncreasedTime: ${position.lastIncreasedTime}
+- price            : ${position.price}
+- fundingRate      : ${position.fundingRate}
+- isLong           : ${position.isLong}
+
+`);
+  };
+
+  const printWrapPosition = async (adapter, collateral, index, isLong) => {
+    const position = await account.getWrapPosition(
       adapter,
       collateral,
       index,
@@ -192,7 +213,7 @@ stable:
         balanceStorageSlot,
         abiCoder.encode(["uint256"], [tokenAmount]),
       ]);
-    } else if (token == WBTC) {
+    } else if (token == WBTC || token == USDCe || token == USDT) {
       const storageSlot = 51n;
       const encoded = abiCoder.encode(
         ["address", "uint256"],
@@ -204,6 +225,143 @@ stable:
         balanceStorageSlot,
         abiCoder.encode(["uint256"], [tokenAmount]),
       ]);
+    }
+  };
+
+  const deposit = async (token, tokenAmount) => {
+    if (token == ETH || token == WETH) {
+      await account.connect(user).deposit(ETH, tokenAmount, {
+        value: tokenAmount,
+      });
+    } else {
+      await faucet(token, tokenAmount);
+      const erc20 = await ethers.getContractAt("IERC20", token);
+      await erc20.connect(user).approve(account.target, tokenAmount);
+      await account.connect(user).deposit(token, tokenAmount);
+    }
+  };
+
+  const increasePosition = async (
+    adapter,
+    collateral,
+    index,
+    collateralAmount,
+    size,
+    isLong,
+    executionFee
+  ) => {
+    const positionOrder = await adapter.makePositionOrder(
+      collateral,
+      index,
+      collateralAmount,
+      size,
+      isLong
+    );
+    await account.connect(user).createMarketOrders(
+      [adapter.target],
+      [
+        {
+          orderType: positionOrder.orderType,
+          path: [...positionOrder.path],
+          index: positionOrder.index,
+          collateralAmount: positionOrder.collateralAmount,
+          size: positionOrder.size,
+          isLong: positionOrder.isLong,
+        },
+      ],
+      { value: executionFee }
+    );
+
+    if (adapter.target == gmxV1.target) {
+      await executeIncreasePosition(account.target);
+    } else if (adapter.target == mux.target) {
+      await fillPositionOrder();
+    }
+  };
+
+  const increaseCollateral = async (
+    adapter,
+    collateral,
+    index,
+    collateralAmount,
+    isLong,
+    executionFee
+  ) => {
+    await account.connect(user).createMarketOrders(
+      [adapter.target],
+      [
+        {
+          orderType: orderType.increaseCollateral,
+          path: [collateral],
+          index: index,
+          collateralAmount: collateralAmount,
+          size: 0,
+          isLong: isLong,
+        },
+      ],
+      { value: executionFee }
+    );
+    if (adapter.target == gmxV1.target) {
+      await executeIncreasePosition(account.target);
+    }
+  };
+
+  const decreaseCollateral = async (
+    adapter,
+    collateral,
+    index,
+    collateralAmount,
+    isLong,
+    executionFee
+  ) => {
+    await account.connect(user).createMarketOrders(
+      [adapter.target],
+      [
+        {
+          orderType: orderType.decreaseCollateral,
+          path: [collateral],
+          index: index,
+          collateralAmount: collateralAmount,
+          size: 0,
+          isLong: isLong,
+        },
+      ],
+      { value: executionFee }
+    );
+    if (adapter.target == gmxV1.target) {
+      await executeDecreasePosition(account.target);
+    } else if (adapter.target == mux.target) {
+      await fillWithdrawalOrder();
+    }
+  };
+
+  const decreasePosition = async (
+    adapter,
+    collateral,
+    index,
+    size,
+    isLong,
+    executionFee
+  ) => {
+    console.log(size, executionFee);
+    await account.connect(user).createMarketOrders(
+      [adapter.target],
+      [
+        {
+          orderType: orderType.decreasePosition,
+          path: [collateral],
+          index: index,
+          collateralAmount: 0n,
+          size: size,
+          isLong: isLong,
+        },
+      ],
+      { value: executionFee }
+    );
+    if (adapter.target == gmxV1.target) {
+      await executeDecreasePosition(account.target);
+    } else if (adapter.target == mux.target) {
+      await fillPositionOrder();
     }
   };
 
@@ -222,11 +380,6 @@ stable:
     // console.log(`owner: ${oldGov} -> ${newGov}`);
 
     await vaultPriceFeed.connect(impersonatedGov).setSecondaryPriceFeed(secondaryPriceFeedMock.target); // prettier-ignore
-    await secondaryPriceFeedMock.setMinPrice(tokenAddress, tokenMinPrice);
-    await secondaryPriceFeedMock.setMaxPrice(tokenAddress, tokenMaxPrice);
-  };
-
-  const setPrice = async (tokenAddress, tokenMinPrice, tokenMaxPrice) => {
     await secondaryPriceFeedMock.setMinPrice(tokenAddress, tokenMinPrice);
     await secondaryPriceFeedMock.setMaxPrice(tokenAddress, tokenMaxPrice);
   };
@@ -259,6 +412,30 @@ stable:
         referenceOracle.target,
         referenceDeviation
       );
+  };
+
+  const setPrice = async (
+    adapter,
+    tokenAddress,
+    tokenMinPrice,
+    tokenMaxPrice,
+    initialized
+  ) => {
+    if (adapter.target == gmxV1.target) {
+      if (!initialized) {
+        await replaceFastPriceFeedAndSetPrice(
+          tokenAddress,
+          tokenMinPrice,
+          tokenMaxPrice
+        );
+      } else {
+        await secondaryPriceFeedMock.setMinPrice(tokenAddress, tokenMinPrice);
+        await secondaryPriceFeedMock.setMaxPrice(tokenAddress, tokenMaxPrice);
+      }
+    } else if (adapter.target == mux.target) {
+      const price = tokenMaxPrice;
+      await replaceOracleReferenceAndSetPrice(tokenAddress, price);
+    }
   };
 
   const executeIncreasePosition = async (account) => {
@@ -381,8 +558,10 @@ stable:
     orderBook,
     liquidityPool,
     weth,
-    usdc,
     wbtc,
+    usdc,
+    usdce,
+    usdt,
     gmxV1,
     mux,
     exchange,
@@ -392,13 +571,21 @@ stable:
     account,
     ETH,
     WETH,
-    USDC,
     WBTC,
+    USDC,
+    USDCe,
+    USDT,
     getAssetFromTokenAddress,
     getIdFromTokenAddress,
     checkBalance,
     printPosition,
+    printWrapPosition,
     faucet,
+    deposit,
+    increasePosition,
+    increaseCollateral,
+    decreaseCollateral,
+    decreasePosition,
     executeIncreasePosition,
     executeDecreasePosition,
     fillPositionOrder,

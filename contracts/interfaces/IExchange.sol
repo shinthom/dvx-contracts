@@ -73,6 +73,7 @@ interface IExchange {
     function getAllRegisteredTokens() external view returns (address[] memory);
     function isRegisteredToken(address token) external view returns (bool);
     function isRegisteredAdapter(address adapter) external view returns (bool);
+    function isStableToken(address token) external view returns (bool);
     function fee() external view returns (Fee memory);
 
     function setFee(Fee memory newFee) external;

@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import { IERC20 } from "./interfaces/tokens/IERC20.sol";
-import { IAccount } from "./interfaces/IAccount.sol";
-import { IAdapter } from  "./interfaces/IAdapter.sol";
-import { IExchange } from "./interfaces/IExchange.sol";
-import { IWarehouse } from  "./interfaces/IWarehouse.sol";
+import {IERC20} from "./interfaces/tokens/IERC20.sol";
+import {IAccount} from "./interfaces/IAccount.sol";
+import {IAdapter} from "./interfaces/IAdapter.sol";
+import {IExchange} from "./interfaces/IExchange.sol";
+import {IWarehouse} from "./interfaces/IWarehouse.sol";
 
 contract Account is IAccount {
     // todo: remove this
-    address constant private ETH = address(0);
-    address constant private WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
+    address private constant ETH = address(0);
+    address private constant WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
 
     address private _owner;
     address private _exchange;
@@ -25,34 +25,47 @@ contract Account is IAccount {
     }
 
     modifier onlyOwner() {
-        require(
-            _owner == msg.sender,
-            "Account: NOT_OWNER"
-        );
+        require(_owner == msg.sender, "Account: NOT_OWNER");
         _;
     }
 
-    function owner() override public view returns (address) { return _owner; }
+    function owner() public view override returns (address) {
+        return _owner;
+    }
 
-    function exchange() override public view returns (address) { return _exchange; }
+    function exchange() public view override returns (address) {
+        return _exchange;
+    }
 
     function getPositions(
         address adapter,
         address[] memory collaterals,
         address[] memory indexs
-    ) override public view returns (IAdapter.Position[] memory) {
+    ) public view override returns (IAdapter.Position[] memory) {
         bool[] memory isLongs = new bool[](2);
         isLongs[0] = true;
         isLongs[1] = false;
 
-        IAdapter.Position[] memory positions
-            = new IAdapter.Position[](collaterals.length * indexs.length * isLongs.length);
+        IAdapter.Position[] memory positions = new IAdapter.Position[](
+            collaterals.length * indexs.length * isLongs.length
+        );
 
         for (uint256 i = 0; i < collaterals.length; i++) {
             for (uint256 j = 0; j < indexs.length; j++) {
                 for (uint256 k = 0; k < isLongs.length; k++) {
-                    positions[i * indexs.length * isLongs.length + j * isLongs.length + k]
-                        = IAdapter(adapter).getPosition(address(this), collaterals[i], indexs[j], isLongs[k]);
+                    positions[
+                        i *
+                            indexs.length *
+                            isLongs.length +
+                            j *
+                            isLongs.length +
+                            k
+                    ] = IAdapter(adapter).getPosition(
+                        address(this),
+                        collaterals[i],
+                        indexs[j],
+                        isLongs[k]
+                    );
                 }
             }
         }
@@ -64,11 +77,32 @@ contract Account is IAccount {
         address collateral,
         address index,
         bool isLong
-    ) override public view returns (IAdapter.Position memory) {
-        return IAdapter(adapter).getPosition(address(this), collateral, index, isLong);
+    ) public view override returns (IAdapter.Position memory) {
+        return
+            IAdapter(adapter).getPosition(
+                address(this),
+                collateral,
+                index,
+                isLong
+            );
     }
 
-    function getBalance(address token) override public view returns (uint256) {
+    function getWrapPosition(
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong
+    ) public view override returns (IAdapter.Position memory) {
+        return
+            IAdapter(adapter).getWrapPosition(
+                address(this),
+                collateral,
+                index,
+                isLong
+            );
+    }
+
+    function getBalance(address token) public view override returns (uint256) {
         if (token == address(0)) {
             return address(this).balance;
         } else {
@@ -76,22 +110,27 @@ contract Account is IAccount {
         }
     }
 
-    function getLockedBalance(address token) override public view returns (uint256) {
+    function getLockedBalance(
+        address token
+    ) public view override returns (uint256) {
         return _lockedBalances[token];
     }
 
-    function deposit(address token, uint256 amount) override external payable {
+    function deposit(address token, uint256 amount) external payable override {
         require(amount > 0, "Account: ZERO_AMOUNT");
 
         if (token == address(0)) {
             require(amount == msg.value, "Account: INVALID_AMOUNT");
         } else {
-            IERC20(token).transferFrom(msg.sender, address(this), amount );
+            IERC20(token).transferFrom(msg.sender, address(this), amount);
         }
         emit Deposited(msg.sender, token, amount);
     }
 
-    function withdraw(address token, uint256 amount) override external onlyOwner  {
+    function withdraw(
+        address token,
+        uint256 amount
+    ) external override onlyOwner {
         require(amount > 0, "Account: ZERO_AMOUNT");
 
         if (token == address(0)) {
@@ -106,12 +145,16 @@ contract Account is IAccount {
         address tokenIn,
         address tokenOut,
         uint256 amountIn
-    ) override external onlyOwner returns (uint256 amountOut) {
+    ) external override onlyOwner returns (uint256 amountOut) {
         require(tokenIn != tokenOut, "Account: SAME_TOKEN");
 
         if (tokenIn == address(0)) {
             require(address(this).balance >= amountIn, "INSUFFICIENT_BALANCE");
-            amountOut = IExchange(_exchange).swap{value: amountIn}(tokenIn, tokenOut, amountIn);
+            amountOut = IExchange(_exchange).swap{value: amountIn}(
+                tokenIn,
+                tokenOut,
+                amountIn
+            );
         } else {
             IERC20(tokenIn).approve(_exchange, amountIn);
             amountOut = IExchange(_exchange).swap(tokenIn, tokenOut, amountIn);
@@ -134,48 +177,52 @@ contract Account is IAccount {
         // }
 
         if (orderType == IExchange.OrderType.IncreasePosition) {
-            return adapter.delegatecall(
-                abi.encodeWithSignature(
-                    "increasePosition(address[],address,uint256,uint256,bool)",
-                    order.path,
-                    order.index,
-                    order.collateralAmount,
-                    order.size,
-                    order.isLong
-                )
-            );
+            return
+                adapter.delegatecall(
+                    abi.encodeWithSignature(
+                        "increasePosition(address[],address,uint256,uint256,bool)",
+                        order.path,
+                        order.index,
+                        order.collateralAmount,
+                        order.size,
+                        order.isLong
+                    )
+                );
         } else if (orderType == IExchange.OrderType.DecreasePosition) {
             require(order.path.length == 1, "INVALID_PATH");
-            return adapter.delegatecall(
-                abi.encodeWithSignature(
-                    "decreasePosition(address,address,uint256,bool)",
-                    order.path[0],
-                    order.index,
-                    order.size,
-                    order.isLong
-                )
-            );
+            return
+                adapter.delegatecall(
+                    abi.encodeWithSignature(
+                        "decreasePosition(address,address,uint256,bool)",
+                        order.path[0],
+                        order.index,
+                        order.size,
+                        order.isLong
+                    )
+                );
         } else if (orderType == IExchange.OrderType.IncreaseCollateral) {
-            return adapter.delegatecall(
-                abi.encodeWithSignature(
-                    "increaseCollateral(address[],address,uint256,bool)",
-                    order.path,
-                    order.index,
-                    order.collateralAmount,
-                    order.isLong
-                )
-            );
+            return
+                adapter.delegatecall(
+                    abi.encodeWithSignature(
+                        "increaseCollateral(address[],address,uint256,bool)",
+                        order.path,
+                        order.index,
+                        order.collateralAmount,
+                        order.isLong
+                    )
+                );
         } else if (orderType == IExchange.OrderType.DecreaseCollateral) {
             require(order.path.length == 1, "INVALID_PATH");
-            return adapter.delegatecall(
-                abi.encodeWithSignature(
-                    "decreaseCollateral(address,address,uint256,bool)",
-                    order.path[0],
-                    order.index,
-                    order.collateralAmount,
-                    order.isLong
-                )
-            );
+            return
+                adapter.delegatecall(
+                    abi.encodeWithSignature(
+                        "decreaseCollateral(address,address,uint256,bool)",
+                        order.path[0],
+                        order.index,
+                        order.collateralAmount,
+                        order.isLong
+                    )
+                );
         }
         emit MarketOrderCreated(address(this), adapter, order);
     }
@@ -183,7 +230,7 @@ contract Account is IAccount {
     function createMarketOrders(
         address[] calldata adapters,
         IExchange.PositionOrder[] calldata orders
-    ) override external payable onlyOwner {
+    ) external payable override onlyOwner {
         for (uint256 i = 0; i < adapters.length; i++) {
             (bool success, bytes memory data) = _createMarketOrder(
                 adapters[i],
@@ -193,7 +240,10 @@ contract Account is IAccount {
         }
     }
 
-    function _validateCollateralAmount(address collateral, uint256 collateralAmount) private view returns (bool) {
+    function _validateCollateralAmount(
+        address collateral,
+        uint256 collateralAmount
+    ) private view returns (bool) {
         uint256 balance;
         uint256 lockedBalance;
         if (collateral == WETH) {
@@ -288,7 +338,7 @@ contract Account is IAccount {
         uint256 triggerPrice,
         uint256 acceptablePrice,
         uint256 executionFee
-    ) override public payable onlyOwner {
+    ) public payable override onlyOwner {
         require(size > 0, "Account: ZERO_SIZE");
 
         require(msg.value == executionFee, "Account: FEE_MISMATCH");
@@ -310,7 +360,10 @@ contract Account is IAccount {
         );
     }
 
-    function cancelTriggerOrder(bytes32 positionKey, uint256 id) override public onlyOwner {
+    function cancelTriggerOrder(
+        bytes32 positionKey,
+        uint256 id
+    ) public override onlyOwner {
         address warehouse = IExchange(_exchange).warehouse();
         IWarehouse(warehouse).cancelTriggerOrder(positionKey, id);
     }
@@ -318,7 +371,7 @@ contract Account is IAccount {
     function executeTriggerOrder(
         address adapter,
         IExchange.PositionOrder calldata order
-    ) override public payable {
+    ) public payable override {
         address warehouse = IExchange(_exchange).warehouse();
         require(msg.sender == warehouse, "NOT_WAREHOUSE");
 

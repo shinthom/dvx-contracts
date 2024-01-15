@@ -2,236 +2,295 @@ const { ethers } = require("hardhat");
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 const { deploy } = require("../../fixture/setup");
 
+const WETH = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1";
+const WBTC = "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f";
+// stable tokens
+const USDC = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
+const USDCe = "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8";
+const USDT = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9";
+
+const longParams = [
+  {
+    collateral: WETH,
+    index: WETH,
+    collateralName: "WETH",
+    indexName: "WETH",
+    collateralAmount: ethers.parseEther("1"),
+    size: ethers.parseEther("10"),
+    isLong: true,
+    collateralPrice: ethers.parseUnits("2000", 30),
+    indexPrice: ethers.parseUnits("2000", 30),
+    indexPriceAfter: ethers.parseUnits("2200", 30),
+  },
+  {
+    collateral: WBTC,
+    index: WBTC,
+    collateralName: "WBTC",
+    indexName: "WBTC",
+    collateralAmount: ethers.parseUnits("0.05", 8),
+    size: ethers.parseUnits("0.5", 8),
+    isLong: true,
+    collateralPrice: ethers.parseUnits("40000", 30),
+    indexPrice: ethers.parseUnits("40000", 30),
+    indexPriceAfter: ethers.parseUnits("44000", 30),
+  },
+];
+
+const shortParams = [
+  {
+    collateral: USDC,
+    index: WETH,
+    collateralName: "USDC",
+    indexName: "WETH",
+    collateralAmount: ethers.parseUnits("2000", 6),
+    size: ethers.parseEther("10"),
+    isLong: false,
+    collateralPrice: ethers.parseUnits("1", 30),
+    indexPrice: ethers.parseUnits("2000", 30),
+    indexPriceAfter: ethers.parseUnits("1800", 30),
+  },
+  {
+    collateral: USDCe,
+    index: WETH,
+    collateralName: "USDCe",
+    indexName: "WETH",
+    collateralAmount: ethers.parseUnits("2000", 6),
+    size: ethers.parseEther("10"),
+    isLong: false,
+    collateralPrice: ethers.parseUnits("1", 30),
+    indexPrice: ethers.parseUnits("2000", 30),
+    indexPriceAfter: ethers.parseUnits("1800", 30),
+  },
+  {
+    collateral: USDT,
+    index: WETH,
+    collateralName: "USDT",
+    indexName: "WETH",
+    collateralAmount: ethers.parseUnits("2000", 6),
+    size: ethers.parseEther("10"),
+    isLong: false,
+    collateralPrice: ethers.parseUnits("1", 30),
+    indexPrice: ethers.parseUnits("2000", 30),
+    indexPriceAfter: ethers.parseUnits("1800", 30),
+  },
+  {
+    collateral: USDC,
+    index: WBTC,
+    collateralName: "USDC",
+    indexName: "WBTC",
+    collateralAmount: ethers.parseUnits("2000", 6),
+    size: ethers.parseUnits("0.5", 8),
+    isLong: false,
+    collateralPrice: ethers.parseUnits("1", 30),
+    indexPrice: ethers.parseUnits("40000", 30),
+    indexPriceAfter: ethers.parseUnits("36000", 30),
+  },
+  {
+    collateral: USDCe,
+    index: WBTC,
+    collateralName: "USDCe",
+    indexName: "WBTC",
+    collateralAmount: ethers.parseUnits("2000", 6),
+    size: ethers.parseUnits("0.5", 8),
+    isLong: false,
+    collateralPrice: ethers.parseUnits("1", 30),
+    indexPrice: ethers.parseUnits("40000", 30),
+    indexPriceAfter: ethers.parseUnits("36000", 30),
+  },
+  {
+    collateral: USDT,
+    index: WBTC,
+    collateralName: "USDT",
+    indexName: "WBTC",
+    collateralAmount: ethers.parseUnits("2000", 6),
+    size: ethers.parseUnits("0.5", 8),
+    isLong: false,
+    collateralPrice: ethers.parseUnits("1", 30),
+    indexPrice: ethers.parseUnits("40000", 30),
+    indexPriceAfter: ethers.parseUnits("36000", 30),
+  },
+];
+
 describe("gmxV1: getPnL", () => {
-  it("long: eth -> eth", async () => {
-    const {
-      gmxV1,
-      user,
-      account,
-      orderType,
-      ETH,
-      WETH,
-      minExecutionFee,
-      executeIncreasePosition,
-      executeDecreasePosition,
-      replaceFastPriceFeedAndSetPrice,
-      setPrice,
-      checkBalance,
-      printPosition,
-    } = await loadFixture(deploy);
+  for (let i = 0; i < longParams.length; i++) {
+    it(`long: ${longParams[i].collateralName} -> ${longParams[i].indexName}`, async () => {
+      const {
+        gmxV1,
+        account,
+        minExecutionFee,
+        deposit,
+        increasePosition,
+        increaseCollateral,
+        decreaseCollateral,
+        decreasePosition,
+        setPrice,
+        checkBalance,
+        printWrapPosition,
+      } = await loadFixture(deploy);
 
-    var minPrice = ethers.parseUnits("2000", 30);
-    var maxPrice = ethers.parseUnits("2000", 30);
-    await replaceFastPriceFeedAndSetPrice(WETH, minPrice, maxPrice);
+      const {
+        collateral,
+        index,
+        collateralAmount,
+        size,
+        isLong,
+        collateralPrice,
+        indexPrice,
+        indexPriceAfter,
+      } = longParams[i];
 
-    const collateral = WETH;
-    const index = WETH;
-    const collateralAmount = ethers.parseEther("1");
-    const size = ethers.parseEther("10");
-    const isLong = true;
+      await setPrice(
+        gmxV1,
+        collateral,
+        collateralPrice,
+        collateralPrice,
+        false
+      );
+      await setPrice(gmxV1, index, indexPrice, indexPrice, true);
+      {
+        await deposit(collateral, collateralAmount);
+        await increasePosition(
+          gmxV1,
+          collateral,
+          index,
+          collateralAmount,
+          size,
+          isLong,
+          minExecutionFee
+        );
+        await checkBalance(account);
+        await printWrapPosition(gmxV1.target, collateral, index, isLong);
+      }
+      await setPrice(gmxV1, index, indexPriceAfter, indexPriceAfter, true);
+      {
+        await deposit(collateral, collateralAmount);
+        await increaseCollateral(
+          gmxV1,
+          collateral,
+          index,
+          collateralAmount,
+          isLong,
+          minExecutionFee
+        );
+        await checkBalance(account);
+        await printWrapPosition(gmxV1.target, collateral, index, isLong);
+      }
+      {
+        await decreaseCollateral(
+          gmxV1,
+          collateral,
+          index,
+          collateralAmount,
+          isLong,
+          minExecutionFee
+        );
+        await checkBalance(account);
+        await printWrapPosition(gmxV1.target, collateral, index, isLong);
+      }
+      {
+        await decreasePosition(
+          gmxV1,
+          collateral,
+          index,
+          collateralAmount,
+          size,
+          isLong,
+          minExecutionFee
+        );
+        await checkBalance(account);
+        await printWrapPosition(gmxV1.target, collateral, index, isLong);
+      }
+    });
+  }
 
-    {
-      await account.deposit(ETH, collateralAmount, { value: collateralAmount });
-      const positionOrder = await gmxV1.makePositionOrder(collateral, index, collateralAmount, size, isLong); // prettier-ignore
-      await account.connect(user).createMarketOrders(
-        [gmxV1.target],
-        [
-          {
-            orderType: positionOrder.orderType,
-            path: [...positionOrder.path],
-            index: positionOrder.index,
-            collateralAmount: positionOrder.collateralAmount,
-            size: positionOrder.size,
-            isLong: positionOrder.isLong,
-          },
-        ],
-        { value: minExecutionFee }
-      );
-      await executeIncreasePosition(account.target);
-      await checkBalance(account);
-      await printPosition(gmxV1.target, collateral, index, isLong);
-    }
-    var minPrice = ethers.parseUnits("2200", 30);
-    var maxPrice = ethers.parseUnits("2200", 30);
-    await setPrice(WETH, minPrice, maxPrice);
-    {
-      await account.deposit(ETH, collateralAmount, { value: collateralAmount });
-      await account.connect(user).createMarketOrders(
-        [gmxV1.target],
-        [
-          {
-            orderType: orderType.increaseCollateral,
-            path: [collateral],
-            index: index,
-            collateralAmount: collateralAmount,
-            size: 0,
-            isLong: isLong,
-          },
-        ],
-        { value: minExecutionFee }
-      );
-      await executeIncreasePosition(account.target);
-      await checkBalance(account);
-      await printPosition(gmxV1.target, collateral, index, isLong);
-    }
-    {
-      await account.connect(user).createMarketOrders(
-        [gmxV1.target],
-        [
-          {
-            orderType: orderType.decreaseCollateral,
-            path: [collateral],
-            index: index,
-            collateralAmount: collateralAmount,
-            size: 0,
-            isLong: isLong,
-          },
-        ],
-        { value: minExecutionFee }
-      );
-      await executeDecreasePosition(account.target);
-      await checkBalance(account);
-      await printPosition(gmxV1.target, collateral, index, isLong);
-    }
-    {
-      const position = await account.getPosition(gmxV1.target, collateral, index, isLong); // prettier-ignore
-      await account.connect(user).createMarketOrders(
-        [gmxV1.target],
-        [
-          {
-            orderType: orderType.decreasePosition,
-            path: [collateral],
-            index: index,
-            collateralAmount: 0,
-            size: position.size,
-            isLong: isLong,
-          },
-        ],
-        { value: minExecutionFee }
-      );
-      await executeDecreasePosition(account.target);
-      await checkBalance(account);
-      await printPosition(gmxV1.target, collateral, index, isLong);
-    }
-  });
+  for (let i = 0; i < shortParams.length; i++) {
+    it(`short: ${shortParams[i].collateralName} -> ${shortParams[i].indexName}`, async () => {
+      const {
+        gmxV1,
+        account,
+        minExecutionFee,
+        deposit,
+        increasePosition,
+        increaseCollateral,
+        decreaseCollateral,
+        decreasePosition,
+        setPrice,
+        checkBalance,
+        printWrapPosition,
+      } = await loadFixture(deploy);
 
-  it("short: usdc -> eth", async () => {
-    const {
-      gmxV1,
-      user,
-      account,
-      orderType,
-      WETH,
-      USDC,
-      usdc,
-      minExecutionFee,
-      faucet,
-      executeIncreasePosition,
-      executeDecreasePosition,
-      replaceFastPriceFeedAndSetPrice,
-      setPrice,
-      checkBalance,
-      printPosition,
-    } = await loadFixture(deploy);
+      const {
+        collateral,
+        index,
+        collateralAmount,
+        size,
+        isLong,
+        collateralPrice,
+        indexPrice,
+        indexPriceAfter,
+      } = shortParams[i];
 
-    var ethMinPrice = ethers.parseUnits("2000", 30);
-    var ethMaxPrice = ethers.parseUnits("2000", 30);
-    await replaceFastPriceFeedAndSetPrice(WETH, ethMinPrice, ethMaxPrice);
-    const usdcPrice = ethers.parseUnits("1", 30);
-    await setPrice(USDC, usdcPrice, usdcPrice);
-
-    const collateral = USDC;
-    const index = WETH;
-    const collateralAmount = ethers.parseUnits("1000", 6);
-    const size = ethers.parseEther("10");
-    const isLong = false;
-
-    {
-      await faucet(USDC, collateralAmount);
-      await usdc.connect(user).approve(account.target, collateralAmount);
-      await account.connect(user).deposit(USDC, collateralAmount);
-      const positionOrder = await gmxV1.makePositionOrder(collateral, index, collateralAmount, size, isLong); // prettier-ignore
-      await account.connect(user).createMarketOrders(
-        [gmxV1.target],
-        [
-          {
-            orderType: positionOrder.orderType,
-            path: [...positionOrder.path],
-            index: positionOrder.index,
-            collateralAmount: positionOrder.collateralAmount,
-            size: positionOrder.size,
-            isLong: positionOrder.isLong,
-          },
-        ],
-        { value: minExecutionFee }
+      await setPrice(
+        gmxV1,
+        collateral,
+        collateralPrice,
+        collateralPrice,
+        false
       );
-      await executeIncreasePosition(account.target);
-      await checkBalance(account);
-      await printPosition(gmxV1.target, collateral, index, isLong);
-    }
-    var ethMinPrice = ethers.parseUnits("1800", 30);
-    var ethMaxPrice = ethers.parseUnits("1800", 30);
-    await setPrice(WETH, ethMinPrice, ethMaxPrice);
-    {
-      await faucet(USDC, collateralAmount);
-      await usdc.connect(user).approve(account.target, collateralAmount);
-      await account.connect(user).deposit(USDC, collateralAmount);
-      await account.connect(user).createMarketOrders(
-        [gmxV1.target],
-        [
-          {
-            orderType: orderType.increaseCollateral,
-            path: [collateral],
-            index: index,
-            collateralAmount: collateralAmount,
-            size: 0,
-            isLong: isLong,
-          },
-        ],
-        { value: minExecutionFee }
-      );
-      await executeIncreasePosition(account.target);
-      await checkBalance(account);
-      await printPosition(gmxV1.target, collateral, index, isLong);
-    }
-    {
-      await account.connect(user).createMarketOrders(
-        [gmxV1.target],
-        [
-          {
-            orderType: orderType.decreaseCollateral,
-            path: [collateral],
-            index: index,
-            collateralAmount: collateralAmount,
-            size: 0,
-            isLong: isLong,
-          },
-        ],
-        { value: minExecutionFee }
-      );
-      await executeDecreasePosition(account.target);
-      await checkBalance(account);
-      await printPosition(gmxV1.target, collateral, index, isLong);
-    }
-    {
-      const position = await account.getPosition(gmxV1.target, collateral, index, isLong); // prettier-ignore
-      await account.connect(user).createMarketOrders(
-        [gmxV1.target],
-        [
-          {
-            orderType: orderType.decreasePosition,
-            path: [collateral],
-            index: index,
-            collateralAmount: 0,
-            size: position.size,
-            isLong: isLong,
-          },
-        ],
-        { value: minExecutionFee }
-      );
-      await executeDecreasePosition(account.target);
-      await checkBalance(account);
-      await printPosition(gmxV1.target, collateral, index, isLong);
-    }
-  });
+      await setPrice(gmxV1, index, indexPrice, indexPrice, true);
+      {
+        await deposit(collateral, collateralAmount);
+        await increasePosition(
+          gmxV1,
+          collateral,
+          index,
+          collateralAmount,
+          size,
+          isLong,
+          minExecutionFee
+        );
+        await checkBalance(account);
+        await printWrapPosition(gmxV1.target, collateral, index, isLong);
+      }
+      await setPrice(gmxV1, index, indexPriceAfter, indexPriceAfter, true);
+      {
+        await deposit(collateral, collateralAmount);
+        await increaseCollateral(
+          gmxV1,
+          collateral,
+          index,
+          collateralAmount,
+          isLong,
+          minExecutionFee
+        );
+        await checkBalance(account);
+        await printWrapPosition(gmxV1.target, collateral, index, isLong);
+      }
+      {
+        await decreaseCollateral(
+          gmxV1,
+          collateral,
+          index,
+          collateralAmount,
+          isLong,
+          minExecutionFee
+        );
+        await checkBalance(account);
+        await printWrapPosition(gmxV1.target, collateral, index, isLong);
+      }
+      {
+        await decreasePosition(
+          gmxV1,
+          collateral,
+          index,
+          collateralAmount,
+          size,
+          isLong,
+          minExecutionFee
+        );
+        await checkBalance(account);
+        await printWrapPosition(gmxV1.target, collateral, index, isLong);
+      }
+    });
+  }
 });

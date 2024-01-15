@@ -31,6 +31,12 @@ interface IAccount {
         address index,
         bool isLong
     ) external view returns (IAdapter.Position memory);
+    function getWrapPosition(
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong
+    ) external view returns (IAdapter.Position memory);
     function getBalance(address token) external view returns (uint256);
     function getLockedBalance(address token) external view returns (uint256);
 

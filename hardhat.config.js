@@ -136,7 +136,7 @@ task("order-id", "Get next order id").setAction(async (_, { ethers }) => {
 
 module.exports = {
   solidity: {
-    version: "0.8.2",
+    version: "0.8.20",
     settings: {
       optimizer: {
         enabled: true,
@@ -144,11 +144,13 @@ module.exports = {
       },
     },
   },
+  mocha: {
+    timeout: 100000000,
+  },
   networks: {
     local: {
       url: "http://127.0.0.1:8545/",
       loggingEnabled: true,
-      timeout: 100_000,
     },
   },
 };

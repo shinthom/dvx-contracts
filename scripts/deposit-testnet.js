@@ -13,9 +13,14 @@ async function main() {
     account,
     WBTC,
     USDC,
-    usdc,
+    USDCe,
+    USDT,
     wbtc,
+    usdc,
+    usdce,
+    usdt,
     faucet,
+    deposit,
   } = await deploy();
   console.log(`
 - user     : ${user.address}
@@ -29,23 +34,25 @@ async function main() {
   `);
 
   console.log("`faucet`");
-  await faucet(USDC, ethers.parseEther("30"), "USDC");
-  await faucet(WBTC, ethers.parseEther("30"), "WBTC");
-  const usdcBalance = await usdc.balanceOf(user.address);
+  await faucet(WBTC, ethers.parseUnits("100", 8));
+  await faucet(USDC, ethers.parseUnits("1000000", 6));
+  await faucet(USDCe, ethers.parseUnits("1000000", 6));
+  await faucet(USDT, ethers.parseUnits("1000000", 6));
   const wbtcBalance = await wbtc.balanceOf(user.address);
-
-  await account.deposit(ethers.ZeroAddress, ethers.parseEther("30"), {
-    value: ethers.parseEther("30"),
-  });
-  await usdc.connect(user).approve(account.target, usdcBalance);
-  await account.connect(user).deposit(USDC, usdcBalance);
-  await wbtc.connect(user).approve(account.target, wbtcBalance);
-  await account.connect(user).deposit(WBTC, wbtcBalance);
+  const usdcBalance = await usdc.balanceOf(user.address);
+  const usdceBalance = await usdce.balanceOf(user.address);
+  const usdtBalance = await usdt.balanceOf(user.address);
 
   console.log("\n`deposit`");
-  console.log("- weth: " + (await account.getBalance(ethers.ZeroAddress)));
-  console.log("- wbtc: " + (await account.getBalance(WBTC)));
-  console.log("- usdc: " + (await account.getBalance(USDC)));
+  await deposit(WBTC, wbtcBalance);
+  await deposit(USDC, usdcBalance);
+  await deposit(USDCe, usdceBalance);
+  await deposit(USDT, usdtBalance);
+  console.log("-  eth  : " + (await account.getBalance(ethers.ZeroAddress)));
+  console.log("- wbtc  : " + (await account.getBalance(WBTC)));
+  console.log("- usdc  : " + (await account.getBalance(USDC)));
+  console.log("- usdc.e: " + (await account.getBalance(USDCe)));
+  console.log("- usdt  : " + (await account.getBalance(USDT)));
 }
 
 // We recommend this pattern to be able to use async/await everywhere

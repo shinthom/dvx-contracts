@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import { IExchange } from  "./interfaces/IExchange.sol";
 import { IWarehouse } from  "./interfaces/IWarehouse.sol";
 import { IAdapter } from  "./interfaces/IAdapter.sol";
-import { IWarehouse } from "./interfaces/IWarehouse.sol";
 
 contract Reader {
     address immutable public warehouse;
