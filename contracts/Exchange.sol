@@ -152,7 +152,7 @@ contract Exchange is IExchange {
         address tokenIn,
         address tokenOut,
         uint256 amountIn
-    ) external payable override returns (uint256 amountOut) {
+    ) external payable virtual override returns (uint256 amountOut) {
         if (tokenOut == address(0)) {
             tokenOut = _weth;
         }

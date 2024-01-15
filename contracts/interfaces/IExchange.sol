@@ -88,7 +88,24 @@ interface IExchange {
         uint256 indexed id
     );
 
+    event Withdrawn(
+        address indexed account,
+        address indexed token,
+        uint256 amount
+    );
+
+    event SetTier(uint8 indexed tierId, uint256 discount);
+
+    event SetReferralTier(address indexed referral, uint8 indexed tierId);
+
+    event SetOpenPositionFee(uint256 indexed fee);
+
     function isStableToken(address token) external view returns (bool);
+
+    function lockedBalances(
+        address account,
+        address token
+    ) external view returns (uint256);
 
     function getPositionKey(
         address account,
@@ -115,6 +132,8 @@ interface IExchange {
         address account,
         uint256 id
     ) external view returns (LimitOrder memory);
+
+    function getOpenPositionFee(uint256 amount) external view returns (uint256);
 
     function createAccount() external returns (address account);
 

@@ -16,6 +16,14 @@ interface IAccount {
         uint256 amount
     );
 
+    event Swapped(
+        address indexed account,
+        address indexed tokenIn,
+        address indexed tokenOut,
+        uint256 amountIn,
+        uint256 amountOut
+    );
+
     function getBalance(address token) external view returns (uint256);
 
     function deposit(address token, uint256 amount) external payable;
