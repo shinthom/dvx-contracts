@@ -12,6 +12,8 @@ contract Exchange is IExchange {
     address private constant _swapRouter =
         0xE592427A0AEce92De3Edee1F18E0157C05861564; // uniswap V3
 
+    uint256 public constant BASIS_POINTS = 100_000_000;
+
     address public gov;
 
     mapping(address => address) public accounts;
@@ -22,7 +24,12 @@ contract Exchange is IExchange {
     mapping(address => LimitOrder[]) private _limitOrders;
     mapping(bytes32 => TriggerOrder[]) private _triggerOrders;
 
-    mapping(address => mapping(address => uint256)) lockedBalances;
+    mapping(address => mapping(address => uint256)) public override lockedBalances; // prettier-ignore
+
+    mapping(uint8 => uint256) public tiers;
+    mapping(address => uint8) public referralTiers;
+
+    uint256 public openPositionFeeRate;
 
     constructor() {
         gov = msg.sender;
@@ -77,6 +84,12 @@ contract Exchange is IExchange {
         return _limitOrders[account][id];
     }
 
+    function getOpenPositionFee(
+        uint256 amount
+    ) public view override returns (uint256) {
+        return (amount * openPositionFeeRate) / BASIS_POINTS;
+    }
+
     function setStableTokens(
         address[] memory tokens,
         bool[] memory isStable
@@ -92,6 +105,29 @@ contract Exchange is IExchange {
     function setRegisteredAdapter(address adapter, bool registered) external {
         require(msg.sender == gov, "msg.sender: not gov");
         _registeredAdapters[adapter] = registered;
+    }
+
+    function setTier(uint8 tierId, uint256 discountRate) external {
+        require(msg.sender == gov, "msg.sender: not gov");
+        require(discountRate <= BASIS_POINTS, "discountRate: excess");
+
+        tiers[tierId] = discountRate;
+        emit SetTier(tierId, discountRate);
+    }
+
+    function setReferralTier(address account, uint8 tierId) external {
+        require(msg.sender == gov, "msg.sender: not gov");
+
+        referralTiers[account] = tierId;
+        emit SetReferralTier(account, tierId);
+    }
+
+    function setOpenPositionFeeRate(uint256 _feeRate) external {
+        require(msg.sender == gov, "msg.sender: not gov");
+        require(_feeRate <= BASIS_POINTS, "fee: excess");
+
+        openPositionFeeRate = _feeRate;
+        emit SetOpenPositionFee(_feeRate);
     }
 
     function createAccount() public override returns (address) {
@@ -464,5 +500,25 @@ contract Exchange is IExchange {
             adapter,
             marketOrder
         );
+    }
+
+    // function newGov
+
+    function withdraw(
+        address receiver,
+        address token,
+        uint256 amount
+    ) external {
+        require(msg.sender == gov, "msg.sender: not gov");
+
+        require(receiver != address(0), "receiver: zero address");
+        require(amount > 0, "amount: zero");
+
+        if (token == address(0)) {
+            payable(msg.sender).transfer(amount);
+        } else {
+            IERC20(token).transfer(msg.sender, amount);
+        }
+        emit Withdrawn(msg.sender, token, amount);
     }
 }
