@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity 0.8.7;
 
 contract SecondPriceFeedMock {
     mapping(address => uint256) private _minPrices;
@@ -13,7 +13,11 @@ contract SecondPriceFeedMock {
         _maxPrices[token] = maxPrice;
     }
 
-    function getPrice(address token, uint256 /* refPrice */, bool maximise) external view returns (uint256) {
+    function getPrice(
+        address token,
+        uint256 /* refPrice */,
+        bool maximise
+    ) external view returns (uint256) {
         return maximise ? _maxPrices[token] : _minPrices[token];
     }
 }

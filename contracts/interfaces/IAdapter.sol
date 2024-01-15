@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity 0.8.7;
 
-import "./IExchange.sol";
+import {IExchange} from "./IExchange.sol";
 
 interface IAdapter {
     struct Position {
@@ -13,15 +13,27 @@ interface IAdapter {
         bool isLong;
     }
 
+    function makeMarketOrder(
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        uint256 size,
+        bool isLong
+    ) external view returns (IExchange.MarketOrder memory);
+
     function getMinExecutionFee() external view returns (uint256);
-
-    function getPriceDecimals() external view returns (uint256);
-
-    function getPrice(address collateral, bool isLong) external view returns (uint256);
 
     function getDepositFee(
         address account,
-        IExchange.PositionOrder memory positionOrder
+        IExchange.MarketOrder memory marketOrder
+    ) external view returns (uint256);
+
+    function getFundingFee(
+        address collateral,
+        address index,
+        uint256 size,
+        uint256 fundingRate,
+        bool isLong
     ) external view returns (uint256);
 
     function getPositionFee(
@@ -29,15 +41,17 @@ interface IAdapter {
         uint256 size
     ) external view returns (uint256);
 
-    function getFundingFee(
+    function getPriceDecimals() external view returns (uint256);
+
+    function getPrice(
         address collateral,
-        address index,
-        uint256 size,
-        uint256 entryFundingRate,
         bool isLong
     ) external view returns (uint256);
 
-    function getAvailableLiquidity(address index, bool isLong) external view returns (uint256);
+    function getWrapPrice(
+        address collateral,
+        bool isLong
+    ) external view returns (uint256);
 
     function getPosition(
         address account,
@@ -53,40 +67,8 @@ interface IAdapter {
         bool isLong
     ) external view returns (Position memory);
 
-    function makePositionOrder(
-        address collateral,
+    function getAvailableLiquidity(
         address index,
-        uint256 collateralAmount,
-        uint256 leverage,
         bool isLong
-    ) external view returns (IExchange.PositionOrder memory);
-
-    function increasePosition(
-        address[] memory path,
-        address index,
-        uint256 collateralAmount,
-        uint256 size,
-        bool isLong
-    ) external payable;
-
-    function decreasePosition(
-        address collateral,
-        address index,
-        uint256 size,
-        bool isLong
-    ) external payable;
-
-    function increaseCollateral(
-        address[] memory path,
-        address index,
-        uint256 collateralAmount,
-        bool isLong
-    ) external payable;
-
-    function decreaseCollateral(
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        bool isLong
-    ) external payable;
+    ) external view returns (uint256);
 }

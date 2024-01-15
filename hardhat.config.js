@@ -136,7 +136,7 @@ task("order-id", "Get next order id").setAction(async (_, { ethers }) => {
 
 module.exports = {
   solidity: {
-    version: "0.8.20",
+    version: "0.8.7",
     settings: {
       optimizer: {
         enabled: true,

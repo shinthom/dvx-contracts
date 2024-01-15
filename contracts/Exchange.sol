@@ -1,156 +1,134 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity 0.8.7;
 
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { IERC20 } from  "./interfaces/tokens/IERC20.sol";
-import { Account } from  "./Account.sol";
-import { IExchange } from "./interfaces/IExchange.sol";
-import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import { ISwapRouter } from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
-import { IQuoterV2 } from "@uniswap/v3-periphery/contracts/interfaces/IQuoterV2.sol";
+import {IAccount, Account} from "./Account.sol";
+import {IERC20} from "./interfaces/IERC20.sol";
+import {IAdapter} from "./interfaces/IAdapter.sol";
+import {IExchange} from "./interfaces/IExchange.sol";
+import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 
-contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
-    address private constant WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
-    address private constant SWAP_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564; // uniswap V3
-    address private constant QUOTER = 0x61fFE014bA17989E743c5F6cB21bF9697530B21e; // uniswap V3
+contract Exchange is IExchange {
+    address private constant _weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
+    address private constant _swapRouter =
+        0xE592427A0AEce92De3Edee1F18E0157C05861564; // uniswap V3
 
-    address private _warehouse;
+    address public gov;
 
-    uint256 private _totalAccounts;
-    mapping(address => address) private _accounts;
-    mapping(address => bool) private _marginKeepers;
+    mapping(address => address) public accounts;
+    mapping(address => bool) private _registeredAdapters;
 
-    address[] private _registeredTokens;
-    address[] private _registeredAdapters;
     mapping(address => bool) private _stableTokens;
 
-    // todo: optimization
-    Fee private _fee;
+    mapping(address => LimitOrder[]) private _limitOrders;
+    mapping(bytes32 => TriggerOrder[]) private _triggerOrders;
 
-    receive() external payable {}
+    mapping(address => mapping(address => uint256)) lockedBalances;
 
-    function initialize(
-        address warehouse_,
-        address[] calldata stableTokens
-    ) external virtual initializer {
-        _warehouse = warehouse_;
-        __Ownable_init();
-        __UUPSUpgradeable_init();
+    constructor() {
+        gov = msg.sender;
+    }
 
-        for (uint256 i = 0; i < stableTokens.length; i++) {
-            _stableTokens[stableTokens[i]] = true;
+    function getPositionKey(
+        address account,
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong
+    ) public pure override returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(account, adapter, collateral, index, isLong)
+            );
+    }
+
+    function isStableToken(
+        address token
+    ) external view override returns (bool) {
+        return _stableTokens[token];
+    }
+
+    function isRegisteredAdapter(address adapter) public view returns (bool) {
+        return _registeredAdapters[adapter];
+    }
+
+    function getTriggerOrders(
+        bytes32 positionKey
+    ) public view override returns (TriggerOrder[] memory) {
+        return _triggerOrders[positionKey];
+    }
+
+    function getTriggerOrder(
+        bytes32 positionKey,
+        uint256 id
+    ) public view override returns (TriggerOrder memory) {
+        return _triggerOrders[positionKey][id];
+    }
+
+    function getLimitOrders(
+        address account
+    ) public view override returns (LimitOrder[] memory) {
+        return _limitOrders[account];
+    }
+
+    function getLimitOrder(
+        address account,
+        uint256 id
+    ) public view override returns (LimitOrder memory) {
+        return _limitOrders[account][id];
+    }
+
+    function setStableTokens(
+        address[] memory tokens,
+        bool[] memory isStable
+    ) external {
+        require(msg.sender == gov, "msg.sender: not gov");
+        require(tokens.length == isStable.length, "length: mismatch");
+
+        for (uint256 i = 0; i < tokens.length; i++) {
+            _stableTokens[tokens[i]] = isStable[i];
         }
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
-
-    function account(address wallet) override public view returns (address) { return _accounts[wallet]; }
-
-    function totalAccount() override public view returns (uint256) { return _totalAccounts; }
-
-    function warehouse() override public view returns (address) { return _warehouse; }
-
-    function isMarginKeeper(address keeper) override public view returns (bool) { return _marginKeepers[keeper]; }
-
-    function getAllRegisteredTokens() override public view returns (address[] memory) { return _registeredTokens; }
-
-    function getAllRegisteredAdapters() override public view returns (address[] memory) { return _registeredAdapters; }
-
-    function isStableToken(address token) override public view returns (bool) { return _stableTokens[token]; }
-
-    function isRegisteredToken(address token) override public view returns (bool) {
-        for (uint256 i = 0; i < _registeredTokens.length; i++) {
-            if (_registeredTokens[i] == token) {
-                return true;
-            }
-        }
-        return false;
-    }
-    function isRegisteredAdapter(address adapter) override public view returns (bool) {
-        for (uint256 i = 0; i < _registeredAdapters.length; i++) {
-            if (_registeredAdapters[i] == adapter) {
-                return true;
-            }
-        }
-        return false;
+    function setRegisteredAdapter(address adapter, bool registered) external {
+        require(msg.sender == gov, "msg.sender: not gov");
+        _registeredAdapters[adapter] = registered;
     }
 
-    function fee() override public view returns (Fee memory) { return _fee; }
+    function createAccount() public override returns (address) {
+        require(accounts[msg.sender] == address(0), "account: already exist");
 
-    function setFee(Fee memory newFee) override external onlyOwner {
-        _fee = newFee;
-        emit FeeSet(newFee);
+        Account account = new Account(msg.sender, address(this));
+        accounts[msg.sender] = address(account);
+        emit CreateAccount(msg.sender, address(account));
+
+        return address(account);
     }
 
-    function quoteExactInputSingle(
-        address tokenIn,
-        address tokenOut,
-        uint256 amountIn
-    ) override external returns (uint256) {
-        if (tokenIn == address(0)) {
-            tokenIn = WETH;
-        }
-        if (tokenOut == address(0)) {
-            tokenOut = WETH;
-        }
-
-        IQuoterV2.QuoteExactInputSingleParams memory params =
-            IQuoterV2.QuoteExactInputSingleParams({
-                tokenIn: tokenIn,
-                tokenOut: tokenOut,
-                fee: 3000,
-                amountIn: amountIn,
-                sqrtPriceLimitX96: 0
-            });
-
-        (uint256 amountOut, , ,) = IQuoterV2(QUOTER).quoteExactInputSingle(params);
-        return amountOut;
-    }
-
-    function quoteExactOutputSingle(
-        address tokenIn,
-        address tokenOut,
-        uint256 amountOut
-    ) override external returns (uint256) {
-        if (tokenIn == address(0)) {
-            tokenIn = WETH;
-        }
-        if (tokenOut == address(0)) {
-            tokenOut = WETH;
-        }
-
-        IQuoterV2.QuoteExactOutputSingleParams memory params =
-            IQuoterV2.QuoteExactOutputSingleParams({
-                tokenIn: tokenIn,
-                tokenOut: tokenOut,
-                fee: 3000,
-                amount: amountOut,
-                sqrtPriceLimitX96: 0
-            });
-
-        (uint256 amountIn, , ,) = IQuoterV2(QUOTER).quoteExactOutputSingle(params);
-        return amountIn;
+    function createAccountAndDeposit(
+        address token,
+        uint256 amount
+    ) external payable override returns (address account) {
+        account = createAccount();
+        IAccount(account).deposit{value: amount}(token, amount);
     }
 
     function swap(
         address tokenIn,
         address tokenOut,
         uint256 amountIn
-    ) override external payable returns (uint256) {
+    ) external payable override returns (uint256 amountOut) {
         if (tokenOut == address(0)) {
-            tokenOut = WETH;
+            tokenOut = _weth;
         }
 
-        uint256 amountOut;
         if (tokenIn == address(0)) {
             require(msg.value == amountIn, "Exchange: INVALID_AMOUNT");
-            IERC20(WETH).deposit{value: msg.value}();
-            IERC20(WETH).approve(SWAP_ROUTER, amountIn);
+            IERC20(_weth).deposit{value: msg.value}();
+            IERC20(_weth).approve(_swapRouter, amountIn);
 
-            ISwapRouter.ExactInputSingleParams memory params =
-                ISwapRouter.ExactInputSingleParams({
-                    tokenIn: WETH, // note: tokenIn is WETH
+            ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
+                .ExactInputSingleParams({
+                    tokenIn: _weth,
                     tokenOut: tokenOut,
                     fee: 3000,
                     recipient: address(this),
@@ -159,13 +137,13 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
                     amountOutMinimum: 0,
                     sqrtPriceLimitX96: 0
                 });
-            amountOut = ISwapRouter(SWAP_ROUTER).exactInputSingle(params);
+            amountOut = ISwapRouter(_swapRouter).exactInputSingle(params);
         } else {
             IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
-            IERC20(tokenIn).approve(SWAP_ROUTER, amountIn);
+            IERC20(tokenIn).approve(_swapRouter, amountIn);
 
-            ISwapRouter.ExactInputSingleParams memory params =
-                ISwapRouter.ExactInputSingleParams({
+            ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
+                .ExactInputSingleParams({
                     tokenIn: tokenIn,
                     tokenOut: tokenOut,
                     fee: 3000,
@@ -175,100 +153,316 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
                     amountOutMinimum: 0,
                     sqrtPriceLimitX96: 0
                 });
-            amountOut = ISwapRouter(SWAP_ROUTER).exactInputSingle(params);
+            amountOut = ISwapRouter(_swapRouter).exactInputSingle(params);
         }
 
-        // todo: fee
-        if (tokenOut == WETH) {
-            IERC20(WETH).withdraw(amountOut);
+        if (tokenOut == _weth) {
+            IERC20(_weth).withdraw(amountOut);
             payable(msg.sender).transfer(amountOut);
         } else {
             IERC20(tokenOut).transfer(msg.sender, amountOut);
         }
-
-        return amountOut;
     }
 
-    function createAccount() override external returns (address) {
-        Account newAccount = _createAccount();
-        return address(newAccount);
-    }
+    // todo: executeMarketOrderMulti
 
-    function createAccountAndDeposit(address token, uint256 amount)
-        override
-        external
-        payable
-        returns (address)
-    {
-        Account newAccount = _createAccount();
-        token == address(0) ?
-            newAccount.deposit{value: msg.value}(address(0), amount) :
-            newAccount.deposit(token, amount);
-        return address(newAccount);
-    }
+    function executeMarketOrder(
+        address account,
+        OrderType orderType,
+        address adapter,
+        address[] memory path,
+        address index,
+        uint256 collateralAmount,
+        uint256 size,
+        bool isLong,
+        uint256 executionFee
+    ) external payable override {
+        require(accounts[msg.sender] == account, "account: not owner");
+        require(path.length == 1 || path.length == 2, "path: invalid length");
 
-    function setMarginKeeper(address keeper, bool status) override external onlyOwner {
-        _marginKeepers[keeper] = status;
-        emit MarginKeeperSet(keeper, status);
-    }
+        require(
+            executionFee >= IAdapter(adapter).getMinExecutionFee(),
+            "executionFee: insufficient"
+        );
+        require(isRegisteredAdapter(adapter), "adapter: not registered");
 
-    function registerAdapter(address adapter) override external onlyOwner {
-        for (uint256 i = 0; i < _registeredAdapters.length; i++) {
-            require(_registeredAdapters[i] != adapter, "Exchange: ALREADY_REGISTERED");
+        if (orderType == OrderType.IncreasePosition) {
+            require(collateralAmount != 0, "collateralAmount: zero");
+            require(size != 0, "size: zero");
+
+            IAccount(account).increasePosition{value: executionFee}(
+                adapter,
+                MarketOrder({
+                    path: path,
+                    index: index,
+                    collateralAmount: collateralAmount,
+                    size: size,
+                    isLong: isLong
+                })
+            );
+        } else if (orderType == OrderType.DecreasePosition) {
+            require(collateralAmount == 0, "collateralAmount: not zero");
+            require(size != 0, "size: zero");
+
+            IAccount(account).decreasePosition{value: executionFee}(
+                adapter,
+                MarketOrder({
+                    path: path,
+                    index: index,
+                    collateralAmount: collateralAmount,
+                    size: size,
+                    isLong: isLong
+                })
+            );
+        } else if (orderType == OrderType.IncreaseCollateral) {
+            require(collateralAmount != 0, "collateralAmount: zero");
+            require(size == 0, "size: not zero");
+
+            IAccount(account).increaseCollateral{value: executionFee}(
+                adapter,
+                MarketOrder({
+                    path: path,
+                    index: index,
+                    collateralAmount: collateralAmount,
+                    size: size,
+                    isLong: isLong
+                })
+            );
+        } else if (orderType == OrderType.DecreaseCollateral) {
+            require(collateralAmount != 0, "collateralAmount: zero");
+            require(size == 0, "size: not zero");
+
+            IAccount(account).decreaseCollateral{value: executionFee}(
+                adapter,
+                MarketOrder({
+                    path: path,
+                    index: index,
+                    collateralAmount: collateralAmount,
+                    size: size,
+                    isLong: isLong
+                })
+            );
         }
-
-        _registeredAdapters.push(adapter);
-        emit AdapterRegistered(adapter);
     }
 
-    function unregisterAdapter(address adapter) override external onlyOwner {
-        for (uint256 i = 0; i < _registeredAdapters.length; i++) {
-            if (_registeredAdapters[i] == adapter) {
-                _registeredAdapters[i] = _registeredAdapters[_registeredAdapters.length - 1];
+    function createTriggerOrder(
+        address account,
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong,
+        uint256 size,
+        TriggerOrderType orderType,
+        uint256 triggerPrice, // 1e18
+        uint256 acceptablePrice, // 1e18
+        uint256 executionFee
+    ) external payable {
+        require(accounts[msg.sender] == address(account), "account: not owner");
+        require(isRegisteredAdapter(adapter), "adapter: not registered");
 
-                _registeredAdapters.pop();
-                emit AdapterUnregistered(adapter);
-                return;
-            }
-        }
-        revert("Exchange: NOT_REGISTERED");
+        require(
+            (isLong && triggerPrice >= acceptablePrice) ||
+                (!isLong && triggerPrice <= acceptablePrice),
+            "triggerPrice: invalid"
+        );
+        require(executionFee == msg.value, "executionFee: mismatch");
+
+        uint256 minExeuctionFee = IAdapter(adapter).getMinExecutionFee();
+        require(executionFee >= minExeuctionFee, "executionFee: insufficient");
+
+        IAdapter.Position memory position = IAdapter(adapter).getPosition(
+            account,
+            collateral,
+            index,
+            isLong
+        );
+        require(position.size > 0, "position: not exist");
+
+        bytes32 positionKey = getPositionKey(
+            account,
+            adapter,
+            collateral,
+            index,
+            isLong
+        );
+
+        TriggerOrder memory triggerOrder = TriggerOrder({
+            id: _triggerOrders[positionKey].length,
+            state: TriggerOrderState.Pending,
+            account: account,
+            adapter: adapter,
+            collateral: collateral,
+            index: index,
+            isLong: isLong,
+            size: size,
+            orderType: orderType,
+            triggerPrice: triggerPrice,
+            acceptablePrice: acceptablePrice,
+            createdAt: block.timestamp
+        });
+        _triggerOrders[positionKey].push(triggerOrder);
+        emit TriggerOrderCreated(account, positionKey, triggerOrder.id);
     }
 
-    function registerToken(address token) override external onlyOwner {
-        for (uint256 i = 0; i < _registeredTokens.length; i++) {
-            require(_registeredTokens[i] != token, "Exchange: ALREADY_REGISTERED");
-        }
+    function cancelTriggerOrder(bytes32 positionKey, uint256 id) external {
+        TriggerOrder memory triggerOrder = _triggerOrders[positionKey][id];
+        require(
+            triggerOrder.account == accounts[msg.sender],
+            "account: not owner"
+        );
+        require(
+            triggerOrder.state == TriggerOrderState.Pending,
+            "state: not pending"
+        );
 
-        _registeredTokens.push(token);
-        emit TokenRegistered(token);
+        _triggerOrders[positionKey][id].state = TriggerOrderState.Canceled;
+        emit TriggerOrderCanceled(triggerOrder.account, positionKey, id);
     }
 
-    function unregisterToken(address token) override external onlyOwner {
-        for (uint256 i = 0; i < _registeredTokens.length; i++) {
-            if (_registeredTokens[i] == token) {
-                _registeredTokens[i] = _registeredTokens[_registeredTokens.length - 1];
+    function executeTriggerOrder(
+        address account,
+        bytes32 positionKey,
+        uint256 id
+    ) external payable {
+        TriggerOrder memory triggerOrder = _triggerOrders[positionKey][id];
+        require(
+            triggerOrder.state == TriggerOrderState.Pending,
+            "state: not pending"
+        );
+        require(account == triggerOrder.account, "account: mismatch");
 
-                _registeredTokens.pop();
-                emit TokenUnregistered(token);
-                return;
-            }
-        }
-        revert("Exchange: NOT_REGISTERED");
+        IAdapter adapter = IAdapter(triggerOrder.adapter);
+        uint256 minExecutionFee = adapter.getMinExecutionFee();
+        require(address(this).balance >= minExecutionFee, "fee: insufficient");
+
+        // 1e18
+        uint256 markPrice = adapter.getWrapPrice(
+            triggerOrder.index,
+            triggerOrder.isLong
+        );
+        require(
+            (triggerOrder.isLong &&
+                markPrice >= triggerOrder.acceptablePrice) ||
+                (!triggerOrder.isLong &&
+                    markPrice <= triggerOrder.acceptablePrice),
+            "price: not acceptable"
+        );
+
+        _triggerOrders[positionKey][id].state = TriggerOrderState.Executed;
+        emit TriggerOrderExecuted(account, positionKey, id);
+
+        address[] memory path = new address[](1);
+        path[0] = triggerOrder.collateral;
+
+        IAccount(account).decreasePosition(
+            triggerOrder.adapter,
+            MarketOrder({
+                path: path,
+                index: triggerOrder.index,
+                collateralAmount: 0,
+                size: triggerOrder.size,
+                isLong: triggerOrder.isLong
+            })
+        );
     }
 
-    function registerStableToken(address token) external onlyOwner {
-        _stableTokens[token] = true;
+    function createLimitOrder(
+        address account,
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        uint256 size,
+        bool isLong,
+        uint256 triggerPrice,
+        uint256 acceptablePrice,
+        uint256 executionFee
+    ) external payable {
+        require(account == accounts[msg.sender], "account: not owner");
+
+        require(
+            (isLong && triggerPrice <= acceptablePrice) ||
+                (!isLong && triggerPrice >= acceptablePrice),
+            "triggerPrice: invalid"
+        );
+        require(executionFee == msg.value, "executionFee: mismatch");
+
+        uint256 balance = collateral == _weth
+            ? IAccount(account).getBalance(address(0))
+            : IAccount(account).getBalance(collateral);
+        require(
+            balance - lockedBalances[account][collateral] >= collateralAmount,
+            "collateralAmount: over balance"
+        );
+        lockedBalances[account][collateral] += collateralAmount;
+
+        LimitOrder memory limitOrder = LimitOrder({
+            id: _limitOrders[account].length,
+            state: LimitOrderState.Pending,
+            collateral: collateral,
+            index: index,
+            collateralAmount: collateralAmount,
+            size: size,
+            isLong: isLong,
+            triggerPrice: triggerPrice,
+            acceptablePrice: acceptablePrice,
+            createdAt: block.timestamp
+        });
+        _limitOrders[account].push(limitOrder);
+        emit LimitOrderCreated(account, limitOrder.id);
     }
 
-    function unregisterStableToken(address token) external onlyOwner {
-        _stableTokens[token] = true;
+    function cancelLimitOrder(address account, uint256 id) external {
+        require(account == accounts[msg.sender], "account: not owner");
+
+        LimitOrder memory limitOrder = _limitOrders[account][id];
+        require(
+            limitOrder.state == LimitOrderState.Pending,
+            "state: not pending"
+        );
+        _limitOrders[account][id].state = LimitOrderState.Canceled;
+        emit LimitOrderCanceled(account, id);
+
+        lockedBalances[account][limitOrder.collateral] -= limitOrder.collateralAmount; // prettier-ignore
     }
 
-    function _createAccount() private returns (Account newAccount) {
-        newAccount = new Account(msg.sender, address(this));
-        emit AccountCreated(msg.sender, address(newAccount));
+    function executeLimitOrder(
+        address adapter,
+        address account,
+        uint256 id
+    ) external payable {
+        IExchange.LimitOrder memory limitOrder = _limitOrders[account][id]; // prettier-ignore
+        require(
+            limitOrder.state == LimitOrderState.Pending,
+            "state: not pending"
+        );
 
-        _accounts[msg.sender] = address(newAccount);
-        _totalAccounts++;
+        uint256 minExecutionFee = IAdapter(adapter).getMinExecutionFee();
+        require(address(this).balance >= minExecutionFee, "fee: insufficient");
+
+        uint256 markPrice = IAdapter(adapter).getWrapPrice(
+            limitOrder.index,
+            limitOrder.isLong
+        );
+        require(
+            (limitOrder.isLong && markPrice >= limitOrder.acceptablePrice) ||
+                (!limitOrder.isLong && markPrice <= limitOrder.acceptablePrice),
+            "price: not acceptable"
+        );
+        _limitOrders[account][id].state = LimitOrderState.Executed;
+        emit LimitOrderExecuted(account, id);
+
+        lockedBalances[account][limitOrder.collateral] -= limitOrder.collateralAmount; // prettier-ignore
+
+        MarketOrder memory marketOrder = IAdapter(adapter).makeMarketOrder(
+            limitOrder.collateral,
+            limitOrder.index,
+            limitOrder.collateralAmount,
+            limitOrder.size,
+            limitOrder.isLong
+        );
+        IAccount(account).increasePosition{value: minExecutionFee}(
+            adapter,
+            marketOrder
+        );
     }
 }

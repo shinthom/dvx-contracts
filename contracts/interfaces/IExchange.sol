@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity 0.8.7;
 
 interface IExchange {
     enum OrderType {
@@ -8,38 +8,45 @@ interface IExchange {
         IncreaseCollateral,
         DecreaseCollateral
     }
+
+    enum TriggerOrderType {
+        TakeProfit,
+        StopLoss
+    }
+
     enum TriggerOrderState {
         Pending,
         Executed,
         Canceled
     }
 
-    struct Fee {
-        uint256 depositFeeBasisPoints;
-        uint256 withdrawFeeBasisPoints;
-        uint256 swapFeeBasisPoints;
-        uint256 positionFeeBasisPoints;
-        uint256 marginFeeBasisPoints;
-        uint256 marginAdjustmentBasisPoints;
+    enum LimitOrderState {
+        Pending,
+        Executed,
+        Canceled
     }
-    struct PositionOrder {
-        OrderType orderType;
+
+    struct MarketOrder {
         address[] path;
         address index;
         uint256 collateralAmount;
         uint256 size;
         bool isLong;
     }
+
     struct LimitOrder {
+        uint256 id;
+        LimitOrderState state;
         address collateral;
         address index;
         uint256 collateralAmount;
         uint256 size;
         bool isLong;
-        uint256 price; // trigger
-        // todo: slippageTolerance
+        uint256 triggerPrice;
+        uint256 acceptablePrice;
         uint256 createdAt;
     }
+
     struct TriggerOrder {
         uint256 id;
         TriggerOrderState state;
@@ -49,50 +56,88 @@ interface IExchange {
         address index;
         bool isLong;
         uint256 size;
-        uint256 tpPrice;
-        uint256 tpPriceBound;
-        uint256 slPrice;
-        uint256 slPriceBound;
+        TriggerOrderType orderType;
+        uint256 triggerPrice;
+        uint256 acceptablePrice;
         uint256 createdAt;
     }
 
-    event AccountCreated(address indexed wallet, address indexed account);
-    event AdapterRegistered(address indexed adapter);
-    event AdapterUnregistered(address indexed adapter);
-    event TokenRegistered(address indexed adapter);
-    event TokenUnregistered(address indexed adapter);
-    event MarginKeeperSet(address indexed keeper, bool status);
-    event MarketOrderCreated(address indexed account, address[] adapters, PositionOrder[] orders);
-    event FeeSet(Fee fee);
+    event CreateAccount(address indexed owner, address indexed account);
 
-    function account(address wallet) external view returns (address);
-    function totalAccount() external view returns (uint256);
-    function warehouse() external view returns (address);
-    function isMarginKeeper(address keeper) external view returns (bool);
-    function getAllRegisteredAdapters() external view returns (address[] memory);
-    function getAllRegisteredTokens() external view returns (address[] memory);
-    function isRegisteredToken(address token) external view returns (bool);
-    function isRegisteredAdapter(address adapter) external view returns (bool);
+    event LimitOrderCreated(address indexed account, uint256 indexed id);
+
+    event LimitOrderCanceled(address indexed account, uint256 indexed id);
+
+    event LimitOrderExecuted(address indexed account, uint256 indexed id);
+
+    event TriggerOrderCreated(
+        address indexed account,
+        bytes32 indexed positionKey,
+        uint256 indexed id
+    );
+
+    event TriggerOrderCanceled(
+        address indexed account,
+        bytes32 indexed positionKey,
+        uint256 indexed id
+    );
+
+    event TriggerOrderExecuted(
+        address indexed account,
+        bytes32 indexed positionKey,
+        uint256 indexed id
+    );
+
     function isStableToken(address token) external view returns (bool);
-    function fee() external view returns (Fee memory);
 
-    function setFee(Fee memory newFee) external;
-    function quoteExactInputSingle(
+    function getPositionKey(
+        address account,
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong
+    ) external view returns (bytes32);
+
+    function getTriggerOrders(
+        bytes32 positionKey
+    ) external view returns (TriggerOrder[] memory);
+
+    function getTriggerOrder(
+        bytes32 positionKey,
+        uint256 id
+    ) external view returns (TriggerOrder memory);
+
+    function getLimitOrders(
+        address account
+    ) external view returns (LimitOrder[] memory);
+
+    function getLimitOrder(
+        address account,
+        uint256 id
+    ) external view returns (LimitOrder memory);
+
+    function createAccount() external returns (address account);
+
+    function createAccountAndDeposit(
+        address token,
+        uint256 amount
+    ) external payable returns (address account);
+
+    function swap(
         address tokenIn,
         address tokenOut,
         uint256 amountIn
-    ) external returns (uint256 amountOut);
-    function quoteExactOutputSingle(
-        address tokenIn,
-        address tokenOut,
-        uint256 amountOut
-    ) external returns (uint256 amountIn);
-    function swap(address tokenIn, address tokenOut, uint256 amount) payable external returns (uint256);
-    function createAccount() external returns (address);
-    function createAccountAndDeposit(address token, uint256 amount) payable external returns (address);
-    function setMarginKeeper(address keeper, bool status) external;
-    function registerAdapter(address adapter) external;
-    function unregisterAdapter(address adapter) external;
-    function registerToken(address token) external;
-    function unregisterToken(address token) external;
+    ) external payable returns (uint256);
+
+    function executeMarketOrder(
+        address account,
+        OrderType orderType,
+        address adapter,
+        address[] memory path,
+        address index,
+        uint256 collateralAmount,
+        uint256 size,
+        bool isLong,
+        uint256 executionFee
+    ) external payable;
 }
