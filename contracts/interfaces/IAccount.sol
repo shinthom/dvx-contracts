@@ -5,16 +5,12 @@ import {IExchange} from "./IExchange.sol";
 
 interface IAccount {
     event Deposited(
-        address indexed account,
+        address indexed sender,
         address indexed token,
         uint256 amount
     );
 
-    event Withdrawn(
-        address indexed account,
-        address indexed token,
-        uint256 amount
-    );
+    event Withdrawn(address indexed token, uint256 amount);
 
     event Swapped(
         address indexed account,
@@ -23,6 +19,10 @@ interface IAccount {
         uint256 amountIn,
         uint256 amountOut
     );
+
+    function owner() external view returns (address);
+
+    function exchange() external view returns (address);
 
     function getBalance(address token) external view returns (uint256);
 

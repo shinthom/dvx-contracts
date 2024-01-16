@@ -4,10 +4,11 @@ pragma solidity 0.8.7;
 import {IAccount} from "./interfaces/IAccount.sol";
 import {IExchange} from "./interfaces/IExchange.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
+import "hardhat/console.sol";
 
 contract Account is IAccount {
-    address public immutable owner;
-    address public immutable exchange;
+    address public immutable override owner;
+    address public immutable override exchange;
 
     receive() external payable {}
 
@@ -27,14 +28,13 @@ contract Account is IAccount {
 
     function deposit(address token, uint256 amount) external payable override {
         require(amount > 0, "amount: zero");
-        require(msg.sender == owner, "msg.sender: not owner");
 
         if (token == address(0)) {
             require(amount == msg.value, "amount: not exact");
         } else {
             IERC20(token).transferFrom(msg.sender, address(this), amount);
         }
-        emit Deposited(address(this), token, amount);
+        emit Deposited(msg.sender, token, amount);
     }
 
     function withdraw(address token, uint256 amount) external override {
@@ -53,7 +53,7 @@ contract Account is IAccount {
         } else {
             IERC20(token).transfer(msg.sender, amount);
         }
-        emit Withdrawn(address(this), token, amount);
+        emit Withdrawn(token, amount);
     }
 
     function swap(
@@ -83,7 +83,7 @@ contract Account is IAccount {
     function increasePosition(
         address adapter,
         IExchange.MarketOrder calldata marketOrder
-    ) external payable override {
+    ) external payable virtual override {
         require(msg.sender == exchange, "msg.sender: not exchange");
         require(adapter != address(0), "adapter: zero address");
 
@@ -115,7 +115,7 @@ contract Account is IAccount {
     function decreasePosition(
         address adapter,
         IExchange.MarketOrder calldata marketOrder
-    ) external payable override {
+    ) external payable virtual override {
         require(msg.sender == exchange, "msg.sender: not exchange");
         require(adapter != address(0), "adapter: zero address");
 
@@ -137,7 +137,7 @@ contract Account is IAccount {
     function increaseCollateral(
         address adapter,
         IExchange.MarketOrder calldata marketOrder
-    ) external payable override {
+    ) external payable virtual override {
         require(msg.sender == exchange, "msg.sender: not exchange");
         require(adapter != address(0), "adapter: zero address");
 
@@ -159,7 +159,7 @@ contract Account is IAccount {
     function decreaseCollateral(
         address adapter,
         IExchange.MarketOrder calldata marketOrder
-    ) external payable override {
+    ) external payable virtual override {
         require(msg.sender == exchange, "msg.sender: not exchange");
         require(adapter != address(0), "adapter: zero address");
 

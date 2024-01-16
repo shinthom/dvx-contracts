@@ -1,6 +1,6 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
-const { faucet } = require("./helper/index");
+const { faucet } = require("./helper");
 
 describe("Account", () => {
   const ETH = ethers.ZeroAddress;
@@ -17,11 +17,10 @@ describe("Account", () => {
     [user, other] = await ethers.getSigners();
 
     exchangeMock = await ethers.deployContract("ExchangeMock", [], user);
-    account = await ethers.deployContract(
-      "Account",
-      [user.address, exchangeMock.target],
-      user
-    );
+    account = await ethers.deployContract("Account", [
+      user.address,
+      exchangeMock.target,
+    ]);
     wbtc = await ethers.getContractAt("IERC20", WBTC);
   });
 
@@ -32,12 +31,6 @@ describe("Account", () => {
       await expect(account.connect(user).deposit(ETH, 0)).to.be.revertedWith(
         "amount: zero"
       );
-    });
-
-    it("reverts when not owner", async () => {
-      await expect(
-        account.connect(other).deposit(ETH, depositAmount)
-      ).to.be.revertedWith("msg.sender: not owner");
     });
 
     it("reverts when amount is not exact", async () => {
@@ -53,7 +46,7 @@ describe("Account", () => {
           .deposit(ETH, depositAmount, { value: depositAmount })
       )
         .to.emit(account, "Deposited")
-        .withArgs(account.target, ETH, depositAmount);
+        .withArgs(user.address, ETH, depositAmount);
       expect(await account.getBalance(ETH)).to.be.equal(depositAmount);
     });
 
@@ -62,7 +55,7 @@ describe("Account", () => {
       await wbtc.connect(user).approve(account.target, depositAmount);
       await expect(account.connect(user).deposit(WBTC, depositAmount))
         .to.emit(account, "Deposited")
-        .withArgs(account.target, WBTC, depositAmount);
+        .withArgs(user.address, WBTC, depositAmount);
       expect(await account.getBalance(WBTC)).to.be.equal(depositAmount);
     });
   });
@@ -126,7 +119,7 @@ describe("Account", () => {
 
       await expect(account.connect(user).withdraw(ETH, withdrawAmount))
         .to.emit(account, "Withdrawn")
-        .withArgs(account.target, ETH, withdrawAmount);
+        .withArgs(ETH, withdrawAmount);
       expect(await account.getBalance(ETH)).to.be.equal(0);
     });
 
@@ -138,7 +131,7 @@ describe("Account", () => {
 
       await expect(account.connect(user).withdraw(WBTC, withdrawAmount))
         .to.emit(account, "Withdrawn")
-        .withArgs(account.target, WBTC, withdrawAmount);
+        .withArgs(WBTC, withdrawAmount);
       expect(await account.getBalance(WBTC)).to.be.equal(0);
     });
   });

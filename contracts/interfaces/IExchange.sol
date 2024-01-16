@@ -9,6 +9,14 @@ interface IExchange {
         DecreaseCollateral
     }
 
+    struct MarketOrder {
+        address[] path;
+        address index;
+        uint256 collateralAmount;
+        uint256 size;
+        bool isLong;
+    }
+
     enum TriggerOrderType {
         TakeProfit,
         StopLoss
@@ -24,14 +32,6 @@ interface IExchange {
         Pending,
         Executed,
         Canceled
-    }
-
-    struct MarketOrder {
-        address[] path;
-        address index;
-        uint256 collateralAmount;
-        uint256 size;
-        bool isLong;
     }
 
     struct LimitOrder {
@@ -62,7 +62,17 @@ interface IExchange {
         uint256 createdAt;
     }
 
-    event CreateAccount(address indexed owner, address indexed account);
+    event AccountCreated(address indexed owner, address indexed account);
+
+    event StableTokenSet(address indexed token, bool isStable);
+
+    event AdapterRegistered(address indexed adapter, bool isRegistered);
+
+    event TierSet(uint8 indexed tierId, uint256 discount);
+
+    event ReferralTierSet(address indexed referral, uint8 indexed tierId);
+
+    event OpenPositionFeeRateSet(uint256 indexed fee);
 
     event LimitOrderCreated(address indexed account, uint256 indexed id);
 
@@ -93,12 +103,6 @@ interface IExchange {
         address indexed token,
         uint256 amount
     );
-
-    event SetTier(uint8 indexed tierId, uint256 discount);
-
-    event SetReferralTier(address indexed referral, uint8 indexed tierId);
-
-    event SetOpenPositionFee(uint256 indexed fee);
 
     function isStableToken(address token) external view returns (bool);
 
