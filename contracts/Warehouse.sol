@@ -21,6 +21,7 @@ contract Warehouse is IWarehouse, Governable {
     mapping(address => bool) public isOrderKeeper;
 
     uint256 public priceMinDeviation = 500; // 5%
+    uint256 public executionFee; // >= execution fee from adapter
 
     modifier onlyExchange() {
         require(msg.sender == exchange, "msg.sender: not exchange");
@@ -57,6 +58,11 @@ contract Warehouse is IWarehouse, Governable {
 
         priceMinDeviation = deviation;
         emit PriceMinDeviationSet(deviation);
+    }
+
+    function setExecutionFee(uint256 fee) external onlyGov {
+        executionFee = fee;
+        emit ExecutionFeeSet(fee);
     }
 
     function getPositionKey(
@@ -98,6 +104,131 @@ contract Warehouse is IWarehouse, Governable {
         return _limitOrders[account][id];
     }
 
+    function createLimitOrder(
+        address account,
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        uint256 size,
+        bool isLong,
+        uint256 triggerPrice,
+        uint256 acceptablePrice,
+        uint256 fee
+    ) external payable override onlyExchange {
+        require(
+            (isLong && triggerPrice <= acceptablePrice) ||
+                (!isLong && triggerPrice >= acceptablePrice),
+            "triggerPrice: invalid"
+        );
+
+        if (priceMinDeviation > 0) {
+            uint256 minDeviation = (triggerPrice * priceMinDeviation) /
+                BASIS_POINTS_DIVISOR;
+            require(
+                (isLong && acceptablePrice - triggerPrice <= minDeviation) ||
+                    (!isLong && triggerPrice - acceptablePrice <= minDeviation),
+                "acceptablePrice: out of deviation"
+            );
+        }
+
+        require(fee == msg.value, "fee: not match");
+        require(fee >= executionFee, "fee: less than executionFee");
+
+        uint256 balance = collateral == _weth
+            ? IAccount(account).getBalance(address(0))
+            : IAccount(account).getBalance(collateral);
+        require(
+            balance - lockedBalance[account][collateral] >= collateralAmount,
+            "collateralAmount: over balance"
+        );
+        lockedBalance[account][collateral] += collateralAmount;
+
+        LimitOrder memory limitOrder = LimitOrder({
+            id: _limitOrders[account].length,
+            state: LimitOrderState.Pending,
+            collateral: collateral,
+            index: index,
+            collateralAmount: collateralAmount,
+            size: size,
+            isLong: isLong,
+            triggerPrice: triggerPrice,
+            acceptablePrice: acceptablePrice,
+            createdAt: block.timestamp
+        });
+        _limitOrders[account].push(limitOrder);
+        emit LimitOrderCreated(account, limitOrder.id);
+    }
+
+    function cancelLimitOrder(
+        address account,
+        uint256 id
+    ) external override onlyExchange {
+        require(_limitOrders[account].length >= id + 1, "id: out of range");
+
+        LimitOrder memory limitOrder = _limitOrders[account][id];
+        require(
+            limitOrder.state == LimitOrderState.Pending,
+            "state: not pending"
+        );
+
+        _limitOrders[account][id].state = LimitOrderState.Canceled;
+        emit LimitOrderCanceled(account, id);
+
+        lockedBalance[account][limitOrder.collateral] -= limitOrder.collateralAmount; // prettier-ignore
+    }
+
+    function executeLimitOrder(
+        address adapter,
+        address account,
+        uint256 id
+    ) external payable onlyOrderKeeper {
+        require(_limitOrders[account].length >= id + 1, "id: out of range");
+        require(
+            address(this).balance >= executionFee,
+            "fee: less than executionFee"
+        );
+
+        IWarehouse.LimitOrder memory limitOrder = _limitOrders[account][id];
+        require(
+            limitOrder.state == LimitOrderState.Pending,
+            "state: not pending"
+        );
+
+        uint256 minExecutionFee = IAdapter(adapter).getMinExecutionFee();
+        require(
+            address(this).balance >= minExecutionFee,
+            "balance: under minExecutionFee"
+        );
+
+        uint256 markPrice = IAdapter(adapter).getWrapPrice(
+            limitOrder.index,
+            limitOrder.isLong
+        );
+        require(
+            (limitOrder.isLong && markPrice <= limitOrder.acceptablePrice) ||
+                (!limitOrder.isLong && markPrice >= limitOrder.acceptablePrice),
+            "price: not acceptable"
+        );
+
+        _limitOrders[account][id].state = LimitOrderState.Executed;
+        emit LimitOrderExecuted(account, id);
+
+        lockedBalance[account][limitOrder.collateral] -= limitOrder.collateralAmount; // prettier-ignore
+
+        IExchange.MarketOrder memory marketOrder = IAdapter(adapter)
+            .makeMarketOrder(
+                limitOrder.collateral,
+                limitOrder.index,
+                limitOrder.collateralAmount,
+                limitOrder.size,
+                limitOrder.isLong
+            );
+        IAccount(account).increasePosition{value: minExecutionFee}(
+            adapter,
+            marketOrder
+        );
+    }
+
     function createTriggerOrder(
         address account,
         address adapter,
@@ -108,7 +239,7 @@ contract Warehouse is IWarehouse, Governable {
         TriggerOrderType orderType,
         uint256 triggerPrice, // 1e18
         uint256 acceptablePrice, // 1e18
-        uint256 executionFee
+        uint256 fee
     ) external payable override onlyExchange {
         require(
             (isLong && triggerPrice >= acceptablePrice) ||
@@ -126,9 +257,8 @@ contract Warehouse is IWarehouse, Governable {
             );
         }
 
-        uint256 minExeuctionFee = IAdapter(adapter).getMinExecutionFee();
-        require(executionFee == msg.value, "executionFee: not match");
-        require(executionFee >= minExeuctionFee, "executionFee: not enough");
+        require(fee == msg.value, "fee: not match");
+        require(fee >= executionFee, "fee: less than executionFee");
 
         IAdapter.Position memory position = IAdapter(adapter).getPosition(
             account,
@@ -212,7 +342,10 @@ contract Warehouse is IWarehouse, Governable {
 
         uint256 minExecutionFee = IAdapter(triggerOrder.adapter)
             .getMinExecutionFee();
-        require(address(this).balance >= minExecutionFee, "fee: insufficient");
+        require(
+            address(this).balance >= minExecutionFee,
+            "balance: under minExecutionFee"
+        );
 
         _triggerOrders[positionKey][id].state = TriggerOrderState.Executed;
         emit TriggerOrderExecuted(triggerOrder.account, positionKey, id);
@@ -230,108 +363,6 @@ contract Warehouse is IWarehouse, Governable {
         IExchange(exchange).executeTriggerOrder{value: minExecutionFee}(
             triggerOrder.adapter,
             triggerOrder.account,
-            marketOrder
-        );
-    }
-
-    function createLimitOrder(
-        address account,
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 size,
-        bool isLong,
-        uint256 triggerPrice,
-        uint256 acceptablePrice,
-        uint256 executionFee
-    ) external payable override onlyExchange {
-        require(
-            (isLong && triggerPrice <= acceptablePrice) ||
-                (!isLong && triggerPrice >= acceptablePrice),
-            "triggerPrice: invalid"
-        );
-        require(executionFee == msg.value, "executionFee: mismatch");
-
-        uint256 balance = collateral == _weth
-            ? IAccount(account).getBalance(address(0))
-            : IAccount(account).getBalance(collateral);
-        require(
-            balance - lockedBalance[account][collateral] >= collateralAmount,
-            "collateralAmount: over balance"
-        );
-        lockedBalance[account][collateral] += collateralAmount;
-
-        LimitOrder memory limitOrder = LimitOrder({
-            id: _limitOrders[account].length,
-            state: LimitOrderState.Pending,
-            collateral: collateral,
-            index: index,
-            collateralAmount: collateralAmount,
-            size: size,
-            isLong: isLong,
-            triggerPrice: triggerPrice,
-            acceptablePrice: acceptablePrice,
-            createdAt: block.timestamp
-        });
-        _limitOrders[account].push(limitOrder);
-        emit LimitOrderCreated(account, limitOrder.id);
-    }
-
-    function cancelLimitOrder(
-        address account,
-        uint256 id
-    ) external override onlyExchange {
-        require(_limitOrders[account].length > id, "id: out of range");
-
-        LimitOrder memory limitOrder = _limitOrders[account][id];
-        require(
-            limitOrder.state == LimitOrderState.Pending,
-            "state: not pending"
-        );
-        _limitOrders[account][id].state = LimitOrderState.Canceled;
-        emit LimitOrderCanceled(account, id);
-
-        lockedBalance[account][limitOrder.collateral] -= limitOrder.collateralAmount; // prettier-ignore
-    }
-
-    function executeLimitOrder(
-        address adapter,
-        address account,
-        uint256 id
-    ) external payable onlyExchange {
-        IWarehouse.LimitOrder memory limitOrder = _limitOrders[account][id]; // prettier-ignore
-        require(
-            limitOrder.state == LimitOrderState.Pending,
-            "state: not pending"
-        );
-
-        uint256 minExecutionFee = IAdapter(adapter).getMinExecutionFee();
-        require(address(this).balance >= minExecutionFee, "fee: insufficient");
-
-        uint256 markPrice = IAdapter(adapter).getWrapPrice(
-            limitOrder.index,
-            limitOrder.isLong
-        );
-        require(
-            (limitOrder.isLong && markPrice >= limitOrder.acceptablePrice) ||
-                (!limitOrder.isLong && markPrice <= limitOrder.acceptablePrice),
-            "price: not acceptable"
-        );
-        _limitOrders[account][id].state = LimitOrderState.Executed;
-        emit LimitOrderExecuted(account, id);
-
-        lockedBalance[account][limitOrder.collateral] -= limitOrder.collateralAmount; // prettier-ignore
-
-        IExchange.MarketOrder memory marketOrder = IAdapter(adapter)
-            .makeMarketOrder(
-                limitOrder.collateral,
-                limitOrder.index,
-                limitOrder.collateralAmount,
-                limitOrder.size,
-                limitOrder.isLong
-            );
-        IAccount(account).increasePosition{value: minExecutionFee}(
-            adapter,
             marketOrder
         );
     }

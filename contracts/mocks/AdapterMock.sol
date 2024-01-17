@@ -2,6 +2,7 @@
 pragma solidity 0.8.7;
 
 import {IAdapter} from "../interfaces/IAdapter.sol";
+import {IExchange} from "../interfaces/IExchange.sol";
 
 contract AdapterMock {
     uint256 private _size;
@@ -43,5 +44,19 @@ contract AdapterMock {
         bool isLong
     ) external view returns (IAdapter.Position memory) {
         return IAdapter.Position(10, _size, 10, 10, 10, true);
+    }
+
+    function makeMarketOrder(
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        uint256 size,
+        bool isLong
+    ) external payable returns (IExchange.MarketOrder memory) {
+        address[] memory path = new address[](1);
+        path[0] = collateral;
+
+        return
+            IExchange.MarketOrder(path, index, collateralAmount, size, isLong);
     }
 }

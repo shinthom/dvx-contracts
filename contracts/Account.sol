@@ -20,7 +20,7 @@ contract Account is IAccount {
         exchange = _exchange;
     }
 
-    function getBalance(address token) public view override returns (uint256) {
+    function getBalance(address token) public view virtual override returns (uint256) {
         return
             token == address(0)
                 ? address(this).balance

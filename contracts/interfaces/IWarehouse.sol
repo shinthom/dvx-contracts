@@ -53,6 +53,8 @@ interface IWarehouse {
 
     event PriceMinDeviationSet(uint256 indexed deviation);
 
+    event ExecutionFeeSet(uint256 indexed fee);
+
     event LimitOrderCreated(address indexed account, uint256 indexed id);
 
     event LimitOrderCanceled(address indexed account, uint256 indexed id);
@@ -110,6 +112,20 @@ interface IWarehouse {
         uint256 id
     ) external view returns (LimitOrder memory);
 
+    function createLimitOrder(
+        address account,
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        uint256 size,
+        bool isLong,
+        uint256 triggerPrice,
+        uint256 acceptablePrice,
+        uint256 fee
+    ) external payable;
+
+    function cancelLimitOrder(address account, uint256 id) external;
+
     function createTriggerOrder(
         address account,
         address adapter,
@@ -124,18 +140,4 @@ interface IWarehouse {
     ) external payable;
 
     function cancelTriggerOrder(bytes32 positionKey, uint256 id) external;
-
-    function createLimitOrder(
-        address account,
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 size,
-        bool isLong,
-        uint256 triggerPrice,
-        uint256 acceptablePrice,
-        uint256 executionFee
-    ) external payable;
-
-    function cancelLimitOrder(address account, uint256 id) external;
 }

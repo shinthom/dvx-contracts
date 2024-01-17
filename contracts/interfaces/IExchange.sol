@@ -67,6 +67,12 @@ interface IExchange {
         MarketOrder memory marketOrder
     ) external payable;
 
+    function executeLimitOrder(
+        address account,
+        address adapter,
+        MarketOrder memory marketOrder
+    ) external payable;
+
     function executeMarketOrder(
         address account,
         OrderType orderType,

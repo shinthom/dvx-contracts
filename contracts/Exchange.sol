@@ -262,6 +262,56 @@ contract Exchange is IExchange, Governable {
         }
     }
 
+    function createLimitOrder(
+        address account,
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        uint256 size,
+        bool isLong,
+        uint256 triggerPrice,
+        uint256 acceptablePrice,
+        uint256 fee
+    ) external payable {
+        require(account != address(0), "account: zero");
+        require(accounts[msg.sender] == address(account), "account: not owner");
+
+        IWarehouse(warehouse).createLimitOrder{value: msg.value}(
+            account,
+            collateral,
+            index,
+            collateralAmount,
+            size,
+            isLong,
+            triggerPrice,
+            acceptablePrice,
+            fee
+        );
+    }
+
+    function cancelLimitOrder(address account, uint256 id) external {
+        require(account != address(0), "account: zero");
+        require(
+            accounts[msg.sender] == address(account),
+            "msg.sender: not owner"
+        );
+
+        IWarehouse(warehouse).cancelLimitOrder(account, id);
+    }
+
+    function executeLimitOrder(
+        address account,
+        address adapter,
+        MarketOrder calldata marketOrder
+    ) external payable virtual override {
+        require(msg.sender == warehouse, "msg.sender: not warehouse");
+
+        IAccount(account).increasePosition{value: msg.value}(
+            adapter,
+            marketOrder
+        );
+    }
+
     function createTriggerOrder(
         address account,
         address adapter,
@@ -320,38 +370,6 @@ contract Exchange is IExchange, Governable {
             adapter,
             marketOrder
         );
-    }
-
-    function createLimitOrder(
-        address account,
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 size,
-        bool isLong,
-        uint256 triggerPrice,
-        uint256 acceptablePrice,
-        uint256 executionFee
-    ) external payable {
-        require(accounts[msg.sender] == address(account), "account: not owner");
-
-        IWarehouse(warehouse).createLimitOrder(
-            account,
-            collateral,
-            index,
-            collateralAmount,
-            size,
-            isLong,
-            triggerPrice,
-            acceptablePrice,
-            executionFee
-        );
-    }
-
-    function cancelLimitOrder(address account, uint256 id) external {
-        require(accounts[msg.sender] == address(account), "account: not owner");
-
-        IWarehouse(warehouse).cancelLimitOrder(account, id);
     }
 
     function withdraw(
