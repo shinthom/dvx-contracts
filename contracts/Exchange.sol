@@ -10,7 +10,6 @@ import {IWarehouse} from "./interfaces/IWarehouse.sol";
 import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 
 contract Exchange is IExchange, Governable {
-    // todo: make set function
     address private constant _weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
     address private constant _swapRouter =
         0xE592427A0AEce92De3Edee1F18E0157C05861564; // uniswap V3
@@ -29,6 +28,17 @@ contract Exchange is IExchange, Governable {
     uint256 public openPositionFeeRate;
 
     receive() external payable {}
+
+    modifier onlyAccountOwner(address account) {
+        require(account != address(0), "account: zero");
+        require(accounts[msg.sender] == account, "account: not owner");
+        _;
+    }
+
+    modifier onlyWarehouse() {
+        require(msg.sender == warehouse, "msg.sender: not warehouse");
+        _;
+    }
 
     function isStableToken(
         address token
@@ -89,23 +99,20 @@ contract Exchange is IExchange, Governable {
         return IWarehouse(warehouse).lockedBalance(account, token);
     }
 
-    function setStableToken(address token, bool isStable) external {
-        require(msg.sender == gov, "msg.sender: not gov");
-
+    function setStableToken(address token, bool isStable) external onlyGov {
         _stableTokens[token] = isStable;
         emit StableTokenSet(token, isStable);
     }
 
-    function setRegisteredAdapter(address adapter, bool isRegistered) external {
-        require(msg.sender == gov, "msg.sender: not gov");
-
+    function setRegisteredAdapter(
+        address adapter,
+        bool isRegistered
+    ) external onlyGov {
         _registeredAdapters[adapter] = isRegistered;
         emit AdapterRegistered(adapter, isRegistered);
     }
 
-    function setTier(uint8 tierId, uint256 discountRate) external {
-        require(msg.sender == gov, "msg.sender: not gov");
-
+    function setTier(uint8 tierId, uint256 discountRate) external onlyGov {
         require(tierId != 0, "tierId: zero");
         require(discountRate <= BASIS_POINTS, "discountRate: invalid");
 
@@ -113,15 +120,12 @@ contract Exchange is IExchange, Governable {
         emit TierSet(tierId, discountRate);
     }
 
-    function setReferralTier(address account, uint8 tierId) external {
-        require(msg.sender == gov, "msg.sender: not gov");
-
+    function setReferralTier(address account, uint8 tierId) external onlyGov {
         referralTiers[account] = tierId;
         emit ReferralTierSet(account, tierId);
     }
 
-    function setOpenPositionFeeRate(uint256 _feeRate) external {
-        require(msg.sender == gov, "msg.sender: not gov");
+    function setOpenPositionFeeRate(uint256 _feeRate) external onlyGov {
         require(_feeRate <= BASIS_POINTS, "feeRate: invalid");
 
         openPositionFeeRate = _feeRate;
@@ -191,10 +195,7 @@ contract Exchange is IExchange, Governable {
         uint256 size,
         bool isLong,
         uint256 executionFee
-    ) external payable override {
-        require(account != address(0), "account: zero");
-        require(accounts[msg.sender] == account, "account: not owner");
-
+    ) external payable override onlyAccountOwner(account) {
         require(path.length == 1 || path.length == 2, "path: invalid length");
 
         require(
@@ -272,10 +273,7 @@ contract Exchange is IExchange, Governable {
         uint256 triggerPrice,
         uint256 acceptablePrice,
         uint256 fee
-    ) external payable {
-        require(account != address(0), "account: zero");
-        require(accounts[msg.sender] == address(account), "account: not owner");
-
+    ) external payable onlyAccountOwner(account) {
         IWarehouse(warehouse).createLimitOrder{value: msg.value}(
             account,
             collateral,
@@ -289,13 +287,10 @@ contract Exchange is IExchange, Governable {
         );
     }
 
-    function cancelLimitOrder(address account, uint256 id) external {
-        require(account != address(0), "account: zero");
-        require(
-            accounts[msg.sender] == address(account),
-            "msg.sender: not owner"
-        );
-
+    function cancelLimitOrder(
+        address account,
+        uint256 id
+    ) external onlyAccountOwner(account) {
         IWarehouse(warehouse).cancelLimitOrder(account, id);
     }
 
@@ -303,9 +298,7 @@ contract Exchange is IExchange, Governable {
         address account,
         address adapter,
         MarketOrder calldata marketOrder
-    ) external payable virtual override {
-        require(msg.sender == warehouse, "msg.sender: not warehouse");
-
+    ) external payable virtual override onlyWarehouse {
         IAccount(account).increasePosition{value: msg.value}(
             adapter,
             marketOrder
@@ -320,15 +313,10 @@ contract Exchange is IExchange, Governable {
         bool isLong,
         uint256 size,
         IWarehouse.TriggerOrderType orderType,
-        uint256 triggerPrice, // 1e18
-        uint256 acceptablePrice, // 1e18
+        uint256 triggerPrice,
+        uint256 acceptablePrice,
         uint256 executionFee
-    ) external payable {
-        require(account != address(0), "account: zero");
-        require(
-            accounts[msg.sender] == address(account),
-            "msg.sender: not owner"
-        );
+    ) external payable onlyAccountOwner(account) {
         require(isRegisteredAdapter(adapter), "adapter: not registered");
 
         IWarehouse(warehouse).createTriggerOrder{value: executionFee}(
@@ -349,13 +337,7 @@ contract Exchange is IExchange, Governable {
         address account,
         bytes32 positionKey,
         uint256 id
-    ) external {
-        require(account != address(0), "account: zero");
-        require(
-            accounts[msg.sender] == address(account),
-            "msg.sender: not owner"
-        );
-
+    ) external onlyAccountOwner(account) {
         IWarehouse(warehouse).cancelTriggerOrder(positionKey, id);
     }
 
@@ -363,9 +345,7 @@ contract Exchange is IExchange, Governable {
         address account,
         address adapter,
         MarketOrder calldata marketOrder
-    ) external payable virtual override {
-        require(msg.sender == warehouse, "msg.sender: not warehouse");
-
+    ) external payable virtual override onlyWarehouse {
         IAccount(account).decreasePosition{value: msg.value}(
             adapter,
             marketOrder
@@ -376,9 +356,7 @@ contract Exchange is IExchange, Governable {
         address receiver,
         address token,
         uint256 amount
-    ) external {
-        require(msg.sender == gov, "msg.sender: not gov");
-
+    ) external onlyGov {
         require(receiver != address(0), "receiver: zero address");
         require(amount > 0, "amount: zero");
 
