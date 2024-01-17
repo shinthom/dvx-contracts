@@ -32,4 +32,10 @@ contract ExchangeMock is Exchange {
 
         return address(account);
     }
+
+    function executeTriggerOrder(
+        address account,
+        address adapter,
+        MarketOrder memory marketOrder
+    ) external payable override {}
 }

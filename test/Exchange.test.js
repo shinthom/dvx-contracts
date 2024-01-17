@@ -234,8 +234,7 @@ describe("Exchange", () => {
       increaseCollateral: 2,
       decreaseCollateral: 3,
     };
-    const validExecutionFee = 10;
-    const invalidExecutionFee = 1;
+    const executionFee = 10;
 
     let exchangeMock;
     let accountMock;
@@ -266,8 +265,8 @@ describe("Exchange", () => {
             collateralAmount,
             size,
             isLong,
-            validExecutionFee,
-            { value: validExecutionFee }
+            executionFee,
+            { value: executionFee }
           )
       ).to.be.revertedWith("account: zero");
     });
@@ -285,8 +284,8 @@ describe("Exchange", () => {
             collateralAmount,
             size,
             isLong,
-            validExecutionFee,
-            { value: validExecutionFee }
+            executionFee,
+            { value: executionFee }
           )
       ).to.be.revertedWith("account: not owner");
     });
@@ -304,8 +303,8 @@ describe("Exchange", () => {
             collateralAmount,
             size,
             isLong,
-            validExecutionFee,
-            { value: validExecutionFee }
+            executionFee,
+            { value: executionFee }
           )
       ).to.be.revertedWith("path: invalid length");
 
@@ -321,8 +320,8 @@ describe("Exchange", () => {
             collateralAmount,
             size,
             isLong,
-            validExecutionFee,
-            { value: validExecutionFee }
+            executionFee,
+            { value: executionFee }
           )
       ).to.be.revertedWith("path: invalid length");
     });
@@ -340,8 +339,8 @@ describe("Exchange", () => {
             collateralAmount,
             size,
             isLong,
-            validExecutionFee,
-            { value: validExecutionFee }
+            executionFee,
+            { value: executionFee }
           )
       ).to.be.revertedWith("adapter: not registered");
     });
@@ -359,8 +358,8 @@ describe("Exchange", () => {
             collateralAmount,
             size,
             isLong,
-            validExecutionFee,
-            { value: validExecutionFee }
+            executionFee,
+            { value: executionFee }
           )
       ).to.be.revertedWith("adapter: not registered");
     });
@@ -382,8 +381,8 @@ describe("Exchange", () => {
             0,
             size,
             isLong,
-            validExecutionFee,
-            { value: validExecutionFee }
+            executionFee,
+            { value: executionFee }
           )
       ).to.be.revertedWith("collateralAmount: zero");
     });
@@ -405,8 +404,8 @@ describe("Exchange", () => {
             collateralAmount,
             0,
             isLong,
-            validExecutionFee,
-            { value: validExecutionFee }
+            executionFee,
+            { value: executionFee }
           )
       ).to.be.revertedWith("size: zero");
     });
@@ -427,8 +426,8 @@ describe("Exchange", () => {
           collateralAmount,
           size,
           isLong,
-          validExecutionFee,
-          { value: validExecutionFee }
+          executionFee,
+          { value: executionFee }
         );
     });
   });

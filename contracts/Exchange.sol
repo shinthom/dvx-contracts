@@ -273,11 +273,15 @@ contract Exchange is IExchange, Governable {
         uint256 triggerPrice, // 1e18
         uint256 acceptablePrice, // 1e18
         uint256 executionFee
-    ) external {
-        require(accounts[msg.sender] == address(account), "account: not owner");
+    ) external payable {
+        require(account != address(0), "account: zero");
+        require(
+            accounts[msg.sender] == address(account),
+            "msg.sender: not owner"
+        );
         require(isRegisteredAdapter(adapter), "adapter: not registered");
 
-        IWarehouse(warehouse).createTriggerOrder(
+        IWarehouse(warehouse).createTriggerOrder{value: executionFee}(
             account,
             adapter,
             collateral,
@@ -296,9 +300,26 @@ contract Exchange is IExchange, Governable {
         bytes32 positionKey,
         uint256 id
     ) external {
-        require(accounts[msg.sender] == address(account), "account: not owner");
+        require(account != address(0), "account: zero");
+        require(
+            accounts[msg.sender] == address(account),
+            "msg.sender: not owner"
+        );
 
-        IWarehouse(warehouse).cancelTriggerOrder(account, positionKey, id);
+        IWarehouse(warehouse).cancelTriggerOrder(positionKey, id);
+    }
+
+    function executeTriggerOrder(
+        address account,
+        address adapter,
+        MarketOrder calldata marketOrder
+    ) external payable virtual override {
+        require(msg.sender == warehouse, "msg.sender: not warehouse");
+
+        IAccount(account).decreasePosition{value: msg.value}(
+            adapter,
+            marketOrder
+        );
     }
 
     function createLimitOrder(

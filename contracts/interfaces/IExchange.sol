@@ -61,6 +61,12 @@ interface IExchange {
         uint256 amountIn
     ) external payable returns (uint256);
 
+    function executeTriggerOrder(
+        address account,
+        address adapter,
+        MarketOrder memory marketOrder
+    ) external payable;
+
     function executeMarketOrder(
         address account,
         OrderType orderType,

@@ -9,7 +9,7 @@ contract Governable {
     }
 
     modifier onlyGov() {
-        require(msg.sender == gov, "Governable: forbidden");
+        require(msg.sender == gov, "msg.sender: not gov");
         _;
     }
 
