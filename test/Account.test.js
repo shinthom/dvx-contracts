@@ -96,7 +96,7 @@ describe("Account", () => {
       await account.deposit(ETH, withdrawAmount, {
         value: withdrawAmount,
       });
-      await exchangeMock.increaseLockedBalance(account.target, ETH, 1n);
+      await exchangeMock.increaseLockedBalance(1n);
       await expect(
         account.connect(user).withdraw(ETH, withdrawAmount)
       ).to.be.revertedWith("amount: exceed balance");
@@ -105,7 +105,7 @@ describe("Account", () => {
       await wbtc.connect(user).approve(account.target, withdrawAmount);
 
       await account.connect(user).deposit(WBTC, withdrawAmount);
-      await exchangeMock.increaseLockedBalance(account.target, WBTC, 1n);
+      await exchangeMock.increaseLockedBalance(1n);
       await expect(
         account.connect(user).withdraw(WBTC, withdrawAmount)
       ).to.be.revertedWith("amount: exceed balance");

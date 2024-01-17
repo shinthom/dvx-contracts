@@ -5,12 +5,17 @@ import {Exchange} from "../Exchange.sol";
 import {AccountMock} from "./AccountMock.sol";
 
 contract ExchangeMock is Exchange {
-    function increaseLockedBalance(
+    uint256 private _lockedBalance;
+
+    function increaseLockedBalance(uint256 amount) external {
+        _lockedBalance = amount;
+    }
+
+    function lockedBalance(
         address account,
-        address token,
-        uint256 amount
-    ) external {
-        lockedBalances[account][token] += amount;
+        address token
+    ) external view override returns (uint256) {
+        return _lockedBalance;
     }
 
     function swap(

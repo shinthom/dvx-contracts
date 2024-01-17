@@ -15,6 +15,7 @@ contract Account is IAccount {
     constructor(address _owner, address _exchange) {
         require(_owner != address(0), "owner: zero address");
         require(_exchange != address(0), "exchange: zero address");
+
         owner = _owner;
         exchange = _exchange;
     }
@@ -42,7 +43,7 @@ contract Account is IAccount {
         require(msg.sender == owner, "msg.sender: not owner");
 
         uint256 balance = getBalance(token);
-        uint256 lockedBalance = IExchange(exchange).lockedBalances(
+        uint256 lockedBalance = IExchange(exchange).lockedBalance(
             address(this),
             token
         );
