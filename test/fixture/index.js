@@ -101,7 +101,7 @@ const deploy = async (noAccount) => {
 
   exchange = await ethers.deployContract("Exchange");
   warehouse = await ethers.deployContract("Warehouse");
-  gmxV1Adapter = await ethers.deployContract("GMXV1Adapter", [
+  gmxV1Adapter = await ethers.deployContract("GmxV1Adapter", [
     PositionRouter,
     Router,
     Vault,

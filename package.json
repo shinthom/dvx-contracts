@@ -15,7 +15,7 @@
     "create-trigger-orders": "hardhat run scripts/create-trigger-orders-testnet.js --network local",
     "test": "hardhat test --network local",
     "test-account": "hardhat test test/Account.test.js --network local",
-    "test-gmx-v1": "hardhat test test/adapters/GMXV1.test.js --network local",
+    "test-gmx-v1": "hardhat test test/adapters/GmxV1.test.js --network local",
     "test-mux": "hardhat test test/adapters/MUX.test.js --network local",
     "test-exchange": "hardhat test test/exchange.test.js --network local",
     "test-quoter": "hardhat test test/quoter.test.js --network local",

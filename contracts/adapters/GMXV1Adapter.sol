@@ -177,7 +177,7 @@ interface IVaultPriceFeed {
     function setSecondaryPriceFeed(address _secondaryPriceFeed) external;
 }
 
-contract GMXV1Adapter is IAdapter {
+contract GmxV1Adapter is IAdapter {
     uint256 public constant BASIS_POINTS_DIVISOR = 10000;
 
     uint256 public constant PRICE_DECIMALS = 30;
