@@ -20,7 +20,9 @@ contract Account is IAccount {
         exchange = _exchange;
     }
 
-    function getBalance(address token) public view virtual override returns (uint256) {
+    function getBalance(
+        address token
+    ) public view virtual override returns (uint256) {
         return
             token == address(0)
                 ? address(this).balance
@@ -92,11 +94,14 @@ contract Account is IAccount {
             = IExchange(exchange).getOpenPositionFee(marketOrder.collateralAmount); // prettier-ignore
         uint256 collateralAmount = marketOrder.collateralAmount - feeCollateral;
 
-        address collateral = marketOrder.path[0];
-        if (collateral == address(0)) {
-            payable(exchange).transfer(feeCollateral);
-        } else {
-            IERC20(collateral).transfer(exchange, collateralAmount);
+        if (feeCollateral > 0) {
+            address collateral = marketOrder.path[0];
+
+            if (collateral == address(0)) {
+                payable(exchange).transfer(feeCollateral);
+            } else {
+                IERC20(collateral).transfer(exchange, collateralAmount);
+            }
         }
 
         // slither-disable-next-line controlled-delegatecall,low-level-calls

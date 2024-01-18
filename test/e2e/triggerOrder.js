@@ -14,12 +14,16 @@ describe("triggerOrder", () => {
     it("should execute a trigger order", async () => {
       const {
         user,
+        orderKeeper,
         account,
         exchange,
+        warehouse,
         gmxV1Adapter,
         WETH,
         deposit,
-        fillPositionOrder,
+        executeIncreasePosition,
+        executeDecreasePosition,
+        setPrice,
       } = await loadFixture(deploy);
 
       const collateral = WETH;
@@ -33,21 +37,31 @@ describe("triggerOrder", () => {
       await exchange.setRegisteredAdapter(gmxV1Adapter.target, true);
 
       await deposit(collateral, collateralAmount);
+
+      const marketOrder = await gmxV1Adapter.makeMarketOrder(
+        collateral,
+        index,
+        collateralAmount,
+        size,
+        isLong
+      );
       await exchange
         .connect(user)
         .executeMarketOrder(
           account.target,
           orderType.increasePosition,
           gmxV1Adapter.target,
-          [collateral],
-          index,
-          collateralAmount,
-          size,
-          isLong,
+          [marketOrder.path[0]],
+          marketOrder.index,
+          marketOrder.collateralAmount,
+          marketOrder.size,
+          marketOrder.isLong,
           executionFee,
-          { value: executionFee }
+          {
+            value: executionFee,
+          }
         );
-      await fillPositionOrder();
+      await executeIncreasePosition(account.target);
       console.log(
         await gmxV1Adapter.getPosition(
           account.target,
@@ -58,8 +72,11 @@ describe("triggerOrder", () => {
       );
 
       const triggerOrderType = { takeProfit: 0, stopLoss: 1 };
-      const triggerPrice = ethers.parseUnits("2000", 18);
-      const acceptablePrice = ethers.parseUnits("2000", 18); // calculated by slippage tolerance
+
+      var triggerPrice = ethers.parseUnits("2000", 18);
+      var acceptablePrice = ethers.parseUnits("2000", 18); // calculated by slippage tolerance
+      var price = ethers.parseUnits("2000", 30);
+      await setPrice(gmxV1Adapter, WETH, price, price, false);
 
       await exchange
         .connect(user)
@@ -91,20 +108,21 @@ describe("triggerOrder", () => {
           executionFee,
           { value: executionFee }
         );
-      const positionKey = await exchange.getPositionKey(
+
+      const positionKey = await warehouse.getPositionKey(
         account.target,
         gmxV1Adapter.target,
         collateral,
         index,
         isLong
       );
-      console.log(await exchange.triggerOrders(positionKey, 0));
-      console.log(await exchange.triggerOrders(positionKey, 1));
-      await exchange.connect(user).cancelTriggerOrder(positionKey, 0);
       await exchange
         .connect(user)
-        .executeTriggerOrder(account.target, positionKey, 1);
-      await fillPositionOrder();
+        .cancelTriggerOrder(account.target, positionKey, 0);
+
+      await warehouse.setOrderKeeper(orderKeeper.address, true);
+      await warehouse.connect(orderKeeper).executeTriggerOrder(positionKey, 1);
+      await executeDecreasePosition(account.target);
       console.log(
         await gmxV1Adapter.getPosition(
           account.target,
@@ -121,10 +139,12 @@ describe("triggerOrder", () => {
           user,
           account,
           exchange,
+          warehouse,
           muxAdapter,
           WETH,
           deposit,
           fillPositionOrder,
+          setPrice,
         } = await loadFixture(deploy);
 
         const collateral = WETH;
@@ -138,19 +158,28 @@ describe("triggerOrder", () => {
         await exchange.setRegisteredAdapter(muxAdapter.target, true);
 
         await deposit(collateral, collateralAmount);
+        const marketOrder = await muxAdapter.makeMarketOrder(
+          collateral,
+          index,
+          collateralAmount,
+          size,
+          isLong
+        );
         await exchange
           .connect(user)
           .executeMarketOrder(
             account.target,
             orderType.increasePosition,
             muxAdapter.target,
-            [collateral],
-            index,
-            collateralAmount,
-            size,
-            isLong,
+            [marketOrder.path[0]],
+            marketOrder.index,
+            marketOrder.collateralAmount,
+            marketOrder.size,
+            marketOrder.isLong,
             executionFee,
-            { value: executionFee }
+            {
+              value: executionFee,
+            }
           );
         await fillPositionOrder();
         console.log(
@@ -163,8 +192,11 @@ describe("triggerOrder", () => {
         );
 
         const triggerOrderType = { takeProfit: 0, stopLoss: 1 };
-        const triggerPrice = ethers.parseUnits("2000", 18);
-        const acceptablePrice = ethers.parseUnits("2000", 18); // calculated by slippage tolerance
+
+        var triggerPrice = ethers.parseUnits("2000", 18);
+        var acceptablePrice = ethers.parseUnits("2000", 18); // calculated by slippage tolerance
+        var price = ethers.parseUnits("2000", 8);
+        await setPrice(muxAdapter, WETH, price, price, false);
 
         await exchange
           .connect(user)
@@ -196,19 +228,22 @@ describe("triggerOrder", () => {
             executionFee,
             { value: executionFee }
           );
-        const positionKey = await exchange.getPositionKey(
+
+        const positionKey = await warehouse.getPositionKey(
           account.target,
           muxAdapter.target,
           collateral,
           index,
           isLong
         );
-        console.log(await exchange.triggerOrders(positionKey, 0));
-        console.log(await exchange.triggerOrders(positionKey, 1));
-        await exchange.connect(user).cancelTriggerOrder(positionKey, 0);
         await exchange
           .connect(user)
-          .executeTriggerOrder(account.target, positionKey, 1);
+          .cancelTriggerOrder(account.target, positionKey, 0);
+
+        await warehouse.setOrderKeeper(orderKeeper.address, true);
+        await warehouse
+          .connect(orderKeeper)
+          .executeTriggerOrder(positionKey, 1);
         await fillPositionOrder();
         console.log(
           await muxAdapter.getPosition(

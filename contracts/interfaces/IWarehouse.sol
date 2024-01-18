@@ -139,5 +139,9 @@ interface IWarehouse {
         uint256 executionFee
     ) external payable;
 
-    function cancelTriggerOrder(bytes32 positionKey, uint256 id) external;
+    function cancelTriggerOrder(
+        address account,
+        bytes32 positionKey,
+        uint256 id
+    ) external;
 }

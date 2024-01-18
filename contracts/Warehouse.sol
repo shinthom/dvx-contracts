@@ -178,8 +178,8 @@ contract Warehouse is IWarehouse, Governable {
     }
 
     function executeLimitOrder(
-        address adapter,
         address account,
+        address adapter,
         uint256 id
     ) external payable onlyOrderKeeper {
         require(_limitOrders[account].length >= id + 1, "id: out of range");
@@ -223,7 +223,8 @@ contract Warehouse is IWarehouse, Governable {
                 limitOrder.size,
                 limitOrder.isLong
             );
-        IAccount(account).increasePosition{value: minExecutionFee}(
+        IExchange(exchange).executeLimitOrder{value: minExecutionFee}(
+            account,
             adapter,
             marketOrder
         );
@@ -295,6 +296,7 @@ contract Warehouse is IWarehouse, Governable {
     }
 
     function cancelTriggerOrder(
+        address account,
         bytes32 positionKey,
         uint256 id
     ) external override onlyExchange {
@@ -304,6 +306,10 @@ contract Warehouse is IWarehouse, Governable {
         );
 
         TriggerOrder memory triggerOrder = _triggerOrders[positionKey][id];
+        require(
+            triggerOrder.account == account,
+            "triggerOrder: not belong to account"
+        );
         require(
             triggerOrder.state == TriggerOrderState.Pending,
             "triggerOrder: not pending"
@@ -361,8 +367,8 @@ contract Warehouse is IWarehouse, Governable {
             isLong: triggerOrder.isLong
         });
         IExchange(exchange).executeTriggerOrder{value: minExecutionFee}(
-            triggerOrder.adapter,
             triggerOrder.account,
+            triggerOrder.adapter,
             marketOrder
         );
     }

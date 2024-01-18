@@ -6,14 +6,17 @@ describe("limitOrder", () => {
   it("should execute a limit order", async () => {
     const {
       user,
+      orderKeeper,
       account,
       exchange,
+      warehouse,
       gmxV1Adapter,
       muxAdapter,
       WETH,
       deposit,
       executeIncreasePosition,
       fillPositionOrder,
+      setPrice,
     } = await loadFixture(deploy);
 
     const collateral = WETH;
@@ -23,8 +26,10 @@ describe("limitOrder", () => {
     const isLong = true;
 
     const executionFee = await gmxV1Adapter.getMinExecutionFee();
-    const triggerPrice = ethers.parseUnits("2000", 18);
-    const acceptablePrice = ethers.parseUnits("2000", 18); // calculated by slippage tolerance
+    var triggerPrice = ethers.parseUnits("2000", 18);
+    var acceptablePrice = ethers.parseUnits("2000", 18); // calculated by slippage tolerance
+    var price = ethers.parseUnits("2000", 30);
+    await setPrice(gmxV1Adapter, WETH, price, price, false);
 
     await deposit(collateral, collateralAmount);
     await exchange
@@ -41,10 +46,8 @@ describe("limitOrder", () => {
         executionFee,
         { value: executionFee }
       );
-    console.log(await exchange.getLimitOrder(account.target, 0));
 
     await exchange.connect(user).cancelLimitOrder(account.target, 0);
-    console.log(await exchange.getLimitOrder(account.target, 0));
 
     await exchange
       .connect(user)
@@ -60,15 +63,27 @@ describe("limitOrder", () => {
         executionFee,
         { value: executionFee }
       );
-    console.log(await exchange.getLimitOrder(account.target, 1));
 
     // quoter should choose the best router(adapter).
 
-    await exchange.executeLimitOrder(gmxV1Adapter.target, account.target, 1);
+    await warehouse.setOrderKeeper(orderKeeper.address, true);
+    await warehouse
+      .connect(orderKeeper)
+      .executeLimitOrder(account.target, gmxV1Adapter.target, 1);
     await executeIncreasePosition(account.target);
     console.log(
-      await gmxV1Adapter.getPosition(account.target, collateral, index, isLong)
+      await gmxV1Adapter.getWrapPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      )
     );
+
+    var triggerPrice = ethers.parseUnits("2000", 18);
+    var acceptablePrice = ethers.parseUnits("2000", 18);
+    var price = ethers.parseUnits("2000", 8);
+    await setPrice(muxAdapter, WETH, price, price, false);
 
     await deposit(collateral, collateralAmount);
     await exchange
@@ -85,12 +100,18 @@ describe("limitOrder", () => {
         executionFee,
         { value: executionFee }
       );
-    console.log(await exchange.getLimitOrder(account.target, 2));
 
-    await exchange.executeLimitOrder(muxAdapter.target, account.target, 2);
+    await warehouse
+      .connect(orderKeeper)
+      .executeLimitOrder(account.target, muxAdapter.target, 2);
     await fillPositionOrder(account.target);
     console.log(
-      await muxAdapter.getPosition(account.target, collateral, index, isLong)
+      await muxAdapter.getWrapPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      )
     );
   });
 });

@@ -274,7 +274,7 @@ contract Exchange is IExchange, Governable {
         uint256 acceptablePrice,
         uint256 fee
     ) external payable onlyAccountOwner(account) {
-        IWarehouse(warehouse).createLimitOrder{value: msg.value}(
+        IWarehouse(warehouse).createLimitOrder{value: fee}(
             account,
             collateral,
             index,
@@ -338,7 +338,7 @@ contract Exchange is IExchange, Governable {
         bytes32 positionKey,
         uint256 id
     ) external onlyAccountOwner(account) {
-        IWarehouse(warehouse).cancelTriggerOrder(positionKey, id);
+        IWarehouse(warehouse).cancelTriggerOrder(account, positionKey, id);
     }
 
     function executeTriggerOrder(

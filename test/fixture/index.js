@@ -44,6 +44,7 @@ let vaultPriceFeed;
 let secondaryPriceFeedMock;
 // dvx contracts
 let exchange;
+let warehouse;
 let gmxV1Adapter;
 let muxAdapter;
 let quoter;
@@ -51,7 +52,7 @@ let quoter;
 let account;
 
 const deploy = async (noAccount) => {
-  [deployer, user, other] = await ethers.getSigners();
+  [deployer, user, other, orderKeeper] = await ethers.getSigners();
   // gmx accounts
   impersonatedAdmin = await ethers.getImpersonatedSigner(
     "0xb4d2603b2494103c90b2c607261dd85484b49ef0"
@@ -98,6 +99,10 @@ const deploy = async (noAccount) => {
   liquidityPool = await ethers.getContractAt("ILiquidityPool", LiquidityPool);
 
   exchange = await ethers.deployContract("Exchange");
+  warehouse = await ethers.deployContract("Warehouse");
+  await exchange.setWarehouse(warehouse.target);
+  await warehouse.setExchange(exchange.target);
+
   gmxV1Adapter = await ethers.deployContract("GMXV1Adapter", [
     PositionRouter,
     Router,
@@ -328,6 +333,7 @@ const deploy = async (noAccount) => {
     deployer,
     user,
     other,
+    orderKeeper,
     impersonatedBroker,
     impersonatedOwner,
     weth,
@@ -338,6 +344,7 @@ const deploy = async (noAccount) => {
     orderBook,
     liquidityPool,
     exchange,
+    warehouse,
     gmxV1Adapter,
     muxAdapter,
     quoter,

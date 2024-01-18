@@ -337,11 +337,13 @@ describe("Warehouse", () => {
     describe("cancel", () => {
       let positionKey;
 
+      const account = ethers.Wallet.createRandom().address;
+
       beforeEach(async () => {
         await warehouse
           .connect(exchange)
           .createTriggerOrder(
-            ethers.ZeroAddress,
+            account,
             adapter.target,
             ETH,
             ETH,
@@ -357,7 +359,7 @@ describe("Warehouse", () => {
           );
 
         positionKey = await warehouse.getPositionKey(
-          ethers.ZeroAddress,
+          account,
           adapter.target,
           ETH,
           ETH,
@@ -367,25 +369,33 @@ describe("Warehouse", () => {
 
       it("reverts when msg.sender is not exchange", async () => {
         await expect(
-          warehouse.connect(user).cancelTriggerOrder(positionKey, 0)
+          warehouse.connect(user).cancelTriggerOrder(account, positionKey, 0)
         ).to.be.revertedWith("msg.sender: not exchange");
       });
 
       it("reverts when position does not exist", async () => {
         await expect(
-          warehouse.connect(exchange).cancelTriggerOrder(ethers.ZeroHash, 0)
+          warehouse
+            .connect(exchange)
+            .cancelTriggerOrder(account, ethers.ZeroHash, 0)
         ).to.be.revertedWith("id: out of range");
       });
 
       it("reverts when triggerOrder state is not pending", async () => {
-        await warehouse.connect(exchange).cancelTriggerOrder(positionKey, 0);
+        await warehouse
+          .connect(exchange)
+          .cancelTriggerOrder(account, positionKey, 0);
         await expect(
-          warehouse.connect(exchange).cancelTriggerOrder(positionKey, 0)
+          warehouse
+            .connect(exchange)
+            .cancelTriggerOrder(account, positionKey, 0)
         ).to.be.revertedWith("triggerOrder: not pending");
       });
 
       it("cancel trigger order", async () => {
-        await warehouse.connect(exchange).cancelTriggerOrder(positionKey, 0);
+        await warehouse
+          .connect(exchange)
+          .cancelTriggerOrder(account, positionKey, 0);
         const triggerOrder = await warehouse.getTriggerOrder(positionKey, 0);
         expect(triggerOrder.state).to.be.equal(triggerOrderState.canceled);
       });
@@ -814,7 +824,7 @@ describe("Warehouse", () => {
         await expect(
           warehouse
             .connect(user)
-            .executeLimitOrder(adapter.target, account.target, 0)
+            .executeLimitOrder(account.target, adapter.target, 0)
         ).to.be.revertedWith("msg.sender: not orderKeeper");
       });
 
@@ -823,7 +833,7 @@ describe("Warehouse", () => {
         await expect(
           warehouse
             .connect(orderKeeper)
-            .executeLimitOrder(adapter.target, account.target, 0)
+            .executeLimitOrder(account.target, adapter.target, 0)
         ).to.be.revertedWith("fee: less than executionFee");
       });
 
@@ -832,7 +842,7 @@ describe("Warehouse", () => {
         await expect(
           warehouse
             .connect(orderKeeper)
-            .executeLimitOrder(adapter.target, account.target, 0)
+            .executeLimitOrder(account.target, adapter.target, 0)
         ).to.be.revertedWith("state: not pending");
       });
 
@@ -841,7 +851,7 @@ describe("Warehouse", () => {
         await expect(
           warehouse
             .connect(orderKeeper)
-            .executeLimitOrder(adapter.target, account.target, 0)
+            .executeLimitOrder(account.target, adapter.target, 0)
         ).to.be.revertedWith("balance: under minExecutionFee");
       });
 
@@ -850,14 +860,17 @@ describe("Warehouse", () => {
         await expect(
           warehouse
             .connect(orderKeeper)
-            .executeLimitOrder(adapter.target, account.target, 0)
+            .executeLimitOrder(account.target, adapter.target, 0)
         ).to.be.revertedWith("price: not acceptable");
       });
 
       it("executes limit order", async () => {
+        const exchangeMock = await ethers.deployContract("ExchangeMock");
+        await warehouse.connect(gov).setExchange(exchangeMock.target);
+
         await warehouse
           .connect(orderKeeper)
-          .executeLimitOrder(adapter.target, account.target, 0);
+          .executeLimitOrder(account.target, adapter.target, 0);
 
         const limitOrder = await warehouse.getLimitOrder(account.target, 0);
         expect(limitOrder.state).to.be.equal(limitOrderState.executed);
