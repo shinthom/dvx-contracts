@@ -1,138 +1,82 @@
 const { ethers } = require("hardhat");
-const { deploy } = require("../test/fixture/setup");
+const { deploy } = require("../test/fixture");
 
 async function main() {
+  const noAccount = false;
   const {
     user,
-    gmxV1,
-    mux,
+    account,
+    gmxV1Adapter,
+    muxAdapter,
     exchange,
     warehouse,
     reader,
     quoter,
-    account,
+    ETH,
     WETH,
     WBTC,
     USDC,
-    faucet,
-    executeIncreasePosition,
-    fillPositionOrder,
-  } = await deploy();
+    deposit,
+    increasePosition,
+  } = await deploy(noAccount);
   console.log(`
 - user     : ${user.address}
-- gmxV1    : ${gmxV1.target}
-- mux      : ${mux.target}
+- gmxV1    : ${gmxV1Adapter.target}
+- mux      : ${muxAdapter.target}
 - exchange : ${exchange.target}
 - warehouse: ${warehouse.target}
 - reader   : ${reader.target}
 - quoter   : ${quoter.target}
-- account  : ${account.target}
+- account  : ${noAccount ? "null" : account.target}
   `);
 
-  console.log("`faucet`");
-  await faucet(WBTC, ethers.parseEther("10"));
-  await faucet(USDC, ethers.parseEther("10"));
+  const ethAmount = ethers.parseEther("100");
+  const wbtcAmount = ethers.parseUnits("100", 8);
+  const usdcAmount = ethers.parseUnits("1000000", 6);
 
-  const depositAndIncreasePosition = async (
-    collateral,
-    index,
-    collateralAmount,
-    size,
-    isLong,
-    description
-  ) => {
-    const gmxOrder = await gmxV1.makePositionOrder(
-      collateral,
-      index,
-      collateralAmount / 2n,
-      size,
-      isLong
-    );
-    const muxOrder = await mux.makePositionOrder(
-      collateral,
-      index,
-      collateralAmount / 2n,
-      size,
-      isLong
-    );
+  await deposit(ETH, ethAmount);
+  await deposit(WBTC, wbtcAmount);
+  await deposit(USDC, usdcAmount);
+  console.log("-  eth: " + (await account.getBalance(ethers.ZeroAddress)));
+  console.log("- wbtc: " + (await account.getBalance(WBTC)));
+  console.log("- usdc: " + (await account.getBalance(USDC)));
 
-    if (collateral == WETH) {
-      await account
-        .connect(user)
-        .deposit(ethers.ZeroAddress, collateralAmount, {
-          value: collateralAmount,
-        });
-    } else {
-      const token = await ethers.getContractAt("IERC20", collateral);
-      await token.connect(user).approve(account.target, collateralAmount);
-      await account.connect(user).deposit(collateral, collateralAmount);
-    }
+  const ethCollateralAmount = ethers.parseEther("1");
+  const wbtcCollateralAmount = ethers.parseUnits("0.1", 8);
+  const usdcCollateralAmount = ethers.parseUnits("1000", 6);
 
-    await account.connect(user).createMarketOrders(
-      [gmxV1.target],
-      [
-        {
-          orderType: gmxOrder.orderType,
-          path: [...gmxOrder.path],
-          index: gmxOrder.index,
-          collateralAmount: gmxOrder.collateralAmount,
-          size: gmxOrder.size,
-          isLong: gmxOrder.isLong,
-        },
-      ],
-      {
-        value:
-          collateral == WETH
-            ? BigInt("180000000000000") + gmxOrder.collateralAmount
-            : BigInt("180000000000000"),
-      }
-    );
-    await account.connect(user).createMarketOrders(
-      [mux.target],
-      [
-        {
-          orderType: muxOrder.orderType,
-          path: [...muxOrder.path],
-          index: muxOrder.index,
-          collateralAmount: muxOrder.collateralAmount,
-          size: muxOrder.size,
-          isLong: muxOrder.isLong,
-        },
-      ],
-      {
-        value: collateral == WETH ? muxOrder.collateralAmount : 0,
-      }
-    );
-    await executeIncreasePosition(account.target);
-    await fillPositionOrder();
+  const ethSize = ethers.parseEther("10");
+  const wbtcSize = ethers.parseUnits("1", 8);
 
-    const gmxV1Position = await gmxV1.getPosition(account.target, isLong ? index : USDC, index, isLong); // prettier-ignore
-    const muxPosition =     await mux.getPosition(account.target, collateral,            index, isLong); // prettier-ignore
-    console.log("\n- " + description);
-    console.log(`  - position(gmx): ${gmxV1Position}`);
-    console.log(`  - position(mux): ${muxPosition}`);
-  };
+  await increasePosition(gmxV1Adapter, WETH, WETH, ethCollateralAmount, ethSize, true, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
+  await increasePosition(gmxV1Adapter, WBTC, WETH, wbtcCollateralAmount, ethSize, true, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
+  await increasePosition(gmxV1Adapter, USDC, WETH, usdcCollateralAmount, ethSize, true, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
+  await increasePosition(gmxV1Adapter, WETH, WETH, ethCollateralAmount, ethSize, false, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
+  await increasePosition(gmxV1Adapter, WBTC, WETH, wbtcCollateralAmount, ethSize, false, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
+  await increasePosition(gmxV1Adapter, USDC, WETH, usdcCollateralAmount, ethSize, false, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
+  await increasePosition(gmxV1Adapter, WETH, WBTC, ethCollateralAmount, wbtcSize, true, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
+  await increasePosition(gmxV1Adapter, WBTC, WBTC, wbtcCollateralAmount, wbtcSize, true, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
+  await increasePosition(gmxV1Adapter, USDC, WBTC, usdcCollateralAmount, wbtcSize, true, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
+  await increasePosition(gmxV1Adapter, WETH, WBTC, ethCollateralAmount, wbtcSize, false, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
+  await increasePosition(gmxV1Adapter, WBTC, WBTC, wbtcCollateralAmount, wbtcSize, false, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
+  await increasePosition(gmxV1Adapter, USDC, WBTC, usdcCollateralAmount, wbtcSize, false, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
 
-  // long weth market
-  await depositAndIncreasePosition(WETH, WETH, ethers.parseEther("1"),       ethers.parseEther("10"), true, "long: weth -> weth") // prettier-ignore
-  await depositAndIncreasePosition(WBTC, WETH, ethers.parseUnits("0.1", 8),  ethers.parseEther("10"), true, "long: wbtc -> weth") // prettier-ignore
-  await depositAndIncreasePosition(USDC, WETH, ethers.parseUnits("1000", 6), ethers.parseEther("10"), true, "long: usdc -> weth") // prettier-ignore
-  // short weth market
-  await depositAndIncreasePosition(WETH, WETH, ethers.parseEther("10"),      ethers.parseEther("10"), false, "short: weth -> weth") // prettier-ignore
-  await depositAndIncreasePosition(WBTC, WETH, ethers.parseUnits("0.1", 8),  ethers.parseEther("10"), false, "short: wbtc -> weth") // prettier-ignore
-  await depositAndIncreasePosition(USDC, WETH, ethers.parseUnits("1000", 6), ethers.parseEther("10"), false, "short: usdc -> weth") // prettier-ignore
-  // long wbtc market
-  await depositAndIncreasePosition(WETH, WBTC, ethers.parseEther("1"),       ethers.parseUnits("1", 8), true, "long: weth -> wbtc") // prettier-ignore
-  await depositAndIncreasePosition(WBTC, WBTC, ethers.parseUnits("0.1", 8),  ethers.parseUnits("1", 8), true, "long: wbtc -> wbtc") // prettier-ignore
-  await depositAndIncreasePosition(USDC, WBTC, ethers.parseUnits("1000", 6), ethers.parseUnits("1", 8), true, "long: usdc -> wbtc") // prettier-ignore
-  // short wbtc market
-  await depositAndIncreasePosition(WETH, WBTC, ethers.parseEther("10"),      ethers.parseUnits("1", 8), false, "short: weth -> wbtc") // prettier-ignore
-  await depositAndIncreasePosition(WBTC, WBTC, ethers.parseUnits("0.1", 8),  ethers.parseUnits("1", 8), false, "short: wbtc -> wbtc") // prettier-ignore
-  await depositAndIncreasePosition(USDC, WBTC, ethers.parseUnits("1000", 6), ethers.parseUnits("1", 8), false, "short: usdc -> wbtc") // prettier-ignore
+  await increasePosition(muxAdapter, WETH, WETH, ethCollateralAmount, ethSize, true, await muxAdapter.getMinExecutionFee()); // prettier-ignore
+  await increasePosition(muxAdapter, WBTC, WETH, wbtcCollateralAmount, ethSize, true, await muxAdapter.getMinExecutionFee()); // prettier-ignore
+  await increasePosition(muxAdapter, USDC, WETH, usdcCollateralAmount, ethSize, true, await muxAdapter.getMinExecutionFee()); // prettier-ignore
+  await increasePosition(muxAdapter, WETH, WETH, ethCollateralAmount, ethSize, false, await muxAdapter.getMinExecutionFee()); // prettier-ignore
+  await increasePosition(muxAdapter, WBTC, WETH, wbtcCollateralAmount, ethSize, false, await muxAdapter.getMinExecutionFee()); // prettier-ignore
+  await increasePosition(muxAdapter, USDC, WETH, usdcCollateralAmount, ethSize, false, await muxAdapter.getMinExecutionFee()); // prettier-ignore
+  await increasePosition(muxAdapter, WETH, WBTC, ethCollateralAmount, wbtcSize, true, await muxAdapter.getMinExecutionFee()); // prettier-ignore
+  await increasePosition(muxAdapter, WBTC, WBTC, wbtcCollateralAmount, wbtcSize, true, await muxAdapter.getMinExecutionFee()); // prettier-ignore
+  await increasePosition(muxAdapter, USDC, WBTC, usdcCollateralAmount, wbtcSize, true, await muxAdapter.getMinExecutionFee()); // prettier-ignore
+  await increasePosition(muxAdapter, WETH, WBTC, ethCollateralAmount, wbtcSize, false, await muxAdapter.getMinExecutionFee()); // prettier-ignore
+  await increasePosition(muxAdapter, WBTC, WBTC, wbtcCollateralAmount, wbtcSize, false, await muxAdapter.getMinExecutionFee()); // prettier-ignore
+  await increasePosition(muxAdapter, USDC, WBTC, usdcCollateralAmount, wbtcSize, false, await muxAdapter.getMinExecutionFee()); // prettier-ignore
 
   const positions = await reader.getPositions(
     account.target,
-    [gmxV1.target, mux.target],
+    [gmxV1Adapter.target, muxAdapter.target],
     [WETH, WBTC, USDC],
     [WETH, WBTC]
   );
@@ -145,15 +89,13 @@ async function main() {
   const tokenAmountInUseAsCollateral =
     await reader.getTokenAmountInUseAsCollateral(
       account.target,
-      [gmxV1.target, mux.target],
+      [gmxV1Adapter.target, muxAdapter.target],
       [WETH, WBTC, USDC],
       [WETH, WBTC]
     );
   console.log(tokenAmountInUseAsCollateral);
 }
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
 main().catch((error) => {
   console.error(error);
   process.exitCode = 1;

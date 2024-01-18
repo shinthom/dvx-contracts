@@ -184,8 +184,10 @@ contract GMXV1Adapter is IAdapter {
     uint256 public constant USD = 1 * (10 ** PRICE_DECIMALS);
 
     address private constant _weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
+    // address private constant _defaultStableToken =
+    //     0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8; // usdc.e
     address private constant _defaultStableToken =
-        0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8; // usdc.e
+        0xaf88d065e77c8cC2239327C5EDb3A432268e5831; // usdc
 
     address private immutable _positionRouter;
     address private immutable _router;
@@ -532,18 +534,18 @@ contract GMXV1Adapter is IAdapter {
         uint256 size,
         bool isLong
     ) private {
-        require(path.length == 1 || path.length == 2, "INVALID_PATH");
+        require(path.length == 1 || path.length == 2, "path: invalid length");
 
         address collateral = path[path.length - 1];
         isLong
-            ? require(collateral == index, "INVALID_PATH")
+            ? require(collateral == index, "collateral: not index")
             : require(
                 IExchange(_exchange).isStableToken(collateral),
-                "INVALID_PATH"
+                "collateral: not stable token"
             );
 
         if (path.length == 2) {
-            require(path[0] != path[1], "INVALID_PATH");
+            require(path[0] != path[1], "path: should be different");
 
             if (path[0] == _weth) {
                 IERC20(path[0]).deposit{value: collateralAmount}();

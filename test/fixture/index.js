@@ -48,6 +48,7 @@ let warehouse;
 let gmxV1Adapter;
 let muxAdapter;
 let quoter;
+let reader;
 
 let account;
 
@@ -100,9 +101,6 @@ const deploy = async (noAccount) => {
 
   exchange = await ethers.deployContract("Exchange");
   warehouse = await ethers.deployContract("Warehouse");
-  await exchange.setWarehouse(warehouse.target);
-  await warehouse.setExchange(exchange.target);
-
   gmxV1Adapter = await ethers.deployContract("GMXV1Adapter", [
     PositionRouter,
     Router,
@@ -115,6 +113,15 @@ const deploy = async (noAccount) => {
     0, // usdc.e
   ]);
   quoter = await ethers.deployContract("Quoter");
+  reader = await ethers.deployContract("Reader", [warehouse.target]);
+
+  await exchange.setWarehouse(warehouse.target);
+  await exchange.setRegisteredAdapter(gmxV1Adapter.target, true);
+  await exchange.setRegisteredAdapter(muxAdapter.target, true);
+  await exchange.setStableToken(USDC, true);
+  await exchange.setStableToken(USDT, true);
+  await exchange.setStableToken(USDCe, true);
+  await warehouse.setExchange(exchange.target);
 
   await exchange.connect(user).createAccount();
   if (!noAccount) {
@@ -165,6 +172,81 @@ const deploy = async (noAccount) => {
       await erc20.connect(user).approve(account.target, tokenAmount);
       await account.connect(user).deposit(token, tokenAmount);
     }
+  };
+
+  const increasePosition = async (
+    adapter,
+    collateral,
+    index,
+    collateralAmount,
+    size,
+    isLong,
+    executionFee
+  ) => {
+    const orderType = {
+      increasePosition: 0,
+      increaseCollateral: 1,
+      decreasePosition: 2,
+      decreaseCollateral: 3,
+    };
+
+    const marketOrder = await adapter.makeMarketOrder(
+      collateral,
+      index,
+      collateralAmount,
+      size,
+      isLong
+    );
+    await exchange
+      .connect(user)
+      .executeMarketOrder(
+        account.target,
+        orderType.increasePosition,
+        adapter.target,
+        [...marketOrder.path],
+        marketOrder.index,
+        marketOrder.collateralAmount,
+        marketOrder.size,
+        marketOrder.isLong,
+        executionFee,
+        {
+          value: executionFee,
+        }
+      );
+
+    if (adapter.target == gmxV1Adapter.target) {
+      await executeIncreasePosition(account.target);
+    } else if (adapter.target == muxAdapter.target) {
+      await fillPositionOrder();
+    }
+  };
+
+  const createTriggerOrder = async (
+    adapter,
+    collateral,
+    index,
+    isLong,
+    size,
+    triggerOrderType,
+    triggerPrice,
+    acceptablePrice,
+    executionFee
+  ) => {
+    await exchange
+      .connect(user)
+      .createTriggerOrder(
+        account.target,
+        adapter.target,
+        collateral,
+        index,
+        isLong,
+        size,
+        triggerOrderType,
+        triggerPrice,
+        acceptablePrice,
+        executionFee,
+        { value: executionFee }
+      );
   };
 
   const executeIncreasePosition = async (account) => {
@@ -348,7 +430,9 @@ const deploy = async (noAccount) => {
     gmxV1Adapter,
     muxAdapter,
     quoter,
+    reader,
     account,
+    ETH,
     WETH,
     WBTC,
     USDC,
@@ -361,6 +445,8 @@ const deploy = async (noAccount) => {
     fillPositionOrder,
     fillWithdrawalOrder,
     setPrice,
+    increasePosition,
+    createTriggerOrder,
   };
 };
 

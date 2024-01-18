@@ -71,7 +71,7 @@ contract Warehouse is IWarehouse, Governable {
         address collateral,
         address index,
         bool isLong
-    ) public pure returns (bytes32) {
+    ) public pure override returns (bytes32) {
         return
             keccak256(
                 abi.encodePacked(account, adapter, collateral, index, isLong)
@@ -80,7 +80,7 @@ contract Warehouse is IWarehouse, Governable {
 
     function getTriggerOrders(
         bytes32 positionKey
-    ) public view returns (TriggerOrder[] memory) {
+    ) public view override returns (TriggerOrder[] memory) {
         return _triggerOrders[positionKey];
     }
 

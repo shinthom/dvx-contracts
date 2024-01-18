@@ -1,16 +1,18 @@
 const { ethers } = require("hardhat");
-const { deploy } = require("../test/fixture/setup");
+const { deploy } = require("../test/fixture");
 
 async function main() {
+  const noAccount = false;
   const {
     user,
-    gmxV1,
-    mux,
+    gmxV1Adapter,
+    muxAdapter,
     exchange,
     warehouse,
     reader,
     quoter,
     account,
+    ETH,
     WBTC,
     USDC,
     USDCe,
@@ -21,38 +23,28 @@ async function main() {
     usdt,
     faucet,
     deposit,
-  } = await deploy();
+  } = await deploy(noAccount);
   console.log(`
 - user     : ${user.address}
-- gmxV1    : ${gmxV1.target}
-- mux      : ${mux.target}
+- gmxV1    : ${gmxV1Adapter.target}
+- mux      : ${muxAdapter.target}
 - exchange : ${exchange.target}
 - warehouse: ${warehouse.target}
 - reader   : ${reader.target}
 - quoter   : ${quoter.target}
-- account  : ${account.target}
+- account  : ${noAccount ? "null" : account.target}
   `);
 
-  console.log("`faucet`");
-  await faucet(WBTC, ethers.parseUnits("100", 8));
-  await faucet(USDC, ethers.parseUnits("1000000", 6));
-  await faucet(USDCe, ethers.parseUnits("1000000", 6));
-  await faucet(USDT, ethers.parseUnits("1000000", 6));
-  const wbtcBalance = await wbtc.balanceOf(user.address);
-  const usdcBalance = await usdc.balanceOf(user.address);
-  const usdceBalance = await usdce.balanceOf(user.address);
-  const usdtBalance = await usdt.balanceOf(user.address);
+  const ethAmount = ethers.parseEther("100");
+  const wbtcAmount = ethers.parseUnits("100", 8);
+  const usdcAmount = ethers.parseUnits("1000000", 6);
 
-  console.log("\n`deposit`");
-  await deposit(WBTC, wbtcBalance);
-  await deposit(USDC, usdcBalance);
-  await deposit(USDCe, usdceBalance);
-  await deposit(USDT, usdtBalance);
-  console.log("-  eth  : " + (await account.getBalance(ethers.ZeroAddress)));
-  console.log("- wbtc  : " + (await account.getBalance(WBTC)));
-  console.log("- usdc  : " + (await account.getBalance(USDC)));
-  console.log("- usdc.e: " + (await account.getBalance(USDCe)));
-  console.log("- usdt  : " + (await account.getBalance(USDT)));
+  await deposit(ETH, ethAmount);
+  await deposit(WBTC, wbtcAmount);
+  await deposit(USDC, usdcAmount);
+  console.log("-  eth: " + (await account.getBalance(ethers.ZeroAddress)));
+  console.log("- wbtc: " + (await account.getBalance(WBTC)));
+  console.log("- usdc: " + (await account.getBalance(USDC)));
 }
 
 // We recommend this pattern to be able to use async/await everywhere

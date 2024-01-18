@@ -85,18 +85,22 @@ interface IWarehouse {
         uint256 amount
     );
 
-    // function getPositionKey(
-    //     address account,
-    //     address adapter,
-    //     address collateral,
-    //     address index,
-    //     bool isLong
-    // ) external view returns (bytes32);
+    function getPositionKey(
+        address account,
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong
+    ) external view returns (bytes32);
 
     function lockedBalance(
         address account,
         address token
     ) external view returns (uint256);
+
+    function getTriggerOrders(
+        bytes32 positionKey
+    ) external view returns (TriggerOrder[] memory);
 
     function getTriggerOrder(
         bytes32 positionKey,

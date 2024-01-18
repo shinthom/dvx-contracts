@@ -1,13 +1,21 @@
-const { deploy } = require("../test/fixture/setup");
+const { deploy } = require("../test/fixture");
 
 async function main() {
   const noAccount = true;
-  const { user, gmxV1, mux, exchange, warehouse, reader, quoter, account } =
-    await deploy(noAccount);
+  const {
+    user,
+    gmxV1Adapter,
+    muxAdapter,
+    exchange,
+    warehouse,
+    reader,
+    quoter,
+    account,
+  } = await deploy(noAccount);
   console.log(`
 - user     : ${user.address}
-- gmxV1    : ${gmxV1.target}
-- mux      : ${mux.target}
+- gmxV1    : ${gmxV1Adapter.target}
+- mux      : ${muxAdapter.target}
 - exchange : ${exchange.target}
 - warehouse: ${warehouse.target}
 - reader   : ${reader.target}

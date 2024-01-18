@@ -40,6 +40,16 @@ contract Exchange is IExchange, Governable {
         _;
     }
 
+    function lockedBalance(
+        address account,
+        address token
+    ) external view virtual override returns (uint256) {
+        if (warehouse == address(0)) {
+            return 0;
+        }
+        return IWarehouse(warehouse).lockedBalance(account, token);
+    }
+
     function isStableToken(
         address token
     ) external view override returns (bool) {
@@ -54,13 +64,6 @@ contract Exchange is IExchange, Governable {
         uint256 amount
     ) public view override returns (uint256) {
         return (amount * openPositionFeeRate) / BASIS_POINTS;
-    }
-
-    function setWarehouse(address _warehouse) external {
-        require(msg.sender == gov, "msg.sender: not gov");
-
-        warehouse = _warehouse;
-        emit WarehouseSet(_warehouse);
     }
 
     function createAccount() public override returns (address) {
@@ -89,14 +92,11 @@ contract Exchange is IExchange, Governable {
         }
     }
 
-    function lockedBalance(
-        address account,
-        address token
-    ) external view virtual override returns (uint256) {
-        if (warehouse == address(0)) {
-            return 0;
-        }
-        return IWarehouse(warehouse).lockedBalance(account, token);
+    function setWarehouse(address _warehouse) external {
+        require(msg.sender == gov, "msg.sender: not gov");
+
+        warehouse = _warehouse;
+        emit WarehouseSet(_warehouse);
     }
 
     function setStableToken(address token, bool isStable) external onlyGov {

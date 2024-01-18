@@ -2,13 +2,13 @@
 pragma solidity 0.8.7;
 
 import {IAdapter} from "./interfaces/IAdapter.sol";
-import {IExchange} from "./interfaces/IExchange.sol";
+import {IWarehouse} from "./interfaces/IWarehouse.sol";
 
 contract Reader {
-    address private immutable _exchange;
+    address private immutable _warehouse;
 
-    constructor(address exchange) {
-        _exchange = exchange;
+    constructor(address warehouse) {
+        _warehouse = warehouse;
     }
 
     struct Position {
@@ -16,7 +16,7 @@ contract Reader {
         address collateral;
         address index;
         IAdapter.Position position;
-        IExchange.TriggerOrder[] pendingTriggerOrders;
+        IWarehouse.TriggerOrder[] pendingTriggerOrders;
     }
 
     struct TokenAmountInUseAsCollateral {
@@ -123,8 +123,8 @@ contract Reader {
         address collateral,
         address index,
         bool isLong
-    ) public view returns (IExchange.TriggerOrder[] memory) {
-        bytes32 positionKey = IExchange(_exchange).getPositionKey(
+    ) public view returns (IWarehouse.TriggerOrder[] memory) {
+        bytes32 positionKey = IWarehouse(_warehouse).getPositionKey(
             account,
             adapter,
             collateral,
@@ -132,7 +132,7 @@ contract Reader {
             isLong
         );
 
-        return IExchange(_exchange).getTriggerOrders(positionKey);
+        return IWarehouse(_warehouse).getTriggerOrders(positionKey);
     }
 
     function getPendingTriggerOrders(
@@ -141,8 +141,8 @@ contract Reader {
         address collateral,
         address index,
         bool isLong
-    ) public view returns (IExchange.TriggerOrder[] memory) {
-        IExchange.TriggerOrder[] memory triggerOrders = getTriggerOrders(
+    ) public view returns (IWarehouse.TriggerOrder[] memory) {
+        IWarehouse.TriggerOrder[] memory triggerOrders = getTriggerOrders(
             account,
             adapter,
             collateral,
@@ -153,20 +153,20 @@ contract Reader {
         uint256 numPendingTriggerOrder;
         for (uint256 i = 0; i < triggerOrders.length; i++) {
             if (
-                triggerOrders[i].state == IExchange.TriggerOrderState.Pending
+                triggerOrders[i].state == IWarehouse.TriggerOrderState.Pending
             ) {
                 numPendingTriggerOrder++;
             }
         }
 
-        IExchange.TriggerOrder[]
-            memory pendingTriggerOrders = new IExchange.TriggerOrder[](
+        IWarehouse.TriggerOrder[]
+            memory pendingTriggerOrders = new IWarehouse.TriggerOrder[](
                 numPendingTriggerOrder
             );
         uint256 idx;
         for (uint256 i = 0; i < triggerOrders.length; i++) {
             if (
-                triggerOrders[i].state == IExchange.TriggerOrderState.Pending
+                triggerOrders[i].state == IWarehouse.TriggerOrderState.Pending
             ) {
                 pendingTriggerOrders[idx] = triggerOrders[i];
                 idx++;
