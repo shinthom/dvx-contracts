@@ -20,7 +20,7 @@ contract Warehouse is IWarehouse, Governable {
     address public exchange;
     mapping(address => bool) public isOrderKeeper;
 
-    uint256 public priceMinDeviation = 500; // 5%
+    uint256 public priceMinDeviation = 100; // 1%
     uint256 public executionFee; // >= execution fee from adapter
 
     modifier onlyExchange() {
