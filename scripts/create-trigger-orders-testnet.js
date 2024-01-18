@@ -17,7 +17,6 @@ async function main() {
     WBTC,
     USDC,
     deposit,
-    setPrice,
     increasePosition,
     createTriggerOrder,
   } = await deploy(noAccount);
@@ -79,7 +78,6 @@ async function main() {
   const triggerOrderType = { takeProfit: 0, stopLoss: 1 };
 
   var price = ethers.parseUnits("2000", 30);
-  await setPrice(gmxV1Adapter, WETH, price, price, false);
   var triggerPrice = ethers.parseUnits("2000", 18);
   var acceptablePrice = ethers.parseUnits("1900", 18);
 
