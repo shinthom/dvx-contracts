@@ -27,6 +27,7 @@ contract Quoter {
         uint256 fee;
         uint256 availableLiquidity;
         IExchange.MarketOrder marketOrder;
+        uint256 executionFee;
     }
 
     function quoteExactInputSingle(
@@ -128,6 +129,7 @@ contract Quoter {
             request.isLong
         );
         answer.marketOrder = makeMarketOrder(adapter, request);
+        answer.executionFee = getMinExecutionFee(adapter);
     }
 
     function makeMarketOrder(
@@ -227,5 +229,9 @@ contract Quoter {
         bool isLong
     ) public view returns (uint256) {
         return IAdapter(adapter).getAvailableLiquidity(index, isLong);
+    }
+
+    function getMinExecutionFee(address adapter) public view returns (uint256) {
+        return IAdapter(adapter).getMinExecutionFee();
     }
 }

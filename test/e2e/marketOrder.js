@@ -29,8 +29,6 @@ describe("marketOrder", () => {
       const size = ethers.parseEther("10");
       const isLong = true;
 
-      const executionFee = await gmxV1Adapter.getMinExecutionFee();
-
       await exchange.setRegisteredAdapter(gmxV1Adapter.target, true);
 
       await deposit(collateral, collateralAmount);
@@ -42,6 +40,7 @@ describe("marketOrder", () => {
         size,
         isLong
       );
+      const executionFee = await gmxV1Adapter.getMinExecutionFee();
       await exchange
         .connect(user)
         .executeMarketOrder(
