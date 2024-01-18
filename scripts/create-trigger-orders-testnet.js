@@ -78,26 +78,14 @@ async function main() {
 
   const triggerOrderType = { takeProfit: 0, stopLoss: 1 };
 
-  var triggerPrice = ethers.parseUnits("2000", 18);
-  var acceptablePrice = ethers.parseUnits("1900", 18);
   var price = ethers.parseUnits("2000", 30);
   await setPrice(gmxV1Adapter, WETH, price, price, false);
+  var triggerPrice = ethers.parseUnits("2000", 18);
+  var acceptablePrice = ethers.parseUnits("1900", 18);
+
   await createTriggerOrder(gmxV1Adapter, WETH, WETH, true, ethSize, triggerOrderType.takeProfit, triggerPrice, acceptablePrice, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
   var positionKey = await warehouse.getPositionKey(account.target, gmxV1Adapter.target, WETH, WETH, true); // prettier-ignore
   console.log(await warehouse.getTriggerOrders(positionKey)); // prettier-ignore
-
-  var triggerPrice = ethers.parseUnits("2000", 18);
-  var acceptablePrice = ethers.parseUnits("1900", 18);
-  var price = ethers.parseUnits("2000", 8);
-  await setPrice(muxAdapter, WETH, price, price, false);
-  var triggerPrice = ethers.parseUnits("40000", 18);
-  var acceptablePrice = ethers.parseUnits("36000", 18);
-  var price = ethers.parseUnits("40000", 8);
-  await setPrice(muxAdapter, WBTC, price, price, true);
-  var triggerPrice = ethers.parseUnits("1", 18);
-  var acceptablePrice = ethers.parseUnits("1", 18);
-  var price = ethers.parseUnits("1", 8);
-  await setPrice(muxAdapter, USDC, price, price, true);
   await createTriggerOrder(muxAdapter, WETH, WETH, true, ethSize, triggerOrderType.takeProfit, triggerPrice, acceptablePrice, await muxAdapter.getMinExecutionFee()); // prettier-ignore
   var positionKey = await warehouse.getPositionKey(account.target, muxAdapter.target, WETH, WETH, true); // prettier-ignore
   console.log(await warehouse.getTriggerOrders(positionKey)); // prettier-ignore
@@ -108,26 +96,12 @@ async function main() {
   var positionKey = await warehouse.getPositionKey(account.target, muxAdapter.target, USDC, WETH, true); // prettier-ignore
   console.log(await warehouse.getTriggerOrders(positionKey)); // prettier-ignore
 
+  // short
   var triggerPrice = ethers.parseUnits("2000", 18);
   var acceptablePrice = ethers.parseUnits("2100", 18);
-  var price = ethers.parseUnits("2000", 30);
-  await setPrice(gmxV1Adapter, WETH, price, price, false);
   await createTriggerOrder(gmxV1Adapter, USDC, WETH, false, ethSize, triggerOrderType.takeProfit, triggerPrice, acceptablePrice, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
   var positionKey = await warehouse.getPositionKey(account.target, gmxV1Adapter.target, USDC, WETH, false); // prettier-ignore
   console.log(await warehouse.getTriggerOrders(positionKey)); // prettier-ignore
-
-  var triggerPrice = ethers.parseUnits("2000", 18);
-  var acceptablePrice = ethers.parseUnits("2100", 18);
-  var price = ethers.parseUnits("2000", 8);
-  await setPrice(muxAdapter, WETH, price, price, false);
-  var triggerPrice = ethers.parseUnits("40000", 18);
-  var acceptablePrice = ethers.parseUnits("44000", 18);
-  var price = ethers.parseUnits("40000", 8);
-  await setPrice(muxAdapter, WBTC, price, price, true);
-  var triggerPrice = ethers.parseUnits("1", 18);
-  var acceptablePrice = ethers.parseUnits("1", 18);
-  var price = ethers.parseUnits("1", 8);
-  await setPrice(muxAdapter, USDC, price, price, true);
   await createTriggerOrder(muxAdapter, WETH, WETH, false, ethSize, triggerOrderType.takeProfit, triggerPrice, acceptablePrice, await muxAdapter.getMinExecutionFee()); // prettier-ignore
   var positionKey = await warehouse.getPositionKey(account.target, muxAdapter.target, WETH, WETH, false); // prettier-ignore
   console.log(await warehouse.getTriggerOrders(positionKey)); // prettier-ignore
