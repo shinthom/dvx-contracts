@@ -213,6 +213,8 @@ describe("Warehouse", () => {
       });
 
       it("reverts when triggerPrice is invalid", async () => {
+        await warehouse.connect(owner).setPriceMinDeviation(100);
+
         var triggerPrice = ethers.parseUnits("2000", 18);
         var acceptablePrice = ethers.parseUnits("2101", 18);
         var isLong = true;
@@ -611,6 +613,8 @@ describe("Warehouse", () => {
       });
 
       it("reverts when triggerPrice is invalid", async () => {
+        await warehouse.connect(owner).setPriceMinDeviation(100);
+
         var triggerPrice = ethers.parseUnits("2000", 18);
         var acceptablePrice = ethers.parseUnits("1899", 18);
         var isLong = true;

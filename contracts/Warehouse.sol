@@ -27,8 +27,6 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
     function initialize() external virtual initializer {
         __Ownable_init();
         __UUPSUpgradeable_init();
-
-        priceMinDeviation = 100; // 1%
     }
 
     function _authorizeUpgrade(
