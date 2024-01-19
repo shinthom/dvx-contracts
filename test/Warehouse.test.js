@@ -21,13 +21,19 @@ describe("Warehouse", () => {
   let adapter;
 
   beforeEach(async () => {
-    [user, other, gov, exchange, orderKeeper] = await ethers.getSigners();
+    [user, other, owner, exchange, orderKeeper] = await ethers.getSigners();
 
     wbtc = await ethers.getContractAt("IERC20", WBTC);
     usdc = await ethers.getContractAt("IERC20", USDC);
 
-    warehouse = await ethers.deployContract("Warehouse");
-    await warehouse.setGov(gov.address);
+    const warehouseImpl = await ethers.deployContract("Warehouse", []);
+    const warehouseProxy = await ethers.deployContract("ERC1967Proxy", [
+      warehouseImpl.target,
+      "0x",
+    ]);
+    warehouse = await ethers.getContractAt("Warehouse", warehouseProxy.target);
+    await warehouse.initialize();
+    await warehouse.transferOwnership(owner.address);
 
     adapter = await ethers.deployContract("AdapterMock");
 
@@ -41,14 +47,14 @@ describe("Warehouse", () => {
   describe("setExchange", () => {
     const newExchange = "0x" + "11".repeat(20);
 
-    it("reverts when not gov", async () => {
+    it("reverts when not owner", async () => {
       await expect(
         warehouse.connect(other).setExchange(newExchange)
-      ).to.be.revertedWith("msg.sender: not gov");
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("sets exchange", async () => {
-      await expect(warehouse.connect(gov).setExchange(newExchange))
+      await expect(warehouse.connect(owner).setExchange(newExchange))
         .to.emit(warehouse, "ExchangeSet")
         .withArgs(newExchange);
       expect(await warehouse.exchange()).to.be.equal(newExchange);
@@ -58,14 +64,16 @@ describe("Warehouse", () => {
   describe("setOrderKeeper", () => {
     const newOrderKeeper = "0x" + "11".repeat(20);
 
-    it("reverts when not gov", async () => {
+    it("reverts when not owner", async () => {
       await expect(
         warehouse.connect(other).setOrderKeeper(newOrderKeeper, true)
-      ).to.be.revertedWith("msg.sender: not gov");
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("sets orderKeeper", async () => {
-      await expect(warehouse.connect(gov).setOrderKeeper(newOrderKeeper, true))
+      await expect(
+        warehouse.connect(owner).setOrderKeeper(newOrderKeeper, true)
+      )
         .to.emit(warehouse, "OrderKeeperSet")
         .withArgs(newOrderKeeper, true);
       expect(await warehouse.isOrderKeeper(newOrderKeeper)).to.be.equal(true);
@@ -75,15 +83,15 @@ describe("Warehouse", () => {
   describe("sets priceMinDeviation", () => {
     const priceMinDeviation = 100;
 
-    it("reverts when not gov", async () => {
+    it("reverts when not owner", async () => {
       await expect(
         warehouse.connect(other).setPriceMinDeviation(priceMinDeviation)
-      ).to.be.revertedWith("msg.sender: not gov");
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("sets priceMinDeviation", async () => {
       await expect(
-        warehouse.connect(gov).setPriceMinDeviation(priceMinDeviation)
+        warehouse.connect(owner).setPriceMinDeviation(priceMinDeviation)
       )
         .to.emit(warehouse, "PriceMinDeviationSet")
         .withArgs(priceMinDeviation);
@@ -96,14 +104,14 @@ describe("Warehouse", () => {
   describe("sets executionFee", () => {
     const executionFee = 100;
 
-    it("reverts when not gov", async () => {
+    it("reverts when not owner", async () => {
       await expect(
         warehouse.connect(other).setExecutionFee(executionFee)
-      ).to.be.revertedWith("msg.sender: not gov");
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("sets execution fees", async () => {
-      await expect(warehouse.connect(gov).setExecutionFee(executionFee))
+      await expect(warehouse.connect(owner).setExecutionFee(executionFee))
         .to.emit(warehouse, "ExecutionFeeSet")
         .withArgs(executionFee);
       expect(await warehouse.executionFee()).to.be.equal(executionFee);
@@ -112,7 +120,7 @@ describe("Warehouse", () => {
 
   describe("triggerOrder", () => {
     const triggerPrice = ethers.parseUnits("2000", 18);
-    const acceptablePrice = ethers.parseUnits("1900", 18);
+    const acceptablePrice = ethers.parseUnits("1980", 18);
     const executionFee = 10;
 
     const size = ethers.parseEther("10");
@@ -129,7 +137,7 @@ describe("Warehouse", () => {
     };
 
     beforeEach(async () => {
-      await warehouse.connect(gov).setExchange(exchange.address);
+      await warehouse.connect(owner).setExchange(exchange.address);
     });
 
     describe("create", () => {
@@ -216,7 +224,7 @@ describe("Warehouse", () => {
         ).to.be.revertedWith("acceptablePrice: out of deviation");
 
         var triggerPrice = ethers.parseUnits("2000", 18);
-        var acceptablePrice = ethers.parseUnits("2101", 18);
+        var acceptablePrice = ethers.parseUnits("2021", 18);
         var isLong = false;
         await expect(
           warehouse
@@ -257,7 +265,7 @@ describe("Warehouse", () => {
       });
 
       it("reverts when executionFee is not enough", async () => {
-        await warehouse.connect(gov).setExecutionFee(executionFee);
+        await warehouse.connect(owner).setExecutionFee(executionFee);
         await expect(
           warehouse
             .connect(exchange)
@@ -405,7 +413,9 @@ describe("Warehouse", () => {
       let positionKey;
 
       beforeEach(async () => {
-        await warehouse.connect(gov).setOrderKeeper(orderKeeper.address, true);
+        await warehouse
+          .connect(owner)
+          .setOrderKeeper(orderKeeper.address, true);
         await warehouse
           .connect(exchange)
           .createTriggerOrder(
@@ -463,7 +473,7 @@ describe("Warehouse", () => {
       it("executes trigger order", async () => {
         await adapter.setWrapPrice(acceptablePrice);
         const exchangeMock = await ethers.deployContract("ExchangeMock");
-        await warehouse.connect(gov).setExchange(exchangeMock.target);
+        await warehouse.connect(owner).setExchange(exchangeMock.target);
 
         await warehouse
           .connect(orderKeeper)
@@ -477,7 +487,7 @@ describe("Warehouse", () => {
 
   describe("limitOrder", () => {
     const triggerPrice = ethers.parseUnits("2000", 18);
-    const acceptablePrice = ethers.parseUnits("2100", 18);
+    const acceptablePrice = ethers.parseUnits("2020", 18);
 
     const fee = 10;
 
@@ -496,7 +506,7 @@ describe("Warehouse", () => {
     let account;
 
     beforeEach(async () => {
-      await warehouse.connect(gov).setExchange(exchange.address);
+      await warehouse.connect(owner).setExchange(exchange.address);
 
       account = await ethers.deployContract("AccountMock", [
         user.address,
@@ -637,7 +647,7 @@ describe("Warehouse", () => {
       });
 
       it("reverts when fee is not enough", async () => {
-        await warehouse.connect(gov).setExecutionFee(fee);
+        await warehouse.connect(owner).setExecutionFee(fee);
         await expect(
           warehouse
             .connect(exchange)
@@ -817,7 +827,9 @@ describe("Warehouse", () => {
               value: fee,
             }
           );
-        await warehouse.connect(gov).setOrderKeeper(orderKeeper.address, true);
+        await warehouse
+          .connect(owner)
+          .setOrderKeeper(orderKeeper.address, true);
       });
 
       it("reverts when msg.sender is not orderKeeper", async () => {
@@ -829,7 +841,7 @@ describe("Warehouse", () => {
       });
 
       it("reverts when fee is less than executionFee", async () => {
-        await warehouse.connect(gov).setExecutionFee(executionFee + 1);
+        await warehouse.connect(owner).setExecutionFee(executionFee + 1);
         await expect(
           warehouse
             .connect(orderKeeper)
@@ -866,7 +878,7 @@ describe("Warehouse", () => {
 
       it("executes limit order", async () => {
         const exchangeMock = await ethers.deployContract("ExchangeMock");
-        await warehouse.connect(gov).setExchange(exchangeMock.target);
+        await warehouse.connect(owner).setExchange(exchangeMock.target);
 
         await warehouse
           .connect(orderKeeper)

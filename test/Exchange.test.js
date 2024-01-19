@@ -17,11 +17,18 @@ describe("Exchange", () => {
   let usdc;
 
   beforeEach(async () => {
-    [user, other, gov] = await ethers.getSigners();
+    [user, other, owner] = await ethers.getSigners();
 
-    exchange = await ethers.deployContract("Exchange", []);
     wbtc = await ethers.getContractAt("IERC20", WBTC);
     usdc = await ethers.getContractAt("IERC20", USDC);
+
+    const exchangeImpl = await ethers.deployContract("Exchange", []);
+    const exchangeProxy = await ethers.deployContract("ERC1967Proxy", [
+      exchangeImpl.target,
+      "0x",
+    ]);
+    exchange = await ethers.getContractAt("Exchange", exchangeProxy.target);
+    await exchange.initialize();
 
     snapshotId = await network.provider.send("evm_snapshot", []);
   });
@@ -76,17 +83,17 @@ describe("Exchange", () => {
 
   describe("setStableToken", () => {
     beforeEach(async () => {
-      await exchange.setGov(gov);
+      await exchange.transferOwnership(owner);
     });
 
-    it("reverts when not gov", async () => {
+    it("reverts when not owner", async () => {
       await expect(
         exchange.connect(other).setStableToken(USDC, true)
-      ).to.be.revertedWith("msg.sender: not gov");
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("set stable token", async () => {
-      await exchange.connect(gov).setStableToken(USDC, true);
+      await exchange.connect(owner).setStableToken(USDC, true);
       expect(await exchange.isStableToken(USDC)).to.be.equal(true);
     });
   });
@@ -95,46 +102,46 @@ describe("Exchange", () => {
     const adapter = "0x" + "11".repeat(20);
 
     beforeEach(async () => {
-      await exchange.setGov(gov);
+      await exchange.transferOwnership(owner);
     });
 
-    it("reverts when not gov", async () => {
+    it("reverts when not owner", async () => {
       await expect(
         exchange.connect(other).setRegisteredAdapter(adapter, true)
-      ).to.be.revertedWith("msg.sender: not gov");
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("set registered adapter", async () => {
-      await exchange.connect(gov).setRegisteredAdapter(adapter, true);
+      await exchange.connect(owner).setRegisteredAdapter(adapter, true);
       expect(await exchange.isRegisteredAdapter(adapter)).to.be.equal(true);
     });
   });
 
   describe("tier", () => {
     beforeEach(async () => {
-      await exchange.setGov(gov);
+      await exchange.transferOwnership(owner);
     });
 
-    it("reverts when not gov", async () => {
+    it("reverts when not owner", async () => {
       await expect(exchange.connect(other).setTier(1, 1000)).to.be.revertedWith(
-        "msg.sender: not gov"
+        "Ownable: caller is not the owner"
       );
     });
 
     it("reverts when tierId is zero", async () => {
-      await expect(exchange.connect(gov).setTier(0, 1000)).to.be.revertedWith(
+      await expect(exchange.connect(owner).setTier(0, 1000)).to.be.revertedWith(
         "tierId: zero"
       );
     });
 
     it("reverts when discountRate is invalid", async () => {
       await expect(
-        exchange.connect(gov).setTier(1, 100_000_000 + 1)
+        exchange.connect(owner).setTier(1, 100_000_000 + 1)
       ).to.be.revertedWith("discountRate: invalid");
     });
 
     it("set tier", async () => {
-      await exchange.connect(gov).setTier(1, 1000);
+      await exchange.connect(owner).setTier(1, 1000);
       expect(await exchange.tiers(1)).to.be.equal(1000);
     });
   });
@@ -143,40 +150,40 @@ describe("Exchange", () => {
     const tierId = 1;
 
     beforeEach(async () => {
-      await exchange.setGov(gov);
+      await exchange.transferOwnership(owner);
     });
 
-    it("reverts when not gov", async () => {
+    it("reverts when not owner", async () => {
       await expect(
         exchange.connect(other).setReferralTier(user.address, tierId)
-      ).to.be.revertedWith("msg.sender: not gov");
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("set referral tier", async () => {
-      await exchange.connect(gov).setReferralTier(user.address, tierId);
+      await exchange.connect(owner).setReferralTier(user.address, tierId);
       expect(await exchange.referralTiers(user.address)).to.be.equal(tierId);
     });
   });
 
   describe("positionFeeRate", () => {
     beforeEach(async () => {
-      await exchange.setGov(gov);
+      await exchange.transferOwnership(owner);
     });
 
-    it("reverts when not gov", async () => {
+    it("reverts when not owner", async () => {
       await expect(
         exchange.connect(other).setOpenPositionFeeRate(1000)
-      ).to.be.revertedWith("msg.sender: not gov");
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("reverts when feeRate is invalid", async () => {
       await expect(
-        exchange.connect(gov).setOpenPositionFeeRate(100_000_000 + 1)
+        exchange.connect(owner).setOpenPositionFeeRate(100_000_000 + 1)
       ).to.be.revertedWith("feeRate: invalid");
     });
 
     it("set open position fee rate", async () => {
-      await exchange.connect(gov).setOpenPositionFeeRate(1000);
+      await exchange.connect(owner).setOpenPositionFeeRate(1000);
       expect(await exchange.openPositionFeeRate()).to.be.equal(1000);
     });
   });
@@ -242,7 +249,8 @@ describe("Exchange", () => {
 
     beforeEach(async () => {
       exchangeMock = await ethers.deployContract("ExchangeMock", []);
-      await exchangeMock.setGov(gov);
+      await exchangeMock.initialize();
+      await exchangeMock.transferOwnership(owner);
       await exchangeMock.connect(user).createAccountMock();
 
       accountMock = await ethers.getContractAt(
@@ -366,7 +374,7 @@ describe("Exchange", () => {
 
     it("reverts when collateralAmount is zero", async () => {
       await exchangeMock
-        .connect(gov)
+        .connect(owner)
         .setRegisteredAdapter(adapterMock.target, true);
 
       await expect(
@@ -389,7 +397,7 @@ describe("Exchange", () => {
 
     it("reverts when size is zero", async () => {
       await exchangeMock
-        .connect(gov)
+        .connect(owner)
         .setRegisteredAdapter(adapterMock.target, true);
 
       await expect(
@@ -412,7 +420,7 @@ describe("Exchange", () => {
 
     it("executes market order", async () => {
       await exchangeMock
-        .connect(gov)
+        .connect(owner)
         .setRegisteredAdapter(adapterMock.target, true);
 
       await exchangeMock
@@ -442,24 +450,24 @@ describe("Exchange", () => {
       });
       await faucet(exchange.target, WBTC, withdrawAmount);
 
-      await exchange.setGov(gov);
+      await exchange.transferOwnership(owner);
     });
 
-    it("reverts when msg.sender is not gov", async () => {
+    it("reverts when msg.sender is not owner", async () => {
       await expect(
         exchange.connect(other).withdraw(user.address, WBTC, 1)
-      ).to.be.revertedWith("msg.sender: not gov");
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("reverts when receiver is zero address", async () => {
       await expect(
-        exchange.connect(gov).withdraw(ethers.ZeroAddress, WBTC, 1)
+        exchange.connect(owner).withdraw(ethers.ZeroAddress, WBTC, 1)
       ).to.be.revertedWith("receiver: zero address");
     });
 
     it("reverts when amount is zero", async () => {
       await expect(
-        exchange.connect(gov).withdraw(user.address, WBTC, 0)
+        exchange.connect(owner).withdraw(user.address, WBTC, 0)
       ).to.be.revertedWith("amount: zero");
     });
 
@@ -469,8 +477,10 @@ describe("Exchange", () => {
       );
       expect(await wbtc.balanceOf(exchange.target)).to.be.equal(withdrawAmount);
 
-      await exchange.connect(gov).withdraw(user.address, ETH, withdrawAmount);
-      await exchange.connect(gov).withdraw(user.address, WBTC, withdrawAmount);
+      await exchange.connect(owner).withdraw(user.address, ETH, withdrawAmount);
+      await exchange
+        .connect(owner)
+        .withdraw(user.address, WBTC, withdrawAmount);
       expect(await ethers.provider.getBalance(exchange.target)).to.be.equal(0);
       expect(await wbtc.balanceOf(exchange.target)).to.be.equal(0);
     });

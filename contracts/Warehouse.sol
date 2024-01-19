@@ -6,9 +6,10 @@ import {IAccount} from "./interfaces/IAccount.sol";
 import {IAdapter} from "./interfaces/IAdapter.sol";
 import {IExchange} from "./interfaces/IExchange.sol";
 import {IWarehouse} from "./interfaces/IWarehouse.sol";
-import {Governable} from "./access/Governable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-contract Warehouse is IWarehouse, Governable {
+contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
     uint256 private constant BASIS_POINTS_DIVISOR = 10000;
 
     address private constant _weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
@@ -20,8 +21,19 @@ contract Warehouse is IWarehouse, Governable {
     address public exchange;
     mapping(address => bool) public isOrderKeeper;
 
-    uint256 public priceMinDeviation = 100; // 1%
+    uint256 public priceMinDeviation;
     uint256 public executionFee; // >= execution fee from adapter
+
+    function initialize() external virtual initializer {
+        __Ownable_init();
+        __UUPSUpgradeable_init();
+
+        priceMinDeviation = 100; // 1%
+    }
+
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyOwner {}
 
     modifier onlyExchange() {
         require(msg.sender == exchange, "msg.sender: not exchange");
@@ -33,7 +45,7 @@ contract Warehouse is IWarehouse, Governable {
         _;
     }
 
-    function setExchange(address _exchange) external onlyGov {
+    function setExchange(address _exchange) external onlyOwner {
         require(_exchange != address(0), "exchange: zero address");
 
         exchange = _exchange;
@@ -43,14 +55,14 @@ contract Warehouse is IWarehouse, Governable {
     function setOrderKeeper(
         address orderKeeper,
         bool isActive
-    ) external onlyGov {
+    ) external onlyOwner {
         require(orderKeeper != address(0), "exchange: zero address");
 
         isOrderKeeper[orderKeeper] = isActive;
         emit OrderKeeperSet(orderKeeper, isActive);
     }
 
-    function setPriceMinDeviation(uint256 deviation) external onlyGov {
+    function setPriceMinDeviation(uint256 deviation) external onlyOwner {
         require(
             deviation <= BASIS_POINTS_DIVISOR,
             "priceMinDeviation: exceed limit"
@@ -60,7 +72,7 @@ contract Warehouse is IWarehouse, Governable {
         emit PriceMinDeviationSet(deviation);
     }
 
-    function setExecutionFee(uint256 fee) external onlyGov {
+    function setExecutionFee(uint256 fee) external onlyOwner {
         executionFee = fee;
         emit ExecutionFeeSet(fee);
     }
@@ -377,9 +389,7 @@ contract Warehouse is IWarehouse, Governable {
         address receiver,
         address token,
         uint256 amount
-    ) external {
-        require(msg.sender == gov, "msg.sender: not gov");
-
+    ) external onlyOwner {
         require(receiver != address(0), "receiver: zero address");
         require(amount > 0, "amount: zero");
 

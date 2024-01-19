@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.7;
 
-import {Governable} from "./access/Governable.sol";
 import {IAccount, Account} from "./Account.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
 import {IAdapter} from "./interfaces/IAdapter.sol";
 import {IExchange} from "./interfaces/IExchange.sol";
 import {IWarehouse} from "./interfaces/IWarehouse.sol";
 import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-contract Exchange is IExchange, Governable {
+contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     address private constant _weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
     address private constant _swapRouter =
         0xE592427A0AEce92De3Edee1F18E0157C05861564; // uniswap V3
@@ -28,6 +29,15 @@ contract Exchange is IExchange, Governable {
     uint256 public openPositionFeeRate;
 
     receive() external payable {}
+
+    function initialize() external virtual initializer {
+        __Ownable_init();
+        __UUPSUpgradeable_init();
+    }
+
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyOwner {}
 
     modifier onlyAccountOwner(address account) {
         require(account != address(0), "account: zero");
@@ -92,14 +102,12 @@ contract Exchange is IExchange, Governable {
         }
     }
 
-    function setWarehouse(address _warehouse) external {
-        require(msg.sender == gov, "msg.sender: not gov");
-
+    function setWarehouse(address _warehouse) external onlyOwner {
         warehouse = _warehouse;
         emit WarehouseSet(_warehouse);
     }
 
-    function setStableToken(address token, bool isStable) external onlyGov {
+    function setStableToken(address token, bool isStable) external onlyOwner {
         _stableTokens[token] = isStable;
         emit StableTokenSet(token, isStable);
     }
@@ -107,12 +115,12 @@ contract Exchange is IExchange, Governable {
     function setRegisteredAdapter(
         address adapter,
         bool isRegistered
-    ) external onlyGov {
+    ) external onlyOwner {
         _registeredAdapters[adapter] = isRegistered;
         emit AdapterRegistered(adapter, isRegistered);
     }
 
-    function setTier(uint8 tierId, uint256 discountRate) external onlyGov {
+    function setTier(uint8 tierId, uint256 discountRate) external onlyOwner {
         require(tierId != 0, "tierId: zero");
         require(discountRate <= BASIS_POINTS, "discountRate: invalid");
 
@@ -120,12 +128,12 @@ contract Exchange is IExchange, Governable {
         emit TierSet(tierId, discountRate);
     }
 
-    function setReferralTier(address account, uint8 tierId) external onlyGov {
+    function setReferralTier(address account, uint8 tierId) external onlyOwner {
         referralTiers[account] = tierId;
         emit ReferralTierSet(account, tierId);
     }
 
-    function setOpenPositionFeeRate(uint256 _feeRate) external onlyGov {
+    function setOpenPositionFeeRate(uint256 _feeRate) external onlyOwner {
         require(_feeRate <= BASIS_POINTS, "feeRate: invalid");
 
         openPositionFeeRate = _feeRate;
@@ -356,7 +364,7 @@ contract Exchange is IExchange, Governable {
         address receiver,
         address token,
         uint256 amount
-    ) external onlyGov {
+    ) external onlyOwner {
         require(receiver != address(0), "receiver: zero address");
         require(amount > 0, "amount: zero");
 

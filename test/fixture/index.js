@@ -99,8 +99,22 @@ const deploy = async (noAccount) => {
   orderBook = await ethers.getContractAt("IOrderBook", OrderBook);
   liquidityPool = await ethers.getContractAt("ILiquidityPool", LiquidityPool);
 
-  exchange = await ethers.deployContract("Exchange");
-  warehouse = await ethers.deployContract("Warehouse");
+  const exchangeImpl = await ethers.deployContract("Exchange", []);
+  const exchangeProxy = await ethers.deployContract("ERC1967Proxy", [
+    exchangeImpl.target,
+    "0x",
+  ]);
+  exchange = await ethers.getContractAt("Exchange", exchangeProxy.target);
+  await exchange.initialize();
+
+  const warehouseImpl = await ethers.deployContract("Warehouse", []);
+  const warehouseProxy = await ethers.deployContract("ERC1967Proxy", [
+    warehouseImpl.target,
+    "0x",
+  ]);
+  warehouse = await ethers.getContractAt("Warehouse", warehouseProxy.target);
+  await warehouse.initialize();
+
   gmxV1Adapter = await ethers.deployContract("GmxV1Adapter", [
     PositionRouter,
     Router,
