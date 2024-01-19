@@ -20,13 +20,39 @@ async function main() {
     console.log("gasUsed:", gasUsed);
   };
 
-  const Warehouse = await ethers.getContractFactory("Warehouse");
-  const warehouse = await Warehouse.deploy();
-  await waitAndLogAccumulatedGasUsed(warehouse.deploymentTransaction());
+  const WarehouseImpl = await ethers.getContractFactory("Warehouse");
+  const warehouseImpl = await WarehouseImpl.deploy();
+  await waitAndLogAccumulatedGasUsed(warehouseImpl.deploymentTransaction());
+  console.log("WarehouseImpl:", warehouseImpl.target, "\n");
 
-  const Exchange = await ethers.getContractFactory("Exchange");
-  const exchange = await Exchange.deploy();
-  await waitAndLogAccumulatedGasUsed(exchange.deploymentTransaction());
+  const WarehouseProxy = await ethers.getContractFactory("ERC1967Proxy");
+  const warehouseProxy = await WarehouseProxy.deploy(
+    warehouseImpl.target,
+    "0x"
+  );
+  await waitAndLogAccumulatedGasUsed(warehouseProxy.deploymentTransaction());
+  console.log("WarehouseProxy:", warehouseProxy.target, "\n");
+
+  const warehouse = await ethers.getContractAt(
+    "Warehouse",
+    warehouseProxy.target
+  );
+  await waitAndLogAccumulatedGasUsed(await warehouse.initialize());
+  console.log("Warehouse is initialized\n");
+
+  const ExchangeImpl = await ethers.getContractFactory("Exchange");
+  const exchangeImpl = await ExchangeImpl.deploy();
+  await waitAndLogAccumulatedGasUsed(exchangeImpl.deploymentTransaction());
+  console.log("WarehouseImpl:", warehouseImpl.target, "\n");
+
+  const ExchangeProxy = await ethers.getContractFactory("ERC1967Proxy");
+  const exchangeProxy = await ExchangeProxy.deploy(exchangeImpl.target, "0x");
+  await waitAndLogAccumulatedGasUsed(exchangeProxy.deploymentTransaction());
+  console.log("WarehouseProxy:", warehouseProxy.target, "\n");
+
+  const exchange = await ethers.getContractAt("Exchange", exchangeProxy.target);
+  await waitAndLogAccumulatedGasUsed(await exchange.initialize());
+  console.log("Exchange is initialized\n");
 
   const GmxV1Adapter = await ethers.getContractFactory("GmxV1Adapter");
   const gmxV1Adapter = await GmxV1Adapter.deploy(
@@ -36,43 +62,54 @@ async function main() {
     exchange.target
   );
   await waitAndLogAccumulatedGasUsed(gmxV1Adapter.deploymentTransaction());
+  console.log("GmxV1Adapter:", gmxV1Adapter.target, "\n");
 
   const MuxAdapter = await ethers.getContractFactory("MuxAdapter");
   // 11 is usdc
   const muxAdapter = await MuxAdapter.deploy(OrderBook, LiquidityPool, 11);
   await waitAndLogAccumulatedGasUsed(muxAdapter.deploymentTransaction());
+  console.log("MuxAdapter:", muxAdapter.target, "\n");
 
   const Quoter = await ethers.getContractFactory("Quoter");
   const quoter = await Quoter.deploy();
   await waitAndLogAccumulatedGasUsed(quoter.deploymentTransaction());
+  console.log("Quoter:", quoter.target, "\n");
 
   const Reader = await ethers.getContractFactory("Reader");
   const reader = await Reader.deploy(warehouse.target);
   await waitAndLogAccumulatedGasUsed(reader.deploymentTransaction());
+  console.log("Reader:", reader.target, "\n");
 
   await waitAndLogAccumulatedGasUsed(
     await warehouse.setExchange(exchange.target)
   );
+  console.log("Warehouse sets exchange\n");
+
   await waitAndLogAccumulatedGasUsed(
     await exchange.setWarehouse(warehouse.target)
   );
-  await waitAndLogAccumulatedGasUsed(
-    await exchange.setWarehouse(warehouse.target)
-  );
+  console.log("Exchange sets warehouse\n");
+
   await waitAndLogAccumulatedGasUsed(
     await exchange.setRegisteredAdapter(gmxV1Adapter.target, true)
   );
+  console.log("Exchange sets gmxV1 adapter\n");
+
   await waitAndLogAccumulatedGasUsed(
     await exchange.setRegisteredAdapter(muxAdapter.target, true)
   );
+  console.log("Exchange sets mux adapter\n");
+
   await waitAndLogAccumulatedGasUsed(await exchange.setStableToken(USDC, true));
+  console.log("Exchange sets USDC as stable token\n");
+
   await waitAndLogAccumulatedGasUsed(await exchange.setStableToken(USDT, true));
+  console.log("Exchange sets USDT as stable token\n");
+
   await waitAndLogAccumulatedGasUsed(
     await exchange.setStableToken(USDCe, true)
   );
-  await waitAndLogAccumulatedGasUsed(
-    await warehouse.setExchange(exchange.target)
-  );
+  console.log("Exchange sets USDC.e as stable token\n");
 }
 
 main().catch((error) => {

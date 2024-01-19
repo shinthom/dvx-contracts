@@ -152,5 +152,8 @@ module.exports = {
       url: "http://127.0.0.1:8545/",
       loggingEnabled: true,
     },
+    "truffle-dashboard": {
+      url: "http://localhost:24012/rpc",
+    },
   },
 };

@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "compile": "hardhat compile",
-    "deploy": "hardhat run scripts/deploy-testnet.js --network local",
+    "deploy": "hardhat run scripts/deploy.js --network local",
+    "deploy-truffle": "hardhat run scripts/deploy.js --network truffle",
     "deposit": "hardhat run scripts/deposit-testnet.js --network local",
     "e2e-realize-profit": "hardhat test test/e2e/realizeProfit.js --network local",
     "e2e-market-order": "hardhat test test/e2e/marketOrder.js --network local",
@@ -57,6 +58,7 @@
     "hardhat-gas-reporter": "^1.0.8",
     "solhint": "^4.0.0",
     "solidity-coverage": "^0.8.0",
+    "truffle": "^5.11.5",
     "typechain": "^8.3.0"
   }
 }
