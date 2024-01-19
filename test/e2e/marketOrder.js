@@ -16,7 +16,9 @@ describe("marketOrder", () => {
         user,
         account,
         exchange,
+        quoter,
         gmxV1Adapter,
+        muxAdapter,
         WETH,
         deposit,
         executeIncreasePosition,
@@ -33,28 +35,27 @@ describe("marketOrder", () => {
 
       await deposit(collateral, collateralAmount);
 
-      const marketOrder = await gmxV1Adapter.makeMarketOrder(
-        collateral,
-        index,
-        collateralAmount,
-        size,
-        isLong
+      const request = { collateral, index, collateralAmount, size, isLong };
+      const answers = await quoter.quote(
+        account.target,
+        [gmxV1Adapter.target],
+        request
       );
-      const executionFee = await gmxV1Adapter.getMinExecutionFee();
+
       await exchange
         .connect(user)
         .executeMarketOrder(
           account.target,
           orderType.increasePosition,
-          gmxV1Adapter.target,
-          [marketOrder.path[0]],
-          marketOrder.index,
-          marketOrder.collateralAmount,
-          marketOrder.size,
-          marketOrder.isLong,
-          executionFee,
+          answers[0].adapter,
+          [...answers[0].marketOrder.path],
+          answers[0].marketOrder.index,
+          answers[0].marketOrder.collateralAmount,
+          answers[0].marketOrder.size,
+          answers[0].marketOrder.isLong,
+          answers[0].executionFee,
           {
-            value: executionFee,
+            value: answers[0].executionFee,
           }
         );
       await executeIncreasePosition(account.target);
@@ -66,6 +67,8 @@ describe("marketOrder", () => {
           isLong
         )
       );
+
+      const executionFee = await gmxV1Adapter.getMinExecutionFee();
 
       await deposit(collateral, collateralAmount);
       await exchange
@@ -154,6 +157,7 @@ describe("marketOrder", () => {
         user,
         account,
         exchange,
+        quoter,
         muxAdapter,
         WETH,
         deposit,
@@ -167,38 +171,38 @@ describe("marketOrder", () => {
       const size = ethers.parseEther("10");
       const isLong = true;
 
-      const executionFee = await muxAdapter.getMinExecutionFee();
-
       await exchange.setRegisteredAdapter(muxAdapter.target, true);
-
       await deposit(collateral, collateralAmount);
-      const marketOrder = await muxAdapter.makeMarketOrder(
-        collateral,
-        index,
-        collateralAmount,
-        size,
-        isLong
+
+      const request = { collateral, index, collateralAmount, size, isLong };
+      const answers = await quoter.quote(
+        account.target,
+        [muxAdapter.target],
+        request
       );
+
       await exchange
         .connect(user)
         .executeMarketOrder(
           account.target,
           orderType.increasePosition,
-          muxAdapter.target,
-          [marketOrder.path[0]],
-          marketOrder.index,
-          marketOrder.collateralAmount,
-          marketOrder.size,
-          marketOrder.isLong,
-          executionFee,
+          answers[0].adapter,
+          [...answers[0].marketOrder.path],
+          answers[0].marketOrder.index,
+          answers[0].marketOrder.collateralAmount,
+          answers[0].marketOrder.size,
+          answers[0].marketOrder.isLong,
+          answers[0].executionFee,
           {
-            value: executionFee,
+            value: answers[0].executionFee,
           }
         );
       await fillPositionOrder();
       console.log(
         await muxAdapter.getPosition(account.target, collateral, index, isLong)
       );
+
+      const executionFee = await muxAdapter.getMinExecutionFee();
 
       await deposit(collateral, collateralAmount);
       await exchange
