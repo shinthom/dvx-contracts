@@ -11,7 +11,7 @@ contract ExchangeMock is Exchange {
         _lockedBalance = amount;
     }
 
-    function lockedBalance(
+    function lockedBalances(
         address account,
         address token
     ) external view override returns (uint256) {

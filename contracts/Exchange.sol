@@ -50,14 +50,14 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         _;
     }
 
-    function lockedBalance(
+    function lockedBalances(
         address account,
         address token
     ) external view virtual override returns (uint256) {
         if (warehouse == address(0)) {
             return 0;
         }
-        return IWarehouse(warehouse).lockedBalance(account, token);
+        return IWarehouse(warehouse).lockedBalances(account, token);
     }
 
     function isStableToken(

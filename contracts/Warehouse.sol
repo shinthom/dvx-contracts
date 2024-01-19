@@ -15,8 +15,8 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
     address private constant _weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
 
     mapping(bytes32 => TriggerOrder[]) private _triggerOrders;
-    mapping(address => LimitOrder[])   private _limitOrders; // prettier-ignore
-    mapping(address => mapping(address => uint256)) public override lockedBalance; // prettier-ignore
+    mapping(address => LimitOrder[]) private _limitOrders;
+    mapping(address => mapping(address => uint256)) public override lockedBalances; // prettier-ignore
 
     address public exchange;
     mapping(address => bool) public isOrderKeeper;
@@ -150,10 +150,10 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
             ? IAccount(account).getBalance(address(0))
             : IAccount(account).getBalance(collateral);
         require(
-            balance - lockedBalance[account][collateral] >= collateralAmount,
+            balance - lockedBalances[account][collateral] >= collateralAmount,
             "collateralAmount: over balance"
         );
-        lockedBalance[account][collateral] += collateralAmount;
+        lockedBalances[account][collateral] += collateralAmount;
 
         LimitOrder memory limitOrder = LimitOrder({
             id: _limitOrders[account].length,
@@ -186,7 +186,7 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         _limitOrders[account][id].state = LimitOrderState.Canceled;
         emit LimitOrderCanceled(account, id);
 
-        lockedBalance[account][limitOrder.collateral] -= limitOrder.collateralAmount; // prettier-ignore
+        lockedBalances[account][limitOrder.collateral] -= limitOrder.collateralAmount; // prettier-ignore
     }
 
     function executeLimitOrder(
@@ -225,7 +225,7 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         _limitOrders[account][id].state = LimitOrderState.Executed;
         emit LimitOrderExecuted(account, id);
 
-        lockedBalance[account][limitOrder.collateral] -= limitOrder.collateralAmount; // prettier-ignore
+        lockedBalances[account][limitOrder.collateral] -= limitOrder.collateralAmount; // prettier-ignore
 
         IExchange.MarketOrder memory marketOrder = IAdapter(adapter)
             .makeMarketOrder(

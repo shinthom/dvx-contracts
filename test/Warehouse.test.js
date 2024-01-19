@@ -118,6 +118,414 @@ describe("Warehouse", () => {
     });
   });
 
+  describe("limitOrder", () => {
+    const triggerPrice = ethers.parseUnits("2000", 18);
+    const acceptablePrice = ethers.parseUnits("2020", 18);
+
+    const fee = 10;
+
+    const collateral = WETH;
+    const index = WETH;
+    const collateralAmount = ethers.parseEther("1");
+    const size = ethers.parseEther("10");
+    const isLong = true;
+
+    const limitOrderState = {
+      pending: 0n,
+      executed: 1n,
+      canceled: 2n,
+    };
+
+    let account;
+
+    beforeEach(async () => {
+      await warehouse.connect(owner).setExchange(exchange.address);
+
+      account = await ethers.deployContract("AccountMock", [
+        user.address,
+        exchange.address,
+      ]);
+    });
+
+    describe("create", () => {
+      it("reverts when msg.sender is not exchange", async () => {
+        await expect(
+          warehouse
+            .connect(user)
+            .createLimitOrder(
+              account.target,
+              collateral,
+              index,
+              collateralAmount,
+              size,
+              isLong,
+              triggerPrice,
+              acceptablePrice,
+              fee
+            )
+        ).to.be.revertedWith("msg.sender: not exchange");
+      });
+
+      it("reverts when triggerPrice is invalid", async () => {
+        var triggerPrice = ethers.parseUnits("2000", 18);
+        var acceptablePrice = ethers.parseUnits("1999", 18);
+        var isLong = true;
+        await expect(
+          warehouse
+            .connect(exchange)
+            .createLimitOrder(
+              account.target,
+              collateral,
+              index,
+              collateralAmount,
+              size,
+              isLong,
+              triggerPrice,
+              acceptablePrice,
+              fee,
+              {
+                value: fee,
+              }
+            )
+        ).to.be.revertedWith("triggerPrice: invalid");
+
+        var triggerPrice = ethers.parseUnits("2000", 18);
+        var acceptablePrice = ethers.parseUnits("2001", 18);
+        var isLong = false;
+        await expect(
+          warehouse
+            .connect(exchange)
+            .createLimitOrder(
+              account.target,
+              collateral,
+              index,
+              collateralAmount,
+              size,
+              isLong,
+              triggerPrice,
+              acceptablePrice,
+              fee,
+              {
+                value: fee,
+              }
+            )
+        ).to.be.revertedWith("triggerPrice: invalid");
+      });
+
+      it("reverts when triggerPrice is invalid", async () => {
+        var triggerPrice = ethers.parseUnits("2000", 18);
+        var acceptablePrice = ethers.parseUnits("2101", 18);
+        var isLong = true;
+        await expect(
+          warehouse
+            .connect(exchange)
+            .createLimitOrder(
+              account.target,
+              collateral,
+              index,
+              collateralAmount,
+              size,
+              isLong,
+              triggerPrice,
+              acceptablePrice,
+              fee,
+              {
+                value: fee,
+              }
+            )
+        ).to.be.revertedWith("acceptablePrice: out of deviation");
+
+        var triggerPrice = ethers.parseUnits("2000", 18);
+        var acceptablePrice = ethers.parseUnits("1899", 18);
+        var isLong = false;
+        await expect(
+          warehouse
+            .connect(exchange)
+            .createLimitOrder(
+              account.target,
+              collateral,
+              index,
+              collateralAmount,
+              size,
+              isLong,
+              triggerPrice,
+              acceptablePrice,
+              fee,
+              {
+                value: fee,
+              }
+            )
+        ).to.be.revertedWith("acceptablePrice: out of deviation");
+      });
+
+      it("reverts when fee is not match", async () => {
+        await expect(
+          warehouse
+            .connect(exchange)
+            .createLimitOrder(
+              account.target,
+              collateral,
+              index,
+              collateralAmount,
+              size,
+              isLong,
+              triggerPrice,
+              acceptablePrice,
+              fee - 1,
+              {
+                value: fee,
+              }
+            )
+        ).to.be.revertedWith("fee: not match");
+      });
+
+      it("reverts when fee is not enough", async () => {
+        await warehouse.connect(owner).setExecutionFee(fee);
+        await expect(
+          warehouse
+            .connect(exchange)
+            .createLimitOrder(
+              account.target,
+              collateral,
+              index,
+              collateralAmount,
+              size,
+              isLong,
+              triggerPrice,
+              acceptablePrice,
+              fee - 1,
+              {
+                value: fee - 1,
+              }
+            )
+        ).to.be.revertedWith("fee: less than executionFee");
+      });
+
+      it("reverts when collateralAmount is over the balance", async () => {
+        await expect(
+          warehouse
+            .connect(exchange)
+            .createLimitOrder(
+              account.target,
+              collateral,
+              index,
+              collateralAmount,
+              size,
+              isLong,
+              triggerPrice,
+              acceptablePrice,
+              fee,
+              {
+                value: fee,
+              }
+            )
+        ).to.be.revertedWith("collateralAmount: over balance");
+
+        await account.setBalance(collateralAmount);
+        await warehouse
+          .connect(exchange)
+          .createLimitOrder(
+            account.target,
+            collateral,
+            index,
+            collateralAmount,
+            size,
+            isLong,
+            triggerPrice,
+            acceptablePrice,
+            fee,
+            {
+              value: fee,
+            }
+          );
+
+        await expect(
+          warehouse
+            .connect(exchange)
+            .createLimitOrder(
+              account.target,
+              collateral,
+              index,
+              collateralAmount,
+              size,
+              isLong,
+              triggerPrice,
+              acceptablePrice,
+              fee,
+              {
+                value: fee,
+              }
+            )
+        ).to.be.revertedWith("collateralAmount: over balance");
+      });
+
+      it("creates limit order", async () => {
+        await account.setBalance(collateralAmount);
+        await warehouse
+          .connect(exchange)
+          .createLimitOrder(
+            account.target,
+            collateral,
+            index,
+            collateralAmount,
+            size,
+            isLong,
+            triggerPrice,
+            acceptablePrice,
+            fee,
+            {
+              value: fee,
+            }
+          );
+
+        const limitOrders = await warehouse.getLimitOrders(account.target);
+        expect(limitOrders.length).to.be.equal(1);
+        expect(
+          await warehouse.lockedBalances(account.target, collateral)
+        ).to.be.equal(collateralAmount);
+      });
+    });
+
+    describe("cancel", () => {
+      beforeEach(async () => {
+        await account.setBalance(collateralAmount);
+        await warehouse
+          .connect(exchange)
+          .createLimitOrder(
+            account.target,
+            collateral,
+            index,
+            collateralAmount,
+            size,
+            isLong,
+            triggerPrice,
+            acceptablePrice,
+            fee,
+            {
+              value: fee,
+            }
+          );
+      });
+
+      it("reverts when msg.sender is not exchange", async () => {
+        await expect(
+          warehouse.connect(user).cancelLimitOrder(account.target, 0)
+        ).to.be.revertedWith("msg.sender: not exchange");
+      });
+
+      it("reverts when id is out of range", async () => {
+        await expect(
+          warehouse.connect(exchange).cancelLimitOrder(user.address, 0)
+        ).to.be.revertedWith("id: out of range");
+        await expect(
+          warehouse.connect(exchange).cancelLimitOrder(account.target, 1)
+        ).to.be.revertedWith("id: out of range");
+      });
+
+      it("reverts when limitOrder state is not pending", async () => {
+        await warehouse.connect(exchange).cancelLimitOrder(account.target, 0);
+        await expect(
+          warehouse.connect(exchange).cancelLimitOrder(account.target, 0)
+        ).to.be.revertedWith("state: not pending");
+      });
+
+      it("cancels limit order", async () => {
+        await warehouse.connect(exchange).cancelLimitOrder(account.target, 0);
+        const limitOrder = await warehouse.getLimitOrder(account.target, 0);
+        expect(limitOrder.state).to.be.equal(limitOrderState.canceled);
+        expect(
+          await warehouse.lockedBalances(account.target, collateral)
+        ).to.be.equal(0);
+      });
+    });
+
+    describe("execute", () => {
+      const executionFee = 10;
+
+      beforeEach(async () => {
+        await account.setBalance(collateralAmount);
+        await warehouse
+          .connect(exchange)
+          .createLimitOrder(
+            account.target,
+            collateral,
+            index,
+            collateralAmount,
+            size,
+            isLong,
+            triggerPrice,
+            acceptablePrice,
+            fee,
+            {
+              value: fee,
+            }
+          );
+        await warehouse
+          .connect(owner)
+          .setOrderKeeper(orderKeeper.address, true);
+      });
+
+      it("reverts when msg.sender is not orderKeeper", async () => {
+        await expect(
+          warehouse
+            .connect(user)
+            .executeLimitOrder(account.target, adapter.target, 0)
+        ).to.be.revertedWith("msg.sender: not orderKeeper");
+      });
+
+      it("reverts when fee is less than executionFee", async () => {
+        await warehouse.connect(owner).setExecutionFee(executionFee + 1);
+        await expect(
+          warehouse
+            .connect(orderKeeper)
+            .executeLimitOrder(account.target, adapter.target, 0)
+        ).to.be.revertedWith("fee: less than executionFee");
+      });
+
+      it("reverts when limitOrder state is not pending", async () => {
+        await warehouse.connect(exchange).cancelLimitOrder(account.target, 0);
+        await expect(
+          warehouse
+            .connect(orderKeeper)
+            .executeLimitOrder(account.target, adapter.target, 0)
+        ).to.be.revertedWith("state: not pending");
+      });
+
+      it("reverts when balance is under minExecutionFee", async () => {
+        await adapter.setMinExecutionFee(executionFee + 1);
+        await expect(
+          warehouse
+            .connect(orderKeeper)
+            .executeLimitOrder(account.target, adapter.target, 0)
+        ).to.be.revertedWith("balance: under minExecutionFee");
+      });
+
+      it("reverts when price is not acceptable", async () => {
+        await adapter.setWrapPrice(acceptablePrice + 1n);
+        await expect(
+          warehouse
+            .connect(orderKeeper)
+            .executeLimitOrder(account.target, adapter.target, 0)
+        ).to.be.revertedWith("price: not acceptable");
+      });
+
+      it("executes limit order", async () => {
+        const exchangeMock = await ethers.deployContract("ExchangeMock");
+        await warehouse.connect(owner).setExchange(exchangeMock.target);
+
+        await warehouse
+          .connect(orderKeeper)
+          .executeLimitOrder(account.target, adapter.target, 0);
+
+        const limitOrder = await warehouse.getLimitOrder(account.target, 0);
+        expect(limitOrder.state).to.be.equal(limitOrderState.executed);
+        expect(
+          await warehouse.lockedBalances(account.target, collateral)
+        ).to.be.equal(0);
+      });
+    });
+  });
+
   describe("triggerOrder", () => {
     const triggerPrice = ethers.parseUnits("2000", 18);
     const acceptablePrice = ethers.parseUnits("1980", 18);
@@ -481,414 +889,6 @@ describe("Warehouse", () => {
 
         const triggerOrder = await warehouse.getTriggerOrder(positionKey, 0);
         expect(triggerOrder.state).to.be.equal(triggerOrderState.executed);
-      });
-    });
-  });
-
-  describe("limitOrder", () => {
-    const triggerPrice = ethers.parseUnits("2000", 18);
-    const acceptablePrice = ethers.parseUnits("2020", 18);
-
-    const fee = 10;
-
-    const collateral = WETH;
-    const index = WETH;
-    const collateralAmount = ethers.parseEther("1");
-    const size = ethers.parseEther("10");
-    const isLong = true;
-
-    const limitOrderState = {
-      pending: 0n,
-      executed: 1n,
-      canceled: 2n,
-    };
-
-    let account;
-
-    beforeEach(async () => {
-      await warehouse.connect(owner).setExchange(exchange.address);
-
-      account = await ethers.deployContract("AccountMock", [
-        user.address,
-        exchange.address,
-      ]);
-    });
-
-    describe("create", () => {
-      it("reverts when msg.sender is not exchange", async () => {
-        await expect(
-          warehouse
-            .connect(user)
-            .createLimitOrder(
-              account.target,
-              collateral,
-              index,
-              collateralAmount,
-              size,
-              isLong,
-              triggerPrice,
-              acceptablePrice,
-              fee
-            )
-        ).to.be.revertedWith("msg.sender: not exchange");
-      });
-
-      it("reverts when triggerPrice is invalid", async () => {
-        var triggerPrice = ethers.parseUnits("2000", 18);
-        var acceptablePrice = ethers.parseUnits("1999", 18);
-        var isLong = true;
-        await expect(
-          warehouse
-            .connect(exchange)
-            .createLimitOrder(
-              account.target,
-              collateral,
-              index,
-              collateralAmount,
-              size,
-              isLong,
-              triggerPrice,
-              acceptablePrice,
-              fee,
-              {
-                value: fee,
-              }
-            )
-        ).to.be.revertedWith("triggerPrice: invalid");
-
-        var triggerPrice = ethers.parseUnits("2000", 18);
-        var acceptablePrice = ethers.parseUnits("2001", 18);
-        var isLong = false;
-        await expect(
-          warehouse
-            .connect(exchange)
-            .createLimitOrder(
-              account.target,
-              collateral,
-              index,
-              collateralAmount,
-              size,
-              isLong,
-              triggerPrice,
-              acceptablePrice,
-              fee,
-              {
-                value: fee,
-              }
-            )
-        ).to.be.revertedWith("triggerPrice: invalid");
-      });
-
-      it("reverts when triggerPrice is invalid", async () => {
-        var triggerPrice = ethers.parseUnits("2000", 18);
-        var acceptablePrice = ethers.parseUnits("2101", 18);
-        var isLong = true;
-        await expect(
-          warehouse
-            .connect(exchange)
-            .createLimitOrder(
-              account.target,
-              collateral,
-              index,
-              collateralAmount,
-              size,
-              isLong,
-              triggerPrice,
-              acceptablePrice,
-              fee,
-              {
-                value: fee,
-              }
-            )
-        ).to.be.revertedWith("acceptablePrice: out of deviation");
-
-        var triggerPrice = ethers.parseUnits("2000", 18);
-        var acceptablePrice = ethers.parseUnits("1899", 18);
-        var isLong = false;
-        await expect(
-          warehouse
-            .connect(exchange)
-            .createLimitOrder(
-              account.target,
-              collateral,
-              index,
-              collateralAmount,
-              size,
-              isLong,
-              triggerPrice,
-              acceptablePrice,
-              fee,
-              {
-                value: fee,
-              }
-            )
-        ).to.be.revertedWith("acceptablePrice: out of deviation");
-      });
-
-      it("reverts when fee is not match", async () => {
-        await expect(
-          warehouse
-            .connect(exchange)
-            .createLimitOrder(
-              account.target,
-              collateral,
-              index,
-              collateralAmount,
-              size,
-              isLong,
-              triggerPrice,
-              acceptablePrice,
-              fee - 1,
-              {
-                value: fee,
-              }
-            )
-        ).to.be.revertedWith("fee: not match");
-      });
-
-      it("reverts when fee is not enough", async () => {
-        await warehouse.connect(owner).setExecutionFee(fee);
-        await expect(
-          warehouse
-            .connect(exchange)
-            .createLimitOrder(
-              account.target,
-              collateral,
-              index,
-              collateralAmount,
-              size,
-              isLong,
-              triggerPrice,
-              acceptablePrice,
-              fee - 1,
-              {
-                value: fee - 1,
-              }
-            )
-        ).to.be.revertedWith("fee: less than executionFee");
-      });
-
-      it("reverts when collateralAmount is over the balance", async () => {
-        await expect(
-          warehouse
-            .connect(exchange)
-            .createLimitOrder(
-              account.target,
-              collateral,
-              index,
-              collateralAmount,
-              size,
-              isLong,
-              triggerPrice,
-              acceptablePrice,
-              fee,
-              {
-                value: fee,
-              }
-            )
-        ).to.be.revertedWith("collateralAmount: over balance");
-
-        await account.setBalance(collateralAmount);
-        await warehouse
-          .connect(exchange)
-          .createLimitOrder(
-            account.target,
-            collateral,
-            index,
-            collateralAmount,
-            size,
-            isLong,
-            triggerPrice,
-            acceptablePrice,
-            fee,
-            {
-              value: fee,
-            }
-          );
-
-        await expect(
-          warehouse
-            .connect(exchange)
-            .createLimitOrder(
-              account.target,
-              collateral,
-              index,
-              collateralAmount,
-              size,
-              isLong,
-              triggerPrice,
-              acceptablePrice,
-              fee,
-              {
-                value: fee,
-              }
-            )
-        ).to.be.revertedWith("collateralAmount: over balance");
-      });
-
-      it("creates limit order", async () => {
-        await account.setBalance(collateralAmount);
-        await warehouse
-          .connect(exchange)
-          .createLimitOrder(
-            account.target,
-            collateral,
-            index,
-            collateralAmount,
-            size,
-            isLong,
-            triggerPrice,
-            acceptablePrice,
-            fee,
-            {
-              value: fee,
-            }
-          );
-
-        const limitOrders = await warehouse.getLimitOrders(account.target);
-        expect(limitOrders.length).to.be.equal(1);
-        expect(
-          await warehouse.lockedBalance(account.target, collateral)
-        ).to.be.equal(collateralAmount);
-      });
-    });
-
-    describe("cancel", () => {
-      beforeEach(async () => {
-        await account.setBalance(collateralAmount);
-        await warehouse
-          .connect(exchange)
-          .createLimitOrder(
-            account.target,
-            collateral,
-            index,
-            collateralAmount,
-            size,
-            isLong,
-            triggerPrice,
-            acceptablePrice,
-            fee,
-            {
-              value: fee,
-            }
-          );
-      });
-
-      it("reverts when msg.sender is not exchange", async () => {
-        await expect(
-          warehouse.connect(user).cancelLimitOrder(account.target, 0)
-        ).to.be.revertedWith("msg.sender: not exchange");
-      });
-
-      it("reverts when id is out of range", async () => {
-        await expect(
-          warehouse.connect(exchange).cancelLimitOrder(user.address, 0)
-        ).to.be.revertedWith("id: out of range");
-        await expect(
-          warehouse.connect(exchange).cancelLimitOrder(account.target, 1)
-        ).to.be.revertedWith("id: out of range");
-      });
-
-      it("reverts when limitOrder state is not pending", async () => {
-        await warehouse.connect(exchange).cancelLimitOrder(account.target, 0);
-        await expect(
-          warehouse.connect(exchange).cancelLimitOrder(account.target, 0)
-        ).to.be.revertedWith("state: not pending");
-      });
-
-      it("cancels limit order", async () => {
-        await warehouse.connect(exchange).cancelLimitOrder(account.target, 0);
-        const limitOrder = await warehouse.getLimitOrder(account.target, 0);
-        expect(limitOrder.state).to.be.equal(limitOrderState.canceled);
-        expect(
-          await warehouse.lockedBalance(account.target, collateral)
-        ).to.be.equal(0);
-      });
-    });
-
-    describe("execute", () => {
-      const executionFee = 10;
-
-      beforeEach(async () => {
-        await account.setBalance(collateralAmount);
-        await warehouse
-          .connect(exchange)
-          .createLimitOrder(
-            account.target,
-            collateral,
-            index,
-            collateralAmount,
-            size,
-            isLong,
-            triggerPrice,
-            acceptablePrice,
-            fee,
-            {
-              value: fee,
-            }
-          );
-        await warehouse
-          .connect(owner)
-          .setOrderKeeper(orderKeeper.address, true);
-      });
-
-      it("reverts when msg.sender is not orderKeeper", async () => {
-        await expect(
-          warehouse
-            .connect(user)
-            .executeLimitOrder(account.target, adapter.target, 0)
-        ).to.be.revertedWith("msg.sender: not orderKeeper");
-      });
-
-      it("reverts when fee is less than executionFee", async () => {
-        await warehouse.connect(owner).setExecutionFee(executionFee + 1);
-        await expect(
-          warehouse
-            .connect(orderKeeper)
-            .executeLimitOrder(account.target, adapter.target, 0)
-        ).to.be.revertedWith("fee: less than executionFee");
-      });
-
-      it("reverts when limitOrder state is not pending", async () => {
-        await warehouse.connect(exchange).cancelLimitOrder(account.target, 0);
-        await expect(
-          warehouse
-            .connect(orderKeeper)
-            .executeLimitOrder(account.target, adapter.target, 0)
-        ).to.be.revertedWith("state: not pending");
-      });
-
-      it("reverts when balance is under minExecutionFee", async () => {
-        await adapter.setMinExecutionFee(executionFee + 1);
-        await expect(
-          warehouse
-            .connect(orderKeeper)
-            .executeLimitOrder(account.target, adapter.target, 0)
-        ).to.be.revertedWith("balance: under minExecutionFee");
-      });
-
-      it("reverts when price is not acceptable", async () => {
-        await adapter.setWrapPrice(acceptablePrice + 1n);
-        await expect(
-          warehouse
-            .connect(orderKeeper)
-            .executeLimitOrder(account.target, adapter.target, 0)
-        ).to.be.revertedWith("price: not acceptable");
-      });
-
-      it("executes limit order", async () => {
-        const exchangeMock = await ethers.deployContract("ExchangeMock");
-        await warehouse.connect(owner).setExchange(exchangeMock.target);
-
-        await warehouse
-          .connect(orderKeeper)
-          .executeLimitOrder(account.target, adapter.target, 0);
-
-        const limitOrder = await warehouse.getLimitOrder(account.target, 0);
-        expect(limitOrder.state).to.be.equal(limitOrderState.executed);
-        expect(
-          await warehouse.lockedBalance(account.target, collateral)
-        ).to.be.equal(0);
       });
     });
   });

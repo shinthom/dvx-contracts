@@ -29,6 +29,18 @@ contract Account is IAccount {
                 : IERC20(token).balanceOf(address(this));
     }
 
+    function getLockedBalance(
+        address token
+    ) public view virtual returns (uint256) {
+        return IExchange(exchange).lockedBalances(address(this), token);
+    }
+
+    function getWithdrawableBalance(
+        address token
+    ) public view virtual returns (uint256) {
+        return getBalance(token) - getLockedBalance(token);
+    }
+
     function deposit(address token, uint256 amount) external payable override {
         require(amount > 0, "amount: zero");
 
@@ -44,12 +56,8 @@ contract Account is IAccount {
         require(amount > 0, "amount: zero");
         require(msg.sender == owner, "msg.sender: not owner");
 
-        uint256 balance = getBalance(token);
-        uint256 lockedBalance = IExchange(exchange).lockedBalance(
-            address(this),
-            token
-        );
-        require(amount <= balance - lockedBalance, "amount: exceed balance");
+        uint256 withdrawableBalance = getWithdrawableBalance(token);
+        require(amount <= withdrawableBalance, "amount: exceed balance");
 
         if (token == address(0)) {
             payable(msg.sender).transfer(amount);

@@ -37,7 +37,7 @@ interface IExchange {
         uint256 amount
     );
 
-    function lockedBalance(
+    function lockedBalances(
         address account,
         address token
     ) external view returns (uint256);
