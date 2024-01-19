@@ -235,6 +235,32 @@ const deploy = async (noAccount) => {
     }
   };
 
+  const createLimitOrder = async (
+    collateral,
+    index,
+    collateralAmount,
+    size,
+    isLong,
+    triggerPrice,
+    acceptablePrice,
+    executionFee
+  ) => {
+    await exchange
+      .connect(user)
+      .createLimitOrder(
+        account.target,
+        collateral,
+        index,
+        collateralAmount,
+        size,
+        isLong,
+        triggerPrice,
+        acceptablePrice,
+        executionFee,
+        { value: executionFee }
+      );
+  };
+
   const createTriggerOrder = async (
     adapter,
     collateral,
@@ -460,6 +486,7 @@ const deploy = async (noAccount) => {
     fillWithdrawalOrder,
     setPrice,
     increasePosition,
+    createLimitOrder,
     createTriggerOrder,
   };
 };

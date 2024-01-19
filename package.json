@@ -14,6 +14,7 @@
     "e2e-trigger-order": "hardhat test test/e2e/triggerOrder.js --network local",
     "e2e-quote": "hardhat test test/e2e/quote.js --network local",
     "open-positions": "hardhat run scripts/open-positions-testnet.js --network local",
+    "create-limit-orders": "hardhat run scripts/create-limit-orders-testnet.js --network local",
     "create-trigger-orders": "hardhat run scripts/create-trigger-orders-testnet.js --network local",
     "test": "hardhat test --network local",
     "test-account": "hardhat test test/Account.test.js --network local",
