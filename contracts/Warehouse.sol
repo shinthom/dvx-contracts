@@ -24,15 +24,6 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
     uint256 public priceMinDeviation;
     uint256 public executionFee; // >= execution fee from adapter
 
-    function initialize() external virtual initializer {
-        __Ownable_init();
-        __UUPSUpgradeable_init();
-    }
-
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal override onlyOwner {}
-
     modifier onlyExchange() {
         require(msg.sender == exchange, "msg.sender: not exchange");
         _;
@@ -42,6 +33,15 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         require(isOrderKeeper[msg.sender], "msg.sender: not orderKeeper");
         _;
     }
+
+    function initialize() external virtual initializer {
+        __Ownable_init();
+        __UUPSUpgradeable_init();
+    }
+
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyOwner {}
 
     function setExchange(address _exchange) external onlyOwner {
         require(_exchange != address(0), "exchange: zero address");

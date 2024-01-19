@@ -30,15 +30,6 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
     receive() external payable {}
 
-    function initialize() external virtual initializer {
-        __Ownable_init();
-        __UUPSUpgradeable_init();
-    }
-
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal override onlyOwner {}
-
     modifier onlyAccountOwner(address account) {
         require(account != address(0), "account: zero");
         require(accounts[msg.sender] == account, "account: not owner");
@@ -48,6 +39,53 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     modifier onlyWarehouse() {
         require(msg.sender == warehouse, "msg.sender: not warehouse");
         _;
+    }
+
+    function initialize() external virtual initializer {
+        __Ownable_init();
+        __UUPSUpgradeable_init();
+    }
+
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyOwner {}
+
+    function setWarehouse(address _warehouse) external onlyOwner {
+        warehouse = _warehouse;
+        emit WarehouseSet(_warehouse);
+    }
+
+    function setRegisteredAdapter(
+        address adapter,
+        bool isRegistered
+    ) external onlyOwner {
+        _registeredAdapters[adapter] = isRegistered;
+        emit AdapterRegistered(adapter, isRegistered);
+    }
+
+    function setStableToken(address token, bool isStable) external onlyOwner {
+        _stableTokens[token] = isStable;
+        emit StableTokenSet(token, isStable);
+    }
+
+    function setOpenPositionFeeRate(uint256 _feeRate) external onlyOwner {
+        require(_feeRate <= BASIS_POINTS, "feeRate: invalid");
+
+        openPositionFeeRate = _feeRate;
+        emit OpenPositionFeeRateSet(_feeRate);
+    }
+
+    function setTier(uint8 tierId, uint256 discountRate) external onlyOwner {
+        require(tierId != 0, "tierId: zero");
+        require(discountRate <= BASIS_POINTS, "discountRate: invalid");
+
+        tiers[tierId] = discountRate;
+        emit TierSet(tierId, discountRate);
+    }
+
+    function setReferralTier(address account, uint8 tierId) external onlyOwner {
+        referralTiers[account] = tierId;
+        emit ReferralTierSet(account, tierId);
     }
 
     function lockedBalances(
@@ -60,14 +98,14 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         return IWarehouse(warehouse).lockedBalances(account, token);
     }
 
+    function isRegisteredAdapter(address adapter) public view returns (bool) {
+        return _registeredAdapters[adapter];
+    }
+
     function isStableToken(
         address token
     ) external view override returns (bool) {
         return _stableTokens[token];
-    }
-
-    function isRegisteredAdapter(address adapter) public view returns (bool) {
-        return _registeredAdapters[adapter];
     }
 
     function getOpenPositionFee(
@@ -100,44 +138,6 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             IERC20(token).approve(account, amount);
             IAccount(account).deposit(token, amount);
         }
-    }
-
-    function setWarehouse(address _warehouse) external onlyOwner {
-        warehouse = _warehouse;
-        emit WarehouseSet(_warehouse);
-    }
-
-    function setStableToken(address token, bool isStable) external onlyOwner {
-        _stableTokens[token] = isStable;
-        emit StableTokenSet(token, isStable);
-    }
-
-    function setRegisteredAdapter(
-        address adapter,
-        bool isRegistered
-    ) external onlyOwner {
-        _registeredAdapters[adapter] = isRegistered;
-        emit AdapterRegistered(adapter, isRegistered);
-    }
-
-    function setTier(uint8 tierId, uint256 discountRate) external onlyOwner {
-        require(tierId != 0, "tierId: zero");
-        require(discountRate <= BASIS_POINTS, "discountRate: invalid");
-
-        tiers[tierId] = discountRate;
-        emit TierSet(tierId, discountRate);
-    }
-
-    function setReferralTier(address account, uint8 tierId) external onlyOwner {
-        referralTiers[account] = tierId;
-        emit ReferralTierSet(account, tierId);
-    }
-
-    function setOpenPositionFeeRate(uint256 _feeRate) external onlyOwner {
-        require(_feeRate <= BASIS_POINTS, "feeRate: invalid");
-
-        openPositionFeeRate = _feeRate;
-        emit OpenPositionFeeRateSet(_feeRate);
     }
 
     function swap(
