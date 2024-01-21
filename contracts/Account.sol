@@ -4,7 +4,6 @@ pragma solidity 0.8.7;
 import {IAccount} from "./interfaces/IAccount.sol";
 import {IExchange} from "./interfaces/IExchange.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
-import "hardhat/console.sol";
 
 contract Account is IAccount {
     address public immutable override owner;

@@ -32,12 +32,9 @@ describe("triggerOrder", () => {
       const size = ethers.parseEther("10");
       const isLong = true;
 
-      const executionFee = await gmxV1Adapter.getMinExecutionFee();
-
-      await exchange.setRegisteredAdapter(gmxV1Adapter.target, true);
+      const adapterExecutionFee = await gmxV1Adapter.getMinExecutionFee();
 
       await deposit(collateral, collateralAmount);
-
       const marketOrder = await gmxV1Adapter.makeMarketOrder(
         collateral,
         index,
@@ -56,9 +53,9 @@ describe("triggerOrder", () => {
           marketOrder.collateralAmount,
           marketOrder.size,
           marketOrder.isLong,
-          executionFee,
+          adapterExecutionFee,
           {
-            value: executionFee,
+            value: adapterExecutionFee,
           }
         );
       await executeIncreasePosition(account.target);
@@ -72,12 +69,13 @@ describe("triggerOrder", () => {
       );
 
       const triggerOrderType = { takeProfit: 0, stopLoss: 1 };
-
       var triggerPrice = ethers.parseUnits("2000", 18);
       var acceptablePrice = ethers.parseUnits("2000", 18); // calculated by slippage tolerance
       var price = ethers.parseUnits("2000", 30);
       await setPrice(gmxV1Adapter, WETH, price, price, false);
 
+      const executionFee = await exchange.minExecutionFee();
+
       await exchange
         .connect(user)
         .createTriggerOrder(
@@ -91,8 +89,10 @@ describe("triggerOrder", () => {
           triggerPrice,
           acceptablePrice,
           executionFee,
-          { value: executionFee }
+          adapterExecutionFee,
+          { value: executionFee + adapterExecutionFee }
         );
+
       await exchange
         .connect(user)
         .createTriggerOrder(
@@ -106,7 +106,8 @@ describe("triggerOrder", () => {
           triggerPrice,
           acceptablePrice,
           executionFee,
-          { value: executionFee }
+          adapterExecutionFee,
+          { value: executionFee + adapterExecutionFee }
         );
 
       const positionKey = await warehouse.getPositionKey(
@@ -153,10 +154,7 @@ describe("triggerOrder", () => {
         const size = ethers.parseEther("10");
         const isLong = true;
 
-        const executionFee = await muxAdapter.getMinExecutionFee();
-
-        await exchange.setRegisteredAdapter(muxAdapter.target, true);
-
+        const adapterExecutionFee = await muxAdapter.getMinExecutionFee();
         await deposit(collateral, collateralAmount);
         const marketOrder = await muxAdapter.makeMarketOrder(
           collateral,
@@ -176,9 +174,9 @@ describe("triggerOrder", () => {
             marketOrder.collateralAmount,
             marketOrder.size,
             marketOrder.isLong,
-            executionFee,
+            adapterExecutionFee,
             {
-              value: executionFee,
+              value: adapterExecutionFee,
             }
           );
         await fillPositionOrder();
@@ -192,11 +190,12 @@ describe("triggerOrder", () => {
         );
 
         const triggerOrderType = { takeProfit: 0, stopLoss: 1 };
-
         var triggerPrice = ethers.parseUnits("2000", 18);
         var acceptablePrice = ethers.parseUnits("2000", 18); // calculated by slippage tolerance
         var price = ethers.parseUnits("2000", 8);
         await setPrice(muxAdapter, WETH, price, price, false);
+
+        const executionFee = await exchange.minExecutionFee();
 
         await exchange
           .connect(user)
@@ -211,7 +210,8 @@ describe("triggerOrder", () => {
             triggerPrice,
             acceptablePrice,
             executionFee,
-            { value: executionFee }
+            adapterExecutionFee,
+            { value: executionFee + adapterExecutionFee }
           );
         await exchange
           .connect(user)
@@ -226,7 +226,8 @@ describe("triggerOrder", () => {
             triggerPrice,
             acceptablePrice,
             executionFee,
-            { value: executionFee }
+            adapterExecutionFee,
+            { value: executionFee + adapterExecutionFee }
           );
 
         const positionKey = await warehouse.getPositionKey(

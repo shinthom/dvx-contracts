@@ -91,14 +91,14 @@ async function main() {
   console.log("Exchange: setWarehouse\n");
 
   await waitAndLogAccumulatedGasUsed(
-    await exchange.setRegisteredAdapter(gmxV1Adapter.target, true)
+    await exchange.registerAdapter(gmxV1Adapter.target)
   );
-  console.log("Exchange: setRegisteredAdapter\n");
+  console.log("Exchange: registerAdapter\n");
 
   await waitAndLogAccumulatedGasUsed(
-    await exchange.setRegisteredAdapter(muxAdapter.target, true)
+    await exchange.registerAdapter(muxAdapter.target)
   );
-  console.log("Exchange: setRegisteredAdapter\n");
+  console.log("Exchange: registerAdapter\n");
 
   await waitAndLogAccumulatedGasUsed(await exchange.setStableToken(USDC, true));
   console.log("Exchange: setStableToken\n");

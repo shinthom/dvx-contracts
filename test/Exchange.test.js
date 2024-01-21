@@ -98,7 +98,28 @@ describe("Exchange", () => {
     });
   });
 
-  describe("setRegisteredAdapter", () => {
+  describe("sets executionFee", () => {
+    const minExecutionFee = 100;
+
+    beforeEach(async () => {
+      await exchange.transferOwnership(owner);
+    });
+
+    it("reverts when not owner", async () => {
+      await expect(
+        exchange.connect(other).setMinExecutionFee(minExecutionFee)
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+
+    it("sets minExecutionFee", async () => {
+      await expect(exchange.connect(owner).setMinExecutionFee(minExecutionFee))
+        .to.emit(exchange, "MinExecutionFeeSet")
+        .withArgs(minExecutionFee);
+      expect(await exchange.minExecutionFee()).to.be.equal(minExecutionFee);
+    });
+  });
+
+  describe("registerAdapter", () => {
     const adapter = "0x" + "11".repeat(20);
 
     beforeEach(async () => {
@@ -107,12 +128,12 @@ describe("Exchange", () => {
 
     it("reverts when not owner", async () => {
       await expect(
-        exchange.connect(other).setRegisteredAdapter(adapter, true)
+        exchange.connect(other).registerAdapter(adapter)
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("set registered adapter", async () => {
-      await exchange.connect(owner).setRegisteredAdapter(adapter, true);
+      await exchange.connect(owner).registerAdapter(adapter);
       expect(await exchange.isRegisteredAdapter(adapter)).to.be.equal(true);
     });
   });
@@ -373,9 +394,7 @@ describe("Exchange", () => {
     });
 
     it("reverts when collateralAmount is zero", async () => {
-      await exchangeMock
-        .connect(owner)
-        .setRegisteredAdapter(adapterMock.target, true);
+      await exchangeMock.connect(owner).registerAdapter(adapterMock.target);
 
       await expect(
         exchangeMock
@@ -396,9 +415,7 @@ describe("Exchange", () => {
     });
 
     it("reverts when size is zero", async () => {
-      await exchangeMock
-        .connect(owner)
-        .setRegisteredAdapter(adapterMock.target, true);
+      await exchangeMock.connect(owner).registerAdapter(adapterMock.target);
 
       await expect(
         exchangeMock
@@ -419,9 +436,7 @@ describe("Exchange", () => {
     });
 
     it("executes market order", async () => {
-      await exchangeMock
-        .connect(owner)
-        .setRegisteredAdapter(adapterMock.target, true);
+      await exchangeMock.connect(owner).registerAdapter(adapterMock.target);
 
       await exchangeMock
         .connect(user)

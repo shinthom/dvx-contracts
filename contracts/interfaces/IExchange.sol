@@ -23,7 +23,11 @@ interface IExchange {
 
     event StableTokenSet(address indexed token, bool isStable);
 
-    event AdapterRegistered(address indexed adapter, bool isRegistered);
+    event MinExecutionFeeSet(uint256 indexed fee);
+
+    event AdapterRegistered(address indexed adapter);
+
+    event AdapterUnregistered(address indexed adapter);
 
     event TierSet(uint8 indexed tierId, uint256 discount);
 
@@ -46,7 +50,11 @@ interface IExchange {
 
     function isStableToken(address token) external view returns (bool);
 
+    function isRegisteredAdapter(address adapter) external view returns (bool);
+
     function getOpenPositionFee(uint256 amount) external view returns (uint256);
+
+    function getMaxAdapterExecutionFee() external view returns (uint256);
 
     function createAccount() external returns (address account);
 

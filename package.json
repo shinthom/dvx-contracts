@@ -6,7 +6,7 @@
   "scripts": {
     "compile": "hardhat compile",
     "deploy": "hardhat run scripts/deploy.js --network local",
-    "deploy-truffle": "hardhat run scripts/deploy.js --network truffle",
+    "deploy-truffle": "hardhat run scripts/deploy.js --network truffle-dashboard",
     "deposit": "hardhat run scripts/deposit-testnet.js --network local",
     "e2e-realize-profit": "hardhat test test/e2e/realizeProfit.js --network local",
     "e2e-market-order": "hardhat test test/e2e/marketOrder.js --network local",

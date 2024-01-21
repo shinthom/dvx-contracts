@@ -566,7 +566,6 @@ contract GmxV1Adapter is IAdapter {
 
         if (isLong) {
             if (collateral == _weth) {
-                console.log(address(this).balance);
                 IPositionRouter(_positionRouter).createIncreasePositionETH{
                     value: collateralAmount + fee
                 }(path, index, 0, size, isLong, price, fee, 0x0, address(0));

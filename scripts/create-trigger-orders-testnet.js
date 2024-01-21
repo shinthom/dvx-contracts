@@ -49,31 +49,34 @@ async function main() {
   const ethSize = ethers.parseEther("10");
   const wbtcSize = ethers.parseUnits("1", 8);
 
-  await increasePosition(gmxV1Adapter, WETH, WETH, ethCollateralAmount, ethSize, true, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
-  await increasePosition(gmxV1Adapter, WBTC, WETH, wbtcCollateralAmount, ethSize, true, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
-  await increasePosition(gmxV1Adapter, USDC, WETH, usdcCollateralAmount, ethSize, true, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
-  await increasePosition(muxAdapter, WETH, WETH, ethCollateralAmount, ethSize, true, await muxAdapter.getMinExecutionFee()); // prettier-ignore
-  await increasePosition(muxAdapter, WBTC, WETH, wbtcCollateralAmount, ethSize, true, await muxAdapter.getMinExecutionFee()); // prettier-ignore
-  await increasePosition(muxAdapter, USDC, WETH, usdcCollateralAmount, ethSize, true, await muxAdapter.getMinExecutionFee()); // prettier-ignore
-  // await increasePosition(gmxV1Adapter, WETH, WBTC, ethCollateralAmount, wbtcSize, true, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
-  // await increasePosition(gmxV1Adapter, WBTC, WBTC, wbtcCollateralAmount, wbtcSize, true, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
-  // await increasePosition(gmxV1Adapter, USDC, WBTC, usdcCollateralAmount, wbtcSize, true, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
-  // await increasePosition(muxAdapter, WETH, WBTC, ethCollateralAmount, wbtcSize, true, await muxAdapter.getMinExecutionFee()); // prettier-ignore
-  // await increasePosition(muxAdapter, WBTC, WBTC, wbtcCollateralAmount, wbtcSize, true, await muxAdapter.getMinExecutionFee()); // prettier-ignore
-  // await increasePosition(muxAdapter, USDC, WBTC, usdcCollateralAmount, wbtcSize, true, await muxAdapter.getMinExecutionFee()); // prettier-ignore
+  const gmxV1AdapterExecutionFee = await gmxV1Adapter.getMinExecutionFee();
+  const muxAdapterExecutionFee = await muxAdapter.getMinExecutionFee();
 
-  await increasePosition(gmxV1Adapter, WETH, WETH, ethCollateralAmount, ethSize, false, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
-  await increasePosition(gmxV1Adapter, WBTC, WETH, wbtcCollateralAmount, ethSize, false, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
-  await increasePosition(gmxV1Adapter, USDC, WETH, usdcCollateralAmount, ethSize, false, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
-  await increasePosition(muxAdapter, WETH, WETH, ethCollateralAmount, ethSize, false, await muxAdapter.getMinExecutionFee()); // prettier-ignore
-  await increasePosition(muxAdapter, WBTC, WETH, wbtcCollateralAmount, ethSize, false, await muxAdapter.getMinExecutionFee()); // prettier-ignore
-  await increasePosition(muxAdapter, USDC, WETH, usdcCollateralAmount, ethSize, false, await muxAdapter.getMinExecutionFee()); // prettier-ignore
-  // await increasePosition(gmxV1Adapter, WETH, WBTC, ethCollateralAmount, wbtcSize, false, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
-  // await increasePosition(gmxV1Adapter, WBTC, WBTC, wbtcCollateralAmount, wbtcSize, false, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
-  // await increasePosition(gmxV1Adapter, USDC, WBTC, usdcCollateralAmount, wbtcSize, false, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
-  // await increasePosition(muxAdapter, WETH, WBTC, ethCollateralAmount, wbtcSize, false, await muxAdapter.getMinExecutionFee()); // prettier-ignore
-  // await increasePosition(muxAdapter, WBTC, WBTC, wbtcCollateralAmount, wbtcSize, false, await muxAdapter.getMinExecutionFee()); // prettier-ignore
-  // await increasePosition(muxAdapter, USDC, WBTC, usdcCollateralAmount, wbtcSize, false, await muxAdapter.getMinExecutionFee()); // prettier-ignore
+  await increasePosition(gmxV1Adapter, WETH, WETH, ethCollateralAmount, ethSize, true, gmxV1AdapterExecutionFee); // prettier-ignore
+  await increasePosition(gmxV1Adapter, WBTC, WETH, wbtcCollateralAmount, ethSize, true, gmxV1AdapterExecutionFee); // prettier-ignore
+  await increasePosition(gmxV1Adapter, USDC, WETH, usdcCollateralAmount, ethSize, true, gmxV1AdapterExecutionFee); // prettier-ignore
+  await increasePosition(muxAdapter, WETH, WETH, ethCollateralAmount, ethSize, true, muxAdapterExecutionFee); // prettier-ignore
+  await increasePosition(muxAdapter, WBTC, WETH, wbtcCollateralAmount, ethSize, true, muxAdapterExecutionFee); // prettier-ignore
+  await increasePosition(muxAdapter, USDC, WETH, usdcCollateralAmount, ethSize, true, muxAdapterExecutionFee); // prettier-ignore
+  // await increasePosition(gmxV1Adapter, WETH, WBTC, ethCollateralAmount, wbtcSize, true, gmxV1AdapterExecutionFee); // prettier-ignore
+  // await increasePosition(gmxV1Adapter, WBTC, WBTC, wbtcCollateralAmount, wbtcSize, true, gmxV1AdapterExecutionFee); // prettier-ignore
+  // await increasePosition(gmxV1Adapter, USDC, WBTC, usdcCollateralAmount, wbtcSize, true, gmxV1AdapterExecutionFee); // prettier-ignore
+  // await increasePosition(muxAdapter, WETH, WBTC, ethCollateralAmount, wbtcSize, true, muxAdapterExecutionFee); // prettier-ignore
+  // await increasePosition(muxAdapter, WBTC, WBTC, wbtcCollateralAmount, wbtcSize, true, muxAdapterExecutionFee); // prettier-ignore
+  // await increasePosition(muxAdapter, USDC, WBTC, usdcCollateralAmount, wbtcSize, true, muxAdapterExecutionFee); // prettier-ignore
+
+  await increasePosition(gmxV1Adapter, WETH, WETH, ethCollateralAmount, ethSize, false, gmxV1AdapterExecutionFee); // prettier-ignore
+  await increasePosition(gmxV1Adapter, WBTC, WETH, wbtcCollateralAmount, ethSize, false, gmxV1AdapterExecutionFee); // prettier-ignore
+  await increasePosition(gmxV1Adapter, USDC, WETH, usdcCollateralAmount, ethSize, false, gmxV1AdapterExecutionFee); // prettier-ignore
+  await increasePosition(muxAdapter, WETH, WETH, ethCollateralAmount, ethSize, false, muxAdapterExecutionFee); // prettier-ignore
+  await increasePosition(muxAdapter, WBTC, WETH, wbtcCollateralAmount, ethSize, false, muxAdapterExecutionFee); // prettier-ignore
+  await increasePosition(muxAdapter, USDC, WETH, usdcCollateralAmount, ethSize, false, muxAdapterExecutionFee); // prettier-ignore
+  // await increasePosition(gmxV1Adapter, WETH, WBTC, ethCollateralAmount, wbtcSize, false, gmxV1AdapterExecutionFee); // prettier-ignore
+  // await increasePosition(gmxV1Adapter, WBTC, WBTC, wbtcCollateralAmount, wbtcSize, false, gmxV1AdapterExecutionFee); // prettier-ignore
+  // await increasePosition(gmxV1Adapter, USDC, WBTC, usdcCollateralAmount, wbtcSize, false, gmxV1AdapterExecutionFee); // prettier-ignore
+  // await increasePosition(muxAdapter, WETH, WBTC, ethCollateralAmount, wbtcSize, false, muxAdapterExecutionFee); // prettier-ignore
+  // await increasePosition(muxAdapter, WBTC, WBTC, wbtcCollateralAmount, wbtcSize, false, muxAdapterExecutionFee); // prettier-ignore
+  // await increasePosition(muxAdapter, USDC, WBTC, usdcCollateralAmount, wbtcSize, false, muxAdapterExecutionFee); // prettier-ignore
 
   const triggerOrderType = { takeProfit: 0, stopLoss: 1 };
 
@@ -81,32 +84,33 @@ async function main() {
   var triggerPrice = ethers.parseUnits("2000", 18);
   var acceptablePrice = ethers.parseUnits("1900", 18);
 
-  await createTriggerOrder(gmxV1Adapter, WETH, WETH, true, ethSize, triggerOrderType.takeProfit, triggerPrice, acceptablePrice, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
+  const executionFee = await exchange.minExecutionFee();
+  await createTriggerOrder(gmxV1Adapter, WETH, WETH, true, ethSize, triggerOrderType.takeProfit, triggerPrice, acceptablePrice, executionFee, gmxV1AdapterExecutionFee, { value: executionFee + gmxV1AdapterExecutionFee }); // prettier-ignore
   var positionKey = await warehouse.getPositionKey(account.target, gmxV1Adapter.target, WETH, WETH, true); // prettier-ignore
   console.log(await warehouse.getTriggerOrders(positionKey)); // prettier-ignore
-  await createTriggerOrder(muxAdapter, WETH, WETH, true, ethSize, triggerOrderType.takeProfit, triggerPrice, acceptablePrice, await muxAdapter.getMinExecutionFee()); // prettier-ignore
+  await createTriggerOrder(muxAdapter, WETH, WETH, true, ethSize, triggerOrderType.takeProfit, triggerPrice, acceptablePrice, executionFee, muxAdapterExecutionFee, { value: executionFee + muxAdapterExecutionFee }); // prettier-ignore
   var positionKey = await warehouse.getPositionKey(account.target, muxAdapter.target, WETH, WETH, true); // prettier-ignore
   console.log(await warehouse.getTriggerOrders(positionKey)); // prettier-ignore
-  await createTriggerOrder(muxAdapter, WBTC, WETH, true, ethSize, triggerOrderType.takeProfit, triggerPrice, acceptablePrice, await muxAdapter.getMinExecutionFee()); // prettier-ignore
+  await createTriggerOrder(muxAdapter, WBTC, WETH, true, ethSize, triggerOrderType.takeProfit, triggerPrice, acceptablePrice, executionFee, muxAdapterExecutionFee, { value: executionFee + muxAdapterExecutionFee }); // prettier-ignore
   var positionKey = await warehouse.getPositionKey(account.target, muxAdapter.target, WBTC, WETH, true); // prettier-ignore
   console.log(await warehouse.getTriggerOrders(positionKey)); // prettier-ignore
-  await createTriggerOrder(muxAdapter, USDC, WETH, true, ethSize, triggerOrderType.takeProfit, triggerPrice, acceptablePrice, await muxAdapter.getMinExecutionFee()); // prettier-ignore
+  await createTriggerOrder(muxAdapter, USDC, WETH, true, ethSize, triggerOrderType.takeProfit, triggerPrice, acceptablePrice, executionFee, muxAdapterExecutionFee, { value: executionFee + muxAdapterExecutionFee }); // prettier-ignore
   var positionKey = await warehouse.getPositionKey(account.target, muxAdapter.target, USDC, WETH, true); // prettier-ignore
   console.log(await warehouse.getTriggerOrders(positionKey)); // prettier-ignore
 
   // short
   var triggerPrice = ethers.parseUnits("2000", 18);
   var acceptablePrice = ethers.parseUnits("2100", 18);
-  await createTriggerOrder(gmxV1Adapter, USDC, WETH, false, ethSize, triggerOrderType.takeProfit, triggerPrice, acceptablePrice, await gmxV1Adapter.getMinExecutionFee()); // prettier-ignore
+  await createTriggerOrder(gmxV1Adapter, USDC, WETH, false, ethSize, triggerOrderType.takeProfit, triggerPrice, acceptablePrice, executionFee, gmxV1AdapterExecutionFee, { value: executionFee + gmxV1AdapterExecutionFee }); // prettier-ignore
   var positionKey = await warehouse.getPositionKey(account.target, gmxV1Adapter.target, USDC, WETH, false); // prettier-ignore
   console.log(await warehouse.getTriggerOrders(positionKey)); // prettier-ignore
-  await createTriggerOrder(muxAdapter, WETH, WETH, false, ethSize, triggerOrderType.takeProfit, triggerPrice, acceptablePrice, await muxAdapter.getMinExecutionFee()); // prettier-ignore
+  await createTriggerOrder(muxAdapter, WETH, WETH, false, ethSize, triggerOrderType.takeProfit, triggerPrice, acceptablePrice, executionFee, muxAdapterExecutionFee, { value: executionFee + muxAdapterExecutionFee }); // prettier-ignore
   var positionKey = await warehouse.getPositionKey(account.target, muxAdapter.target, WETH, WETH, false); // prettier-ignore
   console.log(await warehouse.getTriggerOrders(positionKey)); // prettier-ignore
-  await createTriggerOrder(muxAdapter, WBTC, WETH, false, ethSize, triggerOrderType.takeProfit, triggerPrice, acceptablePrice, await muxAdapter.getMinExecutionFee()); // prettier-ignore
+  await createTriggerOrder(muxAdapter, WBTC, WETH, false, ethSize, triggerOrderType.takeProfit, triggerPrice, acceptablePrice, executionFee, muxAdapterExecutionFee, { value: executionFee + muxAdapterExecutionFee }); // prettier-ignore
   var positionKey = await warehouse.getPositionKey(account.target, muxAdapter.target, WBTC, WETH, false); // prettier-ignore
   console.log(await warehouse.getTriggerOrders(positionKey)); // prettier-ignore
-  await createTriggerOrder(muxAdapter, USDC, WETH, false, ethSize, triggerOrderType.takeProfit, triggerPrice, acceptablePrice, await muxAdapter.getMinExecutionFee()); // prettier-ignore
+  await createTriggerOrder(muxAdapter, USDC, WETH, false, ethSize, triggerOrderType.takeProfit, triggerPrice, acceptablePrice, executionFee, muxAdapterExecutionFee, { value: executionFee + muxAdapterExecutionFee }); // prettier-ignore
   var positionKey = await warehouse.getPositionKey(account.target, muxAdapter.target, USDC, WETH, false); // prettier-ignore
   console.log(await warehouse.getTriggerOrders(positionKey)); // prettier-ignore
 }

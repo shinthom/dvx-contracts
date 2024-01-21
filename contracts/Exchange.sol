@@ -20,13 +20,16 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     address public override warehouse;
     mapping(address => address) public accounts;
 
-    mapping(address => bool) private _stableTokens;
-    mapping(address => bool) private _registeredAdapters;
+    address[] private registeredAdapters;
+    mapping(address => bool) public override isRegisteredAdapter;
+    mapping(address => bool) public override isStableToken;
 
     mapping(uint8 => uint256) public tiers;
     mapping(address => uint8) public referralTiers;
 
-    uint256 public openPositionFeeRate;
+    uint256 public minExecutionFee; // limit / trigger order execution fee
+
+    uint256 public openPositionFeeRate; // open position fee rate
 
     receive() external payable {}
 
@@ -55,16 +58,40 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         emit WarehouseSet(_warehouse);
     }
 
-    function setRegisteredAdapter(
-        address adapter,
-        bool isRegistered
-    ) external onlyOwner {
-        _registeredAdapters[adapter] = isRegistered;
-        emit AdapterRegistered(adapter, isRegistered);
+    function registerAdapter(address adapter) external onlyOwner {
+        require(adapter != address(0), "adapter: zero address");
+        require(!isRegisteredAdapter[adapter], "adapter: already registered");
+
+        registeredAdapters.push(adapter);
+
+        isRegisteredAdapter[adapter] = true;
+        emit AdapterRegistered(adapter);
+    }
+
+    function unregisterAdapter(address adapter) external onlyOwner {
+        require(adapter != address(0), "adapter: zero address");
+        require(isRegisteredAdapter[adapter], "adapter: not registered");
+
+        uint256 length = registeredAdapters.length;
+        for (uint256 i = 0; i < length; i++) {
+            if (registeredAdapters[i] == adapter) {
+                registeredAdapters[i] = registeredAdapters[length - 1];
+                registeredAdapters.pop();
+                break;
+            }
+        }
+
+        isRegisteredAdapter[adapter] = false;
+        emit AdapterUnregistered(adapter);
+    }
+
+    function setMinExecutionFee(uint256 fee) external onlyOwner {
+        minExecutionFee = fee;
+        emit MinExecutionFeeSet(fee);
     }
 
     function setStableToken(address token, bool isStable) external onlyOwner {
-        _stableTokens[token] = isStable;
+        isStableToken[token] = isStable;
         emit StableTokenSet(token, isStable);
     }
 
@@ -96,16 +123,6 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             return 0;
         }
         return IWarehouse(warehouse).lockedBalances(account, token);
-    }
-
-    function isRegisteredAdapter(address adapter) public view returns (bool) {
-        return _registeredAdapters[adapter];
-    }
-
-    function isStableToken(
-        address token
-    ) external view override returns (bool) {
-        return _stableTokens[token];
     }
 
     function getOpenPositionFee(
@@ -202,21 +219,21 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
-        uint256 executionFee
+        uint256 adapterExecutionFee
     ) external payable override onlyAccountOwner(account) {
         require(path.length == 1 || path.length == 2, "path: invalid length");
 
         require(
-            executionFee >= IAdapter(adapter).getMinExecutionFee(),
-            "executionFee: insufficient"
+            adapterExecutionFee >= IAdapter(adapter).getMinExecutionFee(),
+            "adapterExecutionFee: insufficient"
         );
-        require(isRegisteredAdapter(adapter), "adapter: not registered");
+        require(isRegisteredAdapter[adapter], "adapter: not registered");
 
         if (orderType == OrderType.IncreasePosition) {
             require(collateralAmount != 0, "collateralAmount: zero");
             require(size != 0, "size: zero");
 
-            IAccount(account).increasePosition{value: executionFee}(
+            IAccount(account).increasePosition{value: adapterExecutionFee}(
                 adapter,
                 MarketOrder({
                     path: path,
@@ -230,7 +247,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             require(collateralAmount == 0, "collateralAmount: not zero");
             require(size != 0, "size: zero");
 
-            IAccount(account).decreasePosition{value: executionFee}(
+            IAccount(account).decreasePosition{value: adapterExecutionFee}(
                 adapter,
                 MarketOrder({
                     path: path,
@@ -244,7 +261,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             require(collateralAmount != 0, "collateralAmount: zero");
             require(size == 0, "size: not zero");
 
-            IAccount(account).increaseCollateral{value: executionFee}(
+            IAccount(account).increaseCollateral{value: adapterExecutionFee}(
                 adapter,
                 MarketOrder({
                     path: path,
@@ -258,7 +275,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             require(collateralAmount != 0, "collateralAmount: zero");
             require(size == 0, "size: not zero");
 
-            IAccount(account).decreaseCollateral{value: executionFee}(
+            IAccount(account).decreaseCollateral{value: adapterExecutionFee}(
                 adapter,
                 MarketOrder({
                     path: path,
@@ -271,6 +288,24 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         }
     }
 
+    function getMaxAdapterExecutionFee()
+        public
+        view
+        override
+        returns (uint256)
+    {
+        uint256 maxAdapterExecutionFee;
+        for (uint256 i = 0; i < registeredAdapters.length; i++) {
+            uint256 executionFee = IAdapter(registeredAdapters[i])
+                .getMinExecutionFee();
+
+            if (executionFee > maxAdapterExecutionFee) {
+                maxAdapterExecutionFee = executionFee;
+            }
+        }
+        return maxAdapterExecutionFee;
+    }
+
     function createLimitOrder(
         address account,
         address collateral,
@@ -280,9 +315,20 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         bool isLong,
         uint256 triggerPrice,
         uint256 acceptablePrice,
-        uint256 fee
+        uint256 executionFee,
+        uint256 adapterExecutionFee
     ) external payable onlyAccountOwner(account) {
-        IWarehouse(warehouse).createLimitOrder{value: fee}(
+        require(executionFee >= minExecutionFee, "executionFee: insufficient");
+        require(
+            adapterExecutionFee >= getMaxAdapterExecutionFee(),
+            "adapterExecutionFee: insufficient"
+        );
+        require(
+            executionFee + adapterExecutionFee == msg.value,
+            "msg.value: insufficient"
+        );
+
+        IWarehouse(warehouse).createLimitOrder{value: adapterExecutionFee}(
             account,
             collateral,
             index,
@@ -291,7 +337,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             isLong,
             triggerPrice,
             acceptablePrice,
-            fee
+            adapterExecutionFee
         );
     }
 
@@ -307,6 +353,8 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address adapter,
         MarketOrder calldata marketOrder
     ) external payable virtual override onlyWarehouse {
+        require(isRegisteredAdapter[adapter], "adapter: not registered");
+
         IAccount(account).increasePosition{value: msg.value}(
             adapter,
             marketOrder
@@ -323,11 +371,20 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         IWarehouse.TriggerOrderType orderType,
         uint256 triggerPrice,
         uint256 acceptablePrice,
-        uint256 executionFee
+        uint256 executionFee,
+        uint256 adapterExecutionFee
     ) external payable onlyAccountOwner(account) {
-        require(isRegisteredAdapter(adapter), "adapter: not registered");
+        require(executionFee >= minExecutionFee, "executionFee: insufficient");
+        require(
+            adapterExecutionFee == IAdapter(adapter).getMinExecutionFee(),
+            "adapterExecutionFee: not match"
+        );
+        require(
+            executionFee + adapterExecutionFee == msg.value,
+            "msg.value: not match"
+        );
 
-        IWarehouse(warehouse).createTriggerOrder{value: executionFee}(
+        IWarehouse(warehouse).createTriggerOrder{value: adapterExecutionFee}(
             account,
             adapter,
             collateral,
@@ -337,7 +394,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             orderType,
             triggerPrice,
             acceptablePrice,
-            executionFee
+            adapterExecutionFee
         );
     }
 

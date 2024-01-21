@@ -29,6 +29,7 @@ interface IWarehouse {
         bool isLong;
         uint256 triggerPrice;
         uint256 acceptablePrice;
+        uint256 adapterExecutionFee;
         uint256 createdAt;
     }
 
@@ -44,6 +45,7 @@ interface IWarehouse {
         TriggerOrderType orderType;
         uint256 triggerPrice;
         uint256 acceptablePrice;
+        uint256 adapterExecutionFee;
         uint256 createdAt;
     }
 
@@ -52,8 +54,6 @@ interface IWarehouse {
     event OrderKeeperSet(address indexed orderKeeper, bool isActive);
 
     event PriceMinDeviationSet(uint256 indexed deviation);
-
-    event ExecutionFeeSet(uint256 indexed fee);
 
     event LimitOrderCreated(address indexed account, uint256 indexed id);
 
@@ -125,7 +125,7 @@ interface IWarehouse {
         bool isLong,
         uint256 triggerPrice,
         uint256 acceptablePrice,
-        uint256 fee
+        uint256 adapterExecutionFee
     ) external payable;
 
     function cancelLimitOrder(address account, uint256 id) external;
@@ -140,7 +140,7 @@ interface IWarehouse {
         TriggerOrderType orderType,
         uint256 triggerPrice, // 1e18
         uint256 acceptablePrice, // 1e18
-        uint256 executionFee
+        uint256 adapterExecutionFee
     ) external payable;
 
     function cancelTriggerOrder(

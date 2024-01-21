@@ -130,8 +130,8 @@ const deploy = async (noAccount) => {
   reader = await ethers.deployContract("Reader", [warehouse.target]);
 
   await exchange.setWarehouse(warehouse.target);
-  await exchange.setRegisteredAdapter(gmxV1Adapter.target, true);
-  await exchange.setRegisteredAdapter(muxAdapter.target, true);
+  await exchange.registerAdapter(gmxV1Adapter.target);
+  await exchange.registerAdapter(muxAdapter.target);
   await exchange.setStableToken(USDC, true);
   await exchange.setStableToken(USDT, true);
   await exchange.setStableToken(USDCe, true);
@@ -195,7 +195,7 @@ const deploy = async (noAccount) => {
     collateralAmount,
     size,
     isLong,
-    executionFee
+    adapterExecutionFee
   ) => {
     const orderType = {
       increasePosition: 0,
@@ -222,9 +222,9 @@ const deploy = async (noAccount) => {
         marketOrder.collateralAmount,
         marketOrder.size,
         marketOrder.isLong,
-        executionFee,
+        adapterExecutionFee,
         {
-          value: executionFee,
+          value: adapterExecutionFee,
         }
       );
 
@@ -243,7 +243,8 @@ const deploy = async (noAccount) => {
     isLong,
     triggerPrice,
     acceptablePrice,
-    executionFee
+    executionFee,
+    adapterExecutionFee
   ) => {
     await exchange
       .connect(user)
@@ -257,7 +258,8 @@ const deploy = async (noAccount) => {
         triggerPrice,
         acceptablePrice,
         executionFee,
-        { value: executionFee }
+        adapterExecutionFee,
+        { value: executionFee + adapterExecutionFee }
       );
   };
 
@@ -270,7 +272,8 @@ const deploy = async (noAccount) => {
     triggerOrderType,
     triggerPrice,
     acceptablePrice,
-    executionFee
+    executionFee,
+    adapterExecutionFee
   ) => {
     await exchange
       .connect(user)
@@ -285,7 +288,8 @@ const deploy = async (noAccount) => {
         triggerPrice,
         acceptablePrice,
         executionFee,
-        { value: executionFee }
+        adapterExecutionFee,
+        { value: executionFee + adapterExecutionFee }
       );
   };
 

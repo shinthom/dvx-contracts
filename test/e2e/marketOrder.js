@@ -31,8 +31,6 @@ describe("marketOrder", () => {
       const size = ethers.parseEther("10");
       const isLong = true;
 
-      await exchange.setRegisteredAdapter(gmxV1Adapter.target, true);
-
       await deposit(collateral, collateralAmount);
 
       const request = { collateral, index, collateralAmount, size, isLong };
@@ -171,7 +169,6 @@ describe("marketOrder", () => {
       const size = ethers.parseEther("10");
       const isLong = true;
 
-      await exchange.setRegisteredAdapter(muxAdapter.target, true);
       await deposit(collateral, collateralAmount);
 
       const request = { collateral, index, collateralAmount, size, isLong };

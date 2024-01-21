@@ -101,23 +101,6 @@ describe("Warehouse", () => {
     });
   });
 
-  describe("sets executionFee", () => {
-    const executionFee = 100;
-
-    it("reverts when not owner", async () => {
-      await expect(
-        warehouse.connect(other).setExecutionFee(executionFee)
-      ).to.be.revertedWith("Ownable: caller is not the owner");
-    });
-
-    it("sets execution fees", async () => {
-      await expect(warehouse.connect(owner).setExecutionFee(executionFee))
-        .to.emit(warehouse, "ExecutionFeeSet")
-        .withArgs(executionFee);
-      expect(await warehouse.executionFee()).to.be.equal(executionFee);
-    });
-  });
-
   describe("limitOrder", () => {
     const triggerPrice = ethers.parseUnits("2000", 18);
     const acceptablePrice = ethers.parseUnits("2020", 18);
@@ -164,6 +147,27 @@ describe("Warehouse", () => {
               fee
             )
         ).to.be.revertedWith("msg.sender: not exchange");
+      });
+
+      it("reverts when adapterExecutionFee does not match", async () => {
+        var triggerPrice = ethers.parseUnits("2000", 18);
+        var acceptablePrice = ethers.parseUnits("2001", 18);
+        var isLong = true;
+        await expect(
+          warehouse
+            .connect(exchange)
+            .createLimitOrder(
+              account.target,
+              collateral,
+              index,
+              collateralAmount,
+              size,
+              isLong,
+              triggerPrice,
+              acceptablePrice,
+              10
+            )
+        ).to.be.revertedWith("adapterExecutionFee: not match");
       });
 
       it("reverts when triggerPrice is invalid", async () => {
@@ -278,29 +282,7 @@ describe("Warehouse", () => {
                 value: fee,
               }
             )
-        ).to.be.revertedWith("fee: not match");
-      });
-
-      it("reverts when fee is not enough", async () => {
-        await warehouse.connect(owner).setExecutionFee(fee);
-        await expect(
-          warehouse
-            .connect(exchange)
-            .createLimitOrder(
-              account.target,
-              collateral,
-              index,
-              collateralAmount,
-              size,
-              isLong,
-              triggerPrice,
-              acceptablePrice,
-              fee - 1,
-              {
-                value: fee - 1,
-              }
-            )
-        ).to.be.revertedWith("fee: less than executionFee");
+        ).to.be.revertedWith("adapterExecutionFee: not match");
       });
 
       it("reverts when collateralAmount is over the balance", async () => {
@@ -475,15 +457,6 @@ describe("Warehouse", () => {
         ).to.be.revertedWith("msg.sender: not orderKeeper");
       });
 
-      it("reverts when fee is less than executionFee", async () => {
-        await warehouse.connect(owner).setExecutionFee(executionFee + 1);
-        await expect(
-          warehouse
-            .connect(orderKeeper)
-            .executeLimitOrder(account.target, adapter.target, 0)
-        ).to.be.revertedWith("fee: less than executionFee");
-      });
-
       it("reverts when limitOrder state is not pending", async () => {
         await warehouse.connect(exchange).cancelLimitOrder(account.target, 0);
         await expect(
@@ -491,15 +464,6 @@ describe("Warehouse", () => {
             .connect(orderKeeper)
             .executeLimitOrder(account.target, adapter.target, 0)
         ).to.be.revertedWith("state: not pending");
-      });
-
-      it("reverts when balance is under minExecutionFee", async () => {
-        await adapter.setMinExecutionFee(executionFee + 1);
-        await expect(
-          warehouse
-            .connect(orderKeeper)
-            .executeLimitOrder(account.target, adapter.target, 0)
-        ).to.be.revertedWith("balance: under minExecutionFee");
       });
 
       it("reverts when price is not acceptable", async () => {
@@ -568,6 +532,28 @@ describe("Warehouse", () => {
               0
             )
         ).to.be.revertedWith("msg.sender: not exchange");
+      });
+
+      it("reverts when adapterExecutionFee does not match", async () => {
+        var triggerPrice = ethers.parseUnits("2000", 18);
+        var acceptablePrice = ethers.parseUnits("2001", 18);
+        var isLong = true;
+        await expect(
+          warehouse
+            .connect(exchange)
+            .createTriggerOrder(
+              ethers.ZeroAddress,
+              ethers.ZeroAddress,
+              ETH,
+              ETH,
+              isLong,
+              ethers.parseEther("10"),
+              triggerOrderType.takeProfit,
+              triggerPrice,
+              acceptablePrice,
+              10
+            )
+        ).to.be.revertedWith("adapterExecutionFee: not match");
       });
 
       it("reverts when triggerPrice is invalid", async () => {
@@ -654,49 +640,6 @@ describe("Warehouse", () => {
               0
             )
         ).to.be.revertedWith("acceptablePrice: out of deviation");
-      });
-
-      it("reverts when executionFee is not match", async () => {
-        await expect(
-          warehouse
-            .connect(exchange)
-            .createTriggerOrder(
-              ethers.ZeroAddress,
-              adapter.target,
-              ETH,
-              ETH,
-              true,
-              ethers.parseEther("10"),
-              triggerOrderType.takeProfit,
-              triggerPrice,
-              acceptablePrice,
-              executionFee,
-              { value: executionFee - 1 }
-            )
-        ).to.be.revertedWith("fee: not match");
-      });
-
-      it("reverts when executionFee is not enough", async () => {
-        await warehouse.connect(owner).setExecutionFee(executionFee);
-        await expect(
-          warehouse
-            .connect(exchange)
-            .createTriggerOrder(
-              ethers.ZeroAddress,
-              adapter.target,
-              ETH,
-              ETH,
-              true,
-              ethers.parseEther("10"),
-              triggerOrderType.takeProfit,
-              triggerPrice,
-              acceptablePrice,
-              executionFee - 1,
-              {
-                value: executionFee - 1,
-              }
-            )
-        ).to.be.revertedWith("fee: less than executionFee");
       });
 
       it("reverts when there is no position", async () => {
@@ -871,15 +814,6 @@ describe("Warehouse", () => {
         await expect(
           warehouse.connect(orderKeeper).executeTriggerOrder(positionKey, 0)
         ).to.be.revertedWith("price: not acceptable");
-      });
-
-      it("reverts when fee is insufficient", async () => {
-        await adapter.setWrapPrice(acceptablePrice);
-
-        await adapter.setMinExecutionFee(executionFee + 1);
-        await expect(
-          warehouse.connect(orderKeeper).executeTriggerOrder(positionKey, 0)
-        ).to.be.revertedWith("balance: under minExecutionFee");
       });
 
       it("executes trigger order", async () => {

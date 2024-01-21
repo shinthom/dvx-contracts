@@ -25,7 +25,9 @@ describe("limitOrder", () => {
     const size = ethers.parseEther("10");
     const isLong = true;
 
-    const executionFee = await gmxV1Adapter.getMinExecutionFee();
+    const executionFee = await exchange.minExecutionFee();
+    const adapterExecutionFee = await exchange.getMaxAdapterExecutionFee();
+
     var triggerPrice = ethers.parseUnits("2000", 18);
     var acceptablePrice = ethers.parseUnits("2000", 18); // calculated by slippage tolerance
     var price = ethers.parseUnits("2000", 30);
@@ -44,7 +46,8 @@ describe("limitOrder", () => {
         triggerPrice,
         acceptablePrice,
         executionFee,
-        { value: executionFee }
+        adapterExecutionFee,
+        { value: executionFee + adapterExecutionFee }
       );
 
     await exchange.connect(user).cancelLimitOrder(account.target, 0);
@@ -61,7 +64,8 @@ describe("limitOrder", () => {
         triggerPrice,
         acceptablePrice,
         executionFee,
-        { value: executionFee }
+        adapterExecutionFee,
+        { value: executionFee + adapterExecutionFee }
       );
 
     // quoter should choose the best router(adapter).
@@ -98,7 +102,8 @@ describe("limitOrder", () => {
         triggerPrice,
         acceptablePrice,
         executionFee,
-        { value: executionFee }
+        adapterExecutionFee,
+        { value: executionFee + adapterExecutionFee }
       );
 
     await warehouse
