@@ -42,18 +42,17 @@ describe("marketOrder", () => {
 
       await exchange
         .connect(user)
-        .executeMarketOrder(
+        .increasePosition(
           account.target,
-          orderType.increasePosition,
           answers[0].adapter,
           answers[0].marketOrder.collateral,
           answers[0].marketOrder.index,
           answers[0].marketOrder.collateralAmount,
           answers[0].marketOrder.size,
           answers[0].marketOrder.isLong,
-          answers[0].executionFee,
+          answers[0].adapterExecutionFee,
           {
-            value: answers[0].executionFee,
+            value: answers[0].adapterExecutionFee,
           }
         );
       await executeIncreasePosition(account.target);
@@ -66,23 +65,22 @@ describe("marketOrder", () => {
         )
       );
 
-      const executionFee = await gmxV1Adapter.getMinExecutionFee();
+      const adapterExecutionFee = await gmxV1Adapter.getMinExecutionFee();
 
       await deposit(collateral, collateralAmount);
       await exchange
         .connect(user)
-        .executeMarketOrder(
+        .increaseCollateral(
           account.target,
-          orderType.increaseCollateral,
           gmxV1Adapter.target,
           collateral,
           index,
-          collateralAmount,
-          0,
           isLong,
-          executionFee,
+          collateral,
+          collateralAmount,
+          adapterExecutionFee,
           {
-            value: executionFee,
+            value: adapterExecutionFee,
           }
         );
       await executeIncreasePosition(account.target);
@@ -97,18 +95,16 @@ describe("marketOrder", () => {
 
       await exchange
         .connect(user)
-        .executeMarketOrder(
+        .decreaseCollateral(
           account.target,
-          orderType.decreaseCollateral,
           gmxV1Adapter.target,
           collateral,
           index,
-          collateralAmount,
-          0,
           isLong,
-          executionFee,
+          collateralAmount,
+          adapterExecutionFee,
           {
-            value: executionFee,
+            value: adapterExecutionFee,
           }
         );
       await executeDecreasePosition(account.target);
@@ -123,18 +119,16 @@ describe("marketOrder", () => {
 
       await exchange
         .connect(user)
-        .executeMarketOrder(
+        .decreasePosition(
           account.target,
-          orderType.decreasePosition,
           gmxV1Adapter.target,
           collateral,
           index,
-          0,
           size,
           isLong,
-          executionFee,
+          adapterExecutionFee,
           {
-            value: executionFee,
+            value: adapterExecutionFee,
           }
         );
       await executeDecreasePosition(account.target);
@@ -180,18 +174,17 @@ describe("marketOrder", () => {
 
       await exchange
         .connect(user)
-        .executeMarketOrder(
+        .increasePosition(
           account.target,
-          orderType.increasePosition,
           answers[0].adapter,
           answers[0].marketOrder.collateral,
           answers[0].marketOrder.index,
           answers[0].marketOrder.collateralAmount,
           answers[0].marketOrder.size,
           answers[0].marketOrder.isLong,
-          answers[0].executionFee,
+          answers[0].adapterExecutionFee,
           {
-            value: answers[0].executionFee,
+            value: answers[0].adapterExecutionFee,
           }
         );
       await fillPositionOrder();
@@ -199,23 +192,22 @@ describe("marketOrder", () => {
         await muxAdapter.getPosition(account.target, collateral, index, isLong)
       );
 
-      const executionFee = await muxAdapter.getMinExecutionFee();
+      const adapterExecutionFee = await muxAdapter.getMinExecutionFee();
 
       await deposit(collateral, collateralAmount);
       await exchange
         .connect(user)
-        .executeMarketOrder(
+        .increaseCollateral(
           account.target,
-          orderType.increaseCollateral,
           muxAdapter.target,
           collateral,
           index,
-          collateralAmount,
-          0,
           isLong,
-          executionFee,
+          collateral,
+          collateralAmount,
+          adapterExecutionFee,
           {
-            value: executionFee,
+            value: adapterExecutionFee,
           }
         );
       console.log(
@@ -224,18 +216,16 @@ describe("marketOrder", () => {
 
       await exchange
         .connect(user)
-        .executeMarketOrder(
+        .decreaseCollateral(
           account.target,
-          orderType.decreaseCollateral,
           muxAdapter.target,
           collateral,
           index,
-          collateralAmount,
-          0,
           isLong,
-          executionFee,
+          collateralAmount,
+          adapterExecutionFee,
           {
-            value: executionFee,
+            value: adapterExecutionFee,
           }
         );
       await fillWithdrawalOrder();
@@ -245,18 +235,16 @@ describe("marketOrder", () => {
 
       await exchange
         .connect(user)
-        .executeMarketOrder(
+        .decreasePosition(
           account.target,
-          orderType.decreasePosition,
           muxAdapter.target,
           collateral,
           index,
-          0,
           size,
           isLong,
-          executionFee,
+          adapterExecutionFee,
           {
-            value: executionFee,
+            value: adapterExecutionFee,
           }
         );
       await fillPositionOrder();

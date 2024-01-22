@@ -22,7 +22,7 @@ contract ExchangeMock is Exchange {
         address tokenIn,
         address tokenOut,
         uint256 amountIn
-    ) external payable override returns (uint256 amountOut) {
+    ) public payable override returns (uint256 amountOut) {
         amountOut = 10;
     }
 

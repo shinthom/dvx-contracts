@@ -35,7 +35,7 @@ interface IExchange {
 
     event ReferralTierSet(address indexed referral, uint8 indexed tierId);
 
-    event OpenPositionFeeRateSet(uint256 indexed fee);
+    event IncreasePositionFeeRateSet(uint256 indexed fee);
 
     event SwapFeeRateSet(uint256 indexed fee);
 
@@ -87,17 +87,5 @@ interface IExchange {
         address account,
         address adapter,
         MarketOrder memory marketOrder
-    ) external payable;
-
-    function executeMarketOrder(
-        address account,
-        OrderType orderType,
-        address adapter,
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 size,
-        bool isLong,
-        uint256 executionFee
     ) external payable;
 }

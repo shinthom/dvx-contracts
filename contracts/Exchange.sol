@@ -29,7 +29,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
     uint256 public minExecutionFee; // limit / trigger order execution fee
 
-    uint256 public openPositionFeeRate; // open position fee rate
+    uint256 public increasePositionFeeRate; // open position fee rate
     uint256 public swapFeeRate;
 
     address public override defaultStableToken =
@@ -104,11 +104,11 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         emit DefaultStableTokenSet(stableToken);
     }
 
-    function setOpenPositionFeeRate(uint256 _feeRate) external onlyOwner {
+    function setIncreasePositionFeeRate(uint256 _feeRate) external onlyOwner {
         require(_feeRate <= BASIS_POINTS, "feeRate: invalid");
 
-        openPositionFeeRate = _feeRate;
-        emit OpenPositionFeeRateSet(_feeRate);
+        increasePositionFeeRate = _feeRate;
+        emit IncreasePositionFeeRateSet(_feeRate);
     }
 
     function setSwapFeeRate(uint256 _feeRate) external onlyOwner {
@@ -144,10 +144,10 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     function getOpenPositionFee(
         uint256 amount
     ) public view override returns (uint256) {
-        if (openPositionFeeRate == 0) {
+        if (increasePositionFeeRate == 0) {
             return 0;
         }
-        return (amount * openPositionFeeRate) / BASIS_POINTS;
+        return (amount * increasePositionFeeRate) / BASIS_POINTS;
     }
 
     function getSwapFee(
@@ -189,7 +189,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address tokenIn,
         address tokenOut,
         uint256 amountIn
-    ) external payable virtual override returns (uint256 amountOut) {
+    ) public payable virtual override returns (uint256 amountOut) {
         uint256 swapFee = getSwapFee(amountIn);
         amountIn -= swapFee;
 
@@ -242,9 +242,8 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         }
     }
 
-    function executeMarketOrder(
+    function increasePosition(
         address account,
-        OrderType orderType,
         address adapter,
         address collateral,
         address index,
@@ -252,73 +251,96 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         uint256 size,
         bool isLong,
         uint256 adapterExecutionFee
-    ) external payable override onlyAccountOwner(account) {
-        uint256 openPositionFee = getOpenPositionFee(collateralAmount);
-        collateralAmount -= openPositionFee;
-
+    ) external payable onlyAccountOwner(account) {
+        require(isRegisteredAdapter[adapter], "adapter: not registered");
         require(
             adapterExecutionFee >= IAdapter(adapter).getMinExecutionFee(),
             "adapterExecutionFee: insufficient"
         );
-        require(isRegisteredAdapter[adapter], "adapter: not registered");
 
-        if (orderType == OrderType.IncreasePosition) {
-            require(collateralAmount != 0, "collateralAmount: zero");
-            require(size != 0, "size: zero");
+        uint256 openPositionFee = getOpenPositionFee(collateralAmount);
+        collateralAmount -= openPositionFee;
 
-            IAccount(account).increasePosition{value: adapterExecutionFee}(
-                adapter,
-                MarketOrder({
-                    collateral: collateral,
-                    index: index,
-                    collateralAmount: collateralAmount,
-                    size: size,
-                    isLong: isLong
-                })
-            );
-        } else if (orderType == OrderType.DecreasePosition) {
-            require(collateralAmount == 0, "collateralAmount: not zero");
-            require(size != 0, "size: zero");
+        IAccount(account).increasePosition{value: adapterExecutionFee}(
+            adapter,
+            MarketOrder({
+                collateral: collateral,
+                index: index,
+                collateralAmount: collateralAmount,
+                size: size,
+                isLong: isLong
+            })
+        );
+    }
 
-            IAccount(account).decreasePosition{value: adapterExecutionFee}(
-                adapter,
-                MarketOrder({
-                    collateral: collateral,
-                    index: index,
-                    collateralAmount: collateralAmount,
-                    size: size,
-                    isLong: isLong
-                })
-            );
-        } else if (orderType == OrderType.IncreaseCollateral) {
-            require(collateralAmount != 0, "collateralAmount: zero");
-            require(size == 0, "size: not zero");
+    function decreasePosition(
+        address account,
+        address adapter,
+        address collateral,
+        address index,
+        uint256 size,
+        bool isLong,
+        uint256 adapterExecutionFee
+    ) external payable onlyAccountOwner(account) {
+        IAccount(account).decreasePosition{value: adapterExecutionFee}(
+            adapter,
+            MarketOrder({
+                collateral: collateral,
+                index: index,
+                collateralAmount: 0,
+                size: size,
+                isLong: isLong
+            })
+        );
+    }
 
-            IAccount(account).increaseCollateral{value: adapterExecutionFee}(
-                adapter,
-                MarketOrder({
-                    collateral: collateral,
-                    index: index,
-                    collateralAmount: collateralAmount,
-                    size: size,
-                    isLong: isLong
-                })
-            );
-        } else if (orderType == OrderType.DecreaseCollateral) {
-            require(collateralAmount != 0, "collateralAmount: zero");
-            require(size == 0, "size: not zero");
+    function increaseCollateral(
+        address account,
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong,
+        address tokenIn,
+        uint256 amountIn,
+        uint256 adapterExecutionFee
+    ) external payable onlyAccountOwner(account) {
+        uint256 collateralAmount = amountIn;
 
-            IAccount(account).decreaseCollateral{value: adapterExecutionFee}(
-                adapter,
-                MarketOrder({
-                    collateral: collateral,
-                    index: index,
-                    collateralAmount: collateralAmount,
-                    size: size,
-                    isLong: isLong
-                })
-            );
+        if (collateral != tokenIn) {
+            collateralAmount = swap(tokenIn, collateral, amountIn);
         }
+
+        IAccount(account).increaseCollateral{value: adapterExecutionFee}(
+            adapter,
+            MarketOrder({
+                collateral: collateral,
+                index: index,
+                collateralAmount: collateralAmount,
+                size: 0,
+                isLong: isLong
+            })
+        );
+    }
+
+    function decreaseCollateral(
+        address account,
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong,
+        uint256 collateralAmount,
+        uint256 adapterExecutionFee
+    ) external payable onlyAccountOwner(account) {
+        IAccount(account).decreaseCollateral{value: adapterExecutionFee}(
+            adapter,
+            MarketOrder({
+                collateral: collateral,
+                index: index,
+                collateralAmount: collateralAmount,
+                size: 0,
+                isLong: isLong
+            })
+        );
     }
 
     function getMaxAdapterExecutionFee()

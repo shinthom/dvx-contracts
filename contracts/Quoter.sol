@@ -27,7 +27,7 @@ contract Quoter {
         uint256 fee;
         uint256 availableLiquidity;
         IExchange.MarketOrder marketOrder;
-        uint256 executionFee;
+        uint256 adapterExecutionFee;
     }
 
     function quoteExactInputSingle(
@@ -129,7 +129,7 @@ contract Quoter {
             request.isLong
         );
         answer.marketOrder = makeMarketOrder(adapter, request);
-        answer.executionFee = getMinExecutionFee(adapter);
+        answer.adapterExecutionFee = getMinExecutionFee(adapter);
     }
 
     function makeMarketOrder(
