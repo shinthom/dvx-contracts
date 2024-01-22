@@ -4,7 +4,6 @@ pragma solidity 0.8.7;
 import {IAdapter} from "../interfaces/IAdapter.sol";
 import {IExchange} from "../interfaces/IExchange.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
-import "hardhat/console.sol";
 
 interface IVault {
     struct Position {
@@ -240,57 +239,57 @@ contract GmxV1Adapter is IAdapter {
         return price / (10 ** 12); // 1e18
     }
 
-    function getDepositFee(
-        address account,
-        IExchange.MarketOrder memory marketOrder
-    ) external view override returns (uint256) {
-        if (!marketOrder.isLong) {
-            return 0;
-        }
-        address collateral = marketOrder.path[marketOrder.path.length - 1];
-        IAdapter.Position memory position = getPosition(
-            account,
-            collateral,
-            marketOrder.index,
-            marketOrder.isLong
-        );
-        if (position.size == 0) {
-            return 0;
-        }
+    // function getDepositFee(
+    //     address account,
+    //     IExchange.MarketOrder memory marketOrder
+    // ) external view override returns (uint256) {
+    //     if (!marketOrder.isLong) {
+    //         return 0;
+    //     }
+    //     address collateral = marketOrder.path[marketOrder.path.length - 1];
+    //     IAdapter.Position memory position = getPosition(
+    //         account,
+    //         collateral,
+    //         marketOrder.index,
+    //         marketOrder.isLong
+    //     );
+    //     if (position.size == 0) {
+    //         return 0;
+    //     }
 
-        uint256 increasePositionBufferBps
-            = IPositionRouter(_positionRouter).increasePositionBufferBps(); // prettier-ignore
-        uint256 collateralAmountUsd = IVault(_vault).tokenToUsdMin(
-            collateral,
-            marketOrder.collateralAmount
-        );
+    //     uint256 increasePositionBufferBps
+    //         = IPositionRouter(_positionRouter).increasePositionBufferBps(); // prettier-ignore
+    //     uint256 collateralAmountUsd = IVault(_vault).tokenToUsdMin(
+    //         collateral,
+    //         marketOrder.collateralAmount
+    //     );
 
-        uint256 nextSize = position.size + marketOrder.size;
-        uint256 nextCollateralAmount = position.collateralAmount +
-            collateralAmountUsd;
+    //     uint256 nextSize = position.size + marketOrder.size;
+    //     uint256 nextCollateralAmount = position.collateralAmount +
+    //         collateralAmountUsd;
 
-        uint256 prevLeverage = (position.size * BASIS_POINTS_DIVISOR) /
-            position.collateralAmount;
-        uint256 nextLeverage = (nextSize *
-            (BASIS_POINTS_DIVISOR + increasePositionBufferBps)) /
-            nextCollateralAmount;
+    //     uint256 prevLeverage = (position.size * BASIS_POINTS_DIVISOR) /
+    //         position.collateralAmount;
+    //     uint256 nextLeverage = (nextSize *
+    //         (BASIS_POINTS_DIVISOR + increasePositionBufferBps)) /
+    //         nextCollateralAmount;
 
-        if (nextLeverage > prevLeverage) {
-            return 0;
-        }
+    //     if (nextLeverage > prevLeverage) {
+    //         return 0;
+    //     }
 
-        uint256 collateralDecimals = IERC20(collateral).decimals();
-        uint256 minPrice = IVault(_vault).getMinPrice(collateral);
+    //     uint256 collateralDecimals = IERC20(collateral).decimals();
+    //     uint256 minPrice = IVault(_vault).getMinPrice(collateral);
 
-        uint256 depositFeeBasisPoints
-            = IPositionRouter(_positionRouter).depositFee(); // prettier-ignore
-        uint256 collateralAmountAfterDepositFee = (marketOrder
-            .collateralAmount * depositFeeBasisPoints) / BASIS_POINTS_DIVISOR;
+    //     uint256 depositFeeBasisPoints
+    //         = IPositionRouter(_positionRouter).depositFee(); // prettier-ignore
+    //     uint256 collateralAmountAfterDepositFee = (marketOrder
+    //         .collateralAmount * depositFeeBasisPoints) / BASIS_POINTS_DIVISOR;
 
-        return
-            (collateralAmountAfterDepositFee * minPrice) /
-            (10 ** collateralDecimals);
-    }
+    //     return
+    //         (collateralAmountAfterDepositFee * minPrice) /
+    //         (10 ** collateralDecimals);
+    // }
 
     function getPositionFee(
         address /* index */,
@@ -421,33 +420,33 @@ contract GmxV1Adapter is IAdapter {
         override
         returns (IExchange.MarketOrder memory marketOrder)
     {
-        address[] memory path;
-        if (isLong) {
-            if (collateral == index) {
-                path = new address[](1);
-                path[0] = collateral;
-            } else {
-                path = new address[](2);
-                path[0] = collateral;
-                path[1] = index;
-            }
-        } else {
-            if (IExchange(_exchange).isStableToken(collateral)) {
-                path = new address[](1);
-                path[0] = collateral;
-            } else {
-                path = new address[](2);
-                path[0] = collateral;
-                path[1] = _defaultStableToken;
-            }
-        }
+        // address[] memory path;
+        // if (isLong) {
+        //     if (collateral == index) {
+        //         path = new address[](1);
+        //         path[0] = collateral;
+        //     } else {
+        //         path = new address[](2);
+        //         path[0] = collateral;
+        //         path[1] = index;
+        //     }
+        // } else {
+        //     if (IExchange(_exchange).isStableToken(collateral)) {
+        //         path = new address[](1);
+        //         path[0] = collateral;
+        //     } else {
+        //         path = new address[](2);
+        //         path[0] = collateral;
+        //         path[1] = _defaultStableToken;
+        //     }
+        // }
 
         uint8 indexDecimal = IERC20(index).decimals();
         uint256 indexPrice = getPrice(index, isLong);
 
         uint256 sizeUsd = (size * indexPrice) / (10 ** indexDecimal);
         marketOrder = IExchange.MarketOrder({
-            path: path,
+            collateral: collateral,
             index: index,
             collateralAmount: collateralAmount,
             size: sizeUsd,
@@ -456,7 +455,7 @@ contract GmxV1Adapter is IAdapter {
     }
 
     function increasePosition(
-        address[] memory path,
+        address collateral,
         address index,
         uint256 collateralAmount,
         uint256 size,
@@ -465,8 +464,10 @@ contract GmxV1Adapter is IAdapter {
         if (!IRouter(_router).approvedPlugins(address(this), _positionRouter)) {
             IRouter(_router).approvePlugin(_positionRouter);
         }
+        require(collateral != address(0), "collateral: zero address");
+        require(index != address(0), "index: zero address");
 
-        _increase(path, index, collateralAmount, size, isLong);
+        _increase(collateral, index, collateralAmount, size, isLong);
     }
 
     function decreasePosition(
@@ -497,10 +498,10 @@ contract GmxV1Adapter is IAdapter {
         uint256 collateralAmount,
         bool isLong
     ) public payable {
-        address[] memory path = new address[](1);
-        path[0] = collateral;
+        require(collateral != address(0), "collateral: zero address");
+        require(index != address(0), "index: zero address");
 
-        _increase(path, index, collateralAmount, 0, isLong);
+        _increase(collateral, index, collateralAmount, 0, isLong);
     }
 
     function decreaseCollateral(
@@ -528,51 +529,91 @@ contract GmxV1Adapter is IAdapter {
     }
 
     function _increase(
-        address[] memory path,
+        address collateral,
         address index,
         uint256 collateralAmount,
         uint256 size,
         bool isLong
     ) private {
-        require(path.length == 1 || path.length == 2, "path: invalid length");
+        if (isLong && (collateral != index)) {
+            uint256 amountOut;
 
-        address collateral = path[path.length - 1];
-        isLong
-            ? require(collateral == index, "collateral: not index")
-            : require(
-                IExchange(_exchange).isStableToken(collateral),
-                "collateral: not stable token"
-            );
-
-        if (path.length == 2) {
-            require(path[0] != path[1], "path: should be different");
-
-            if (path[0] == _weth) {
-                IERC20(path[0]).deposit{value: collateralAmount}();
+            if (collateral == _weth) {
+                amountOut = IExchange(_exchange).swap{value: collateralAmount}(
+                    address(0),
+                    index,
+                    collateralAmount
+                );
+            } else if (index == _weth) {
+                IERC20(collateral).approve(_exchange, collateralAmount);
+                amountOut = IExchange(_exchange).swap(
+                    collateral,
+                    address(0),
+                    collateralAmount
+                );
+            } else {
+                IERC20(collateral).approve(_exchange, collateralAmount);
+                amountOut = IExchange(_exchange).swap(
+                    collateral,
+                    index,
+                    collateralAmount
+                );
             }
-            IERC20(path[0]).approve(_exchange, collateralAmount);
-            collateralAmount = IExchange(_exchange).swap(
-                path[0],
-                path[1],
-                collateralAmount
-            );
+
+            collateralAmount = amountOut;
+            collateral = index;
+        }
+
+        if (!isLong && !(IExchange(_exchange).isStableToken(collateral))) {
+            uint256 amountOut;
+            address defaultStableToken
+                = IExchange(_exchange).defaultStableToken(); // prettier-ignore
+
+            if (collateral == _weth) {
+                amountOut = IExchange(_exchange).swap{value: collateralAmount}(
+                    address(0),
+                    defaultStableToken,
+                    collateralAmount
+                );
+            } else {
+                IERC20(collateral).approve(_exchange, collateralAmount);
+                amountOut = IExchange(_exchange).swap(
+                    collateral,
+                    defaultStableToken,
+                    collateralAmount
+                );
+            }
+
+            collateralAmount = amountOut;
+            collateral = defaultStableToken;
         }
 
         uint256 price = isLong ? type(uint256).max : 0;
-        uint256 fee = IPositionRouter(_positionRouter).minExecutionFee();
+        uint256 adapterExecutionFee = IPositionRouter(_positionRouter)
+            .minExecutionFee();
 
-        path = new address[](1);
+        address[] memory path = new address[](1);
         path[0] = collateral;
 
         if (isLong) {
             if (collateral == _weth) {
                 IPositionRouter(_positionRouter).createIncreasePositionETH{
-                    value: collateralAmount + fee
-                }(path, index, 0, size, isLong, price, fee, 0x0, address(0));
+                    value: collateralAmount + adapterExecutionFee
+                }(
+                    path,
+                    index,
+                    0,
+                    size,
+                    isLong,
+                    price,
+                    adapterExecutionFee,
+                    0x0,
+                    address(0)
+                );
             } else {
                 IERC20(collateral).approve(_router, collateralAmount);
                 IPositionRouter(_positionRouter).createIncreasePosition{
-                    value: fee
+                    value: adapterExecutionFee
                 }(
                     path,
                     index,
@@ -581,14 +622,16 @@ contract GmxV1Adapter is IAdapter {
                     size,
                     isLong,
                     price,
-                    fee,
+                    adapterExecutionFee,
                     0x0,
                     address(0)
                 );
             }
         } else {
             IERC20(collateral).approve(_router, collateralAmount);
-            IPositionRouter(_positionRouter).createIncreasePosition{value: fee}(
+            IPositionRouter(_positionRouter).createIncreasePosition{
+                value: adapterExecutionFee
+            }(
                 path,
                 index,
                 collateralAmount,
@@ -596,7 +639,7 @@ contract GmxV1Adapter is IAdapter {
                 size,
                 isLong,
                 price,
-                fee,
+                adapterExecutionFee,
                 0x0,
                 address(0)
             );

@@ -358,11 +358,8 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         _triggerOrders[positionKey][id].state = TriggerOrderState.Executed;
         emit TriggerOrderExecuted(triggerOrder.account, positionKey, id);
 
-        address[] memory path = new address[](1);
-        path[0] = triggerOrder.collateral;
-
         IExchange.MarketOrder memory marketOrder = IExchange.MarketOrder({
-            path: path,
+            collateral: triggerOrder.collateral,
             index: triggerOrder.index,
             collateralAmount: 0,
             size: triggerOrder.size,

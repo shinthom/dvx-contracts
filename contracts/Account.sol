@@ -5,6 +5,8 @@ import {IAccount} from "./interfaces/IAccount.sol";
 import {IExchange} from "./interfaces/IExchange.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
 
+// todo: lockedBalance -> transfer assets (limit order)
+
 contract Account is IAccount {
     address public immutable override owner;
     address public immutable override exchange;
@@ -17,6 +19,16 @@ contract Account is IAccount {
 
         owner = _owner;
         exchange = _exchange;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "msg.sender: not owner");
+        _;
+    }
+
+    modifier onlyExchange() {
+        require(msg.sender == exchange, "msg.sender: not exchange");
+        _;
     }
 
     function getBalance(
@@ -40,38 +52,52 @@ contract Account is IAccount {
         return getBalance(token) - getLockedBalance(token);
     }
 
-    function deposit(address token, uint256 amount) external payable override {
+    function depositETH(uint256 amount) external payable override onlyOwner {
+        require(amount > 0, "amount: zero");
+        require(msg.value == amount, "amount: not exact");
+
+        emit Deposited(msg.sender, address(0), msg.value);
+    }
+
+    function deposit(
+        address token,
+        uint256 amount
+    ) external override onlyOwner {
         require(amount > 0, "amount: zero");
 
-        if (token == address(0)) {
-            require(amount == msg.value, "amount: not exact");
-        } else {
-            IERC20(token).transferFrom(msg.sender, address(this), amount);
-        }
+        IERC20(token).transferFrom(msg.sender, address(this), amount);
         emit Deposited(msg.sender, token, amount);
     }
 
-    function withdraw(address token, uint256 amount) external override {
+    function withdrawETH(uint256 amount) external override onlyOwner {
         require(amount > 0, "amount: zero");
-        require(msg.sender == owner, "msg.sender: not owner");
+
+        uint256 withdrawableBalance = getWithdrawableBalance(address(0));
+        require(amount <= withdrawableBalance, "amount: exceed balance");
+
+        payable(owner).transfer(amount);
+        emit Withdrawn(address(0), amount);
+    }
+
+    function withdraw(
+        address token,
+        uint256 amount
+    ) external override onlyOwner {
+        require(amount > 0, "amount: zero");
 
         uint256 withdrawableBalance = getWithdrawableBalance(token);
         require(amount <= withdrawableBalance, "amount: exceed balance");
 
-        if (token == address(0)) {
-            payable(msg.sender).transfer(amount);
-        } else {
-            IERC20(token).transfer(msg.sender, amount);
-        }
+        IERC20(token).transfer(msg.sender, amount);
         emit Withdrawn(token, amount);
     }
 
+    // todo: eth native swap
     function swap(
         address tokenIn,
         address tokenOut,
         uint256 amountIn
-    ) external virtual returns (uint256 amountOut) {
-        require(msg.sender == owner, "msg.sender: not owner");
+    ) external virtual onlyOwner returns (uint256 amountOut) {
         require(tokenIn != tokenOut, "same tokens");
 
         uint256 balance = getBalance(tokenIn);
@@ -93,31 +119,32 @@ contract Account is IAccount {
     function increasePosition(
         address adapter,
         IExchange.MarketOrder calldata marketOrder
-    ) external payable virtual override {
-        require(msg.sender == exchange, "msg.sender: not exchange");
+    ) external payable virtual override onlyExchange {
         require(adapter != address(0), "adapter: zero address");
 
-        uint256 feeCollateral
-            = IExchange(exchange).getOpenPositionFee(marketOrder.collateralAmount); // prettier-ignore
-        uint256 collateralAmount = marketOrder.collateralAmount - feeCollateral;
+        // // todo
+        // uint256 feeCollateral
+        //     = IExchange(exchange).getOpenPositionFee(marketOrder.collateralAmount); // prettier-ignore
+        // uint256 collateralAmount = marketOrder.collateralAmount - feeCollateral;
 
-        if (feeCollateral > 0) {
-            address collateral = marketOrder.path[0];
-
-            if (collateral == address(0)) {
-                payable(exchange).transfer(feeCollateral);
-            } else {
-                IERC20(collateral).transfer(exchange, collateralAmount);
-            }
-        }
+        // if (feeCollateral > 0) {
+        //     if (marketOrder.collateral == address(0)) {
+        //         payable(exchange).transfer(feeCollateral);
+        //     } else {
+        //         IERC20(marketOrder.collateral).transfer(
+        //             exchange,
+        //             collateralAmount
+        //         );
+        //     }
+        // }
 
         // slither-disable-next-line controlled-delegatecall,low-level-calls
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
-                "increasePosition(address[],address,uint256,uint256,bool)",
-                marketOrder.path,
+                "increasePosition(address,address,uint256,uint256,bool)",
+                marketOrder.collateral,
                 marketOrder.index,
-                collateralAmount,
+                marketOrder.collateralAmount,
                 marketOrder.size,
                 marketOrder.isLong
             )
@@ -128,17 +155,14 @@ contract Account is IAccount {
     function decreasePosition(
         address adapter,
         IExchange.MarketOrder calldata marketOrder
-    ) external payable virtual override {
-        require(msg.sender == exchange, "msg.sender: not exchange");
+    ) external payable virtual override onlyExchange {
         require(adapter != address(0), "adapter: zero address");
-
-        require(marketOrder.path.length == 1, "path: invalid length");
 
         // slither-disable-next-line controlled-delegatecall,low-level-calls
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
                 "decreasePosition(address,address,uint256,bool)",
-                marketOrder.path[0],
+                marketOrder.collateral,
                 marketOrder.index,
                 marketOrder.size,
                 marketOrder.isLong
@@ -150,17 +174,14 @@ contract Account is IAccount {
     function increaseCollateral(
         address adapter,
         IExchange.MarketOrder calldata marketOrder
-    ) external payable virtual override {
-        require(msg.sender == exchange, "msg.sender: not exchange");
+    ) external payable virtual override onlyExchange {
         require(adapter != address(0), "adapter: zero address");
-
-        require(marketOrder.path.length == 1, "path: invalid length");
 
         // slither-disable-next-line controlled-delegatecall,low-level-calls
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
                 "increaseCollateral(address,address,uint256,bool)",
-                marketOrder.path[0],
+                marketOrder.collateral,
                 marketOrder.index,
                 marketOrder.collateralAmount,
                 marketOrder.isLong
@@ -172,17 +193,14 @@ contract Account is IAccount {
     function decreaseCollateral(
         address adapter,
         IExchange.MarketOrder calldata marketOrder
-    ) external payable virtual override {
-        require(msg.sender == exchange, "msg.sender: not exchange");
+    ) external payable virtual override onlyExchange {
         require(adapter != address(0), "adapter: zero address");
-
-        require(marketOrder.path.length == 1, "path: invalid length");
 
         // slither-disable-next-line controlled-delegatecall,low-level-calls
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
                 "decreaseCollateral(address,address,uint256,bool)",
-                marketOrder.path[0],
+                marketOrder.collateral,
                 marketOrder.index,
                 marketOrder.collateralAmount,
                 marketOrder.isLong

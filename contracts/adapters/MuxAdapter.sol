@@ -259,12 +259,12 @@ contract MuxAdapter is IAdapter {
         return getPrice(token, isLong);
     }
 
-    function getDepositFee(
-        address /* account */,
-        IExchange.MarketOrder memory /* positionOrder */
-    ) external pure override returns (uint256) {
-        return 0;
-    }
+    // function getDepositFee(
+    //     address /* account */,
+    //     IExchange.MarketOrder memory /* positionOrder */
+    // ) external pure override returns (uint256) {
+    //     return 0;
+    // }
 
     function getPositionFee(
         address index,
@@ -404,12 +404,9 @@ contract MuxAdapter is IAdapter {
         uint256 size,
         bool isLong
     ) public pure override returns (IExchange.MarketOrder memory) {
-        address[] memory path = new address[](1);
-        path[0] = collateral;
-
         return
             IExchange.MarketOrder({
-                path: path,
+                collateral: collateral,
                 index: index,
                 collateralAmount: collateralAmount,
                 size: size,
@@ -418,15 +415,12 @@ contract MuxAdapter is IAdapter {
     }
 
     function increasePosition(
-        address[] memory path,
+        address collateral,
         address index,
         uint256 collateralAmount,
         uint256 size,
         bool isLong
     ) external payable {
-        require(path.length == 1, "path: invalid length");
-        address collateral = path[0];
-
         uint8 collateralId = _getIdFromTokenAddress(collateral);
         uint8 indexId = _getIdFromTokenAddress(index);
         bytes32 subAccountId = _assembleSubAccountId(

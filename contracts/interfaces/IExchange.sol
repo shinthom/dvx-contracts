@@ -10,7 +10,7 @@ interface IExchange {
     }
 
     struct MarketOrder {
-        address[] path;
+        address collateral;
         address index;
         uint256 collateralAmount;
         uint256 size;
@@ -25,6 +25,8 @@ interface IExchange {
 
     event MinExecutionFeeSet(uint256 indexed fee);
 
+    event DefaultStableTokenSet(address indexed token);
+
     event AdapterRegistered(address indexed adapter);
 
     event AdapterUnregistered(address indexed adapter);
@@ -35,11 +37,15 @@ interface IExchange {
 
     event OpenPositionFeeRateSet(uint256 indexed fee);
 
+    event SwapFeeRateSet(uint256 indexed fee);
+
     event Withdrawn(
         address indexed account,
         address indexed token,
         uint256 amount
     );
+
+    function defaultStableToken() external view returns (address);
 
     function lockedBalances(
         address account,
@@ -51,6 +57,8 @@ interface IExchange {
     function isStableToken(address token) external view returns (bool);
 
     function isRegisteredAdapter(address adapter) external view returns (bool);
+
+    function getSwapFee(uint256 tokenAmount) external view returns (uint256);
 
     function getOpenPositionFee(uint256 amount) external view returns (uint256);
 
@@ -85,7 +93,7 @@ interface IExchange {
         address account,
         OrderType orderType,
         address adapter,
-        address[] memory path,
+        address collateral,
         address index,
         uint256 collateralAmount,
         uint256 size,

@@ -23,10 +23,10 @@ interface IAdapter {
 
     function getMinExecutionFee() external view returns (uint256);
 
-    function getDepositFee(
-        address account,
-        IExchange.MarketOrder memory marketOrder
-    ) external view returns (uint256);
+    // function getDepositFee(
+    //     address account,
+    //     IExchange.MarketOrder memory marketOrder
+    // ) external view returns (uint256);
 
     function getFundingFee(
         address collateral,

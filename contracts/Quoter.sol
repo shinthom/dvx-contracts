@@ -161,7 +161,7 @@ contract Quoter {
         return
             IAdapter(adapter).getPosition(
                 account,
-                marketOrder.path[marketOrder.path.length - 1],
+                marketOrder.collateral,
                 marketOrder.index,
                 marketOrder.isLong
             );
@@ -183,22 +183,24 @@ contract Quoter {
         IAdapter.Position memory currentPosition = IAdapter(adapter)
             .getPosition(
                 account,
-                marketOrder.path[marketOrder.path.length - 1],
+                marketOrder.collateral,
                 marketOrder.index,
                 marketOrder.isLong
             );
 
         fee = IAdapter(adapter).getPositionFee(request.index, marketOrder.size);
-        if (currentPosition.size > 0) {
-            fee += IAdapter(adapter).getFundingFee(
-                marketOrder.path[marketOrder.path.length - 1],
-                request.index,
-                currentPosition.size,
-                currentPosition.fundingRate,
-                request.isLong
-            );
-            fee += IAdapter(adapter).getDepositFee(account, marketOrder);
-        }
+
+        // note: funding and deposit fees are not considered when routing.
+        // if (currentPosition.size > 0) {
+        //     fee += IAdapter(adapter).getFundingFee(
+        //         marketOrder.path[marketOrder.path.length - 1],
+        //         request.index,
+        //         currentPosition.size,
+        //         currentPosition.fundingRate,
+        //         request.isLong
+        //     );
+        //     fee += IAdapter(adapter).getDepositFee(account, marketOrder);
+        // }
 
         uint256 priceDecimals = IAdapter(adapter).getPriceDecimals();
         if (priceDecimals > PRICE_DECIMAL) {

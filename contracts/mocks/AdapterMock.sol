@@ -53,10 +53,13 @@ contract AdapterMock {
         uint256 size,
         bool isLong
     ) external payable returns (IExchange.MarketOrder memory) {
-        address[] memory path = new address[](1);
-        path[0] = collateral;
-
         return
-            IExchange.MarketOrder(path, index, collateralAmount, size, isLong);
+            IExchange.MarketOrder(
+                collateral,
+                index,
+                collateralAmount,
+                size,
+                isLong
+            );
     }
 }

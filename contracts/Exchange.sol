@@ -30,6 +30,10 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     uint256 public minExecutionFee; // limit / trigger order execution fee
 
     uint256 public openPositionFeeRate; // open position fee rate
+    uint256 public swapFeeRate;
+
+    address public override defaultStableToken =
+        0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8; // usdc.e
 
     receive() external payable {}
 
@@ -95,11 +99,23 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         emit StableTokenSet(token, isStable);
     }
 
+    function setDefaultStableToken(address stableToken) external onlyOwner {
+        defaultStableToken = stableToken;
+        emit DefaultStableTokenSet(stableToken);
+    }
+
     function setOpenPositionFeeRate(uint256 _feeRate) external onlyOwner {
         require(_feeRate <= BASIS_POINTS, "feeRate: invalid");
 
         openPositionFeeRate = _feeRate;
         emit OpenPositionFeeRateSet(_feeRate);
+    }
+
+    function setSwapFeeRate(uint256 _feeRate) external onlyOwner {
+        require(_feeRate <= BASIS_POINTS, "feeRate: invalid");
+
+        swapFeeRate = _feeRate;
+        emit SwapFeeRateSet(_feeRate);
     }
 
     function setTier(uint8 tierId, uint256 discountRate) external onlyOwner {
@@ -128,7 +144,19 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     function getOpenPositionFee(
         uint256 amount
     ) public view override returns (uint256) {
+        if (openPositionFeeRate == 0) {
+            return 0;
+        }
         return (amount * openPositionFeeRate) / BASIS_POINTS;
+    }
+
+    function getSwapFee(
+        uint256 tokenAmount
+    ) public view override returns (uint256) {
+        if (swapFeeRate == 0) {
+            return 0;
+        }
+        return (tokenAmount * swapFeeRate) / BASIS_POINTS;
     }
 
     function createAccount() public override returns (address) {
@@ -149,7 +177,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
         if (token == address(0)) {
             require(msg.value == amount, "amount: not exact");
-            IAccount(account).deposit{value: amount}(address(0), amount);
+            IAccount(account).depositETH{value: amount}(amount);
         } else {
             IERC20(token).transferFrom(msg.sender, address(this), amount);
             IERC20(token).approve(account, amount);
@@ -162,14 +190,17 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address tokenOut,
         uint256 amountIn
     ) external payable virtual override returns (uint256 amountOut) {
+        uint256 swapFee = getSwapFee(amountIn);
+        amountIn -= swapFee;
+
         require(tokenIn != tokenOut, "same tokens");
         if (tokenOut == address(0)) {
             tokenOut = _weth;
         }
 
         if (tokenIn == address(0)) {
-            require(msg.value == amountIn, "amount: not exact");
-            IERC20(_weth).deposit{value: msg.value}();
+            require(amountIn == msg.value, "amount: not exact");
+            IERC20(_weth).deposit{value: amountIn}();
             IERC20(_weth).approve(_swapRouter, amountIn);
 
             ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
@@ -199,6 +230,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
                     amountOutMinimum: 0,
                     sqrtPriceLimitX96: 0
                 });
+
             amountOut = ISwapRouter(_swapRouter).exactInputSingle(params);
         }
 
@@ -214,14 +246,15 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address account,
         OrderType orderType,
         address adapter,
-        address[] memory path,
+        address collateral,
         address index,
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
         uint256 adapterExecutionFee
     ) external payable override onlyAccountOwner(account) {
-        require(path.length == 1 || path.length == 2, "path: invalid length");
+        uint256 openPositionFee = getOpenPositionFee(collateralAmount);
+        collateralAmount -= openPositionFee;
 
         require(
             adapterExecutionFee >= IAdapter(adapter).getMinExecutionFee(),
@@ -236,7 +269,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             IAccount(account).increasePosition{value: adapterExecutionFee}(
                 adapter,
                 MarketOrder({
-                    path: path,
+                    collateral: collateral,
                     index: index,
                     collateralAmount: collateralAmount,
                     size: size,
@@ -250,7 +283,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             IAccount(account).decreasePosition{value: adapterExecutionFee}(
                 adapter,
                 MarketOrder({
-                    path: path,
+                    collateral: collateral,
                     index: index,
                     collateralAmount: collateralAmount,
                     size: size,
@@ -264,7 +297,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             IAccount(account).increaseCollateral{value: adapterExecutionFee}(
                 adapter,
                 MarketOrder({
-                    path: path,
+                    collateral: collateral,
                     index: index,
                     collateralAmount: collateralAmount,
                     size: size,
@@ -278,7 +311,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             IAccount(account).decreaseCollateral{value: adapterExecutionFee}(
                 adapter,
                 MarketOrder({
-                    path: path,
+                    collateral: collateral,
                     index: index,
                     collateralAmount: collateralAmount,
                     size: size,

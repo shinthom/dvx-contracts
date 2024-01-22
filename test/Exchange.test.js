@@ -319,42 +319,6 @@ describe("Exchange", () => {
       ).to.be.revertedWith("account: not owner");
     });
 
-    it("reverts when invalid path", async () => {
-      await expect(
-        exchangeMock
-          .connect(user)
-          .executeMarketOrder(
-            accountMock.target,
-            orderType.increasePosition,
-            adapterMock.target,
-            [],
-            index,
-            collateralAmount,
-            size,
-            isLong,
-            executionFee,
-            { value: executionFee }
-          )
-      ).to.be.revertedWith("path: invalid length");
-
-      await expect(
-        exchangeMock
-          .connect(user)
-          .executeMarketOrder(
-            accountMock.target,
-            orderType.increasePosition,
-            adapterMock.target,
-            [ETH, WBTC, USDC],
-            index,
-            collateralAmount,
-            size,
-            isLong,
-            executionFee,
-            { value: executionFee }
-          )
-      ).to.be.revertedWith("path: invalid length");
-    });
-
     it("reverts when not registered adapter", async () => {
       await expect(
         exchangeMock

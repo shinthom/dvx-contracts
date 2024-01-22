@@ -135,6 +135,7 @@ const deploy = async (noAccount) => {
   await exchange.setStableToken(USDC, true);
   await exchange.setStableToken(USDT, true);
   await exchange.setStableToken(USDCe, true);
+  await exchange.setDefaultStableToken(USDCe);
   await warehouse.setExchange(exchange.target);
 
   await exchange.connect(user).createAccount();
@@ -177,7 +178,7 @@ const deploy = async (noAccount) => {
 
   const deposit = async (token, tokenAmount) => {
     if (token == ETH || token == WETH) {
-      await account.connect(user).deposit(ETH, tokenAmount, {
+      await account.connect(user).depositETH(tokenAmount, {
         value: tokenAmount,
       });
     } else {
@@ -211,13 +212,14 @@ const deploy = async (noAccount) => {
       size,
       isLong
     );
+
     await exchange
       .connect(user)
       .executeMarketOrder(
         account.target,
         orderType.increasePosition,
         adapter.target,
-        [...marketOrder.path],
+        marketOrder.collateral,
         marketOrder.index,
         marketOrder.collateralAmount,
         marketOrder.size,
