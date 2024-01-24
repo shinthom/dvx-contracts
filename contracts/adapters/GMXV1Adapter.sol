@@ -467,7 +467,12 @@ contract GmxV1Adapter is IAdapter {
         require(collateral != address(0), "collateral: zero address");
         require(index != address(0), "index: zero address");
 
-        _increase(collateral, index, collateralAmount, size, isLong);
+        uint8 indexDecimal = IERC20(index).decimals();
+        uint256 indexPrice = getPrice(index, isLong);
+
+        uint256 sizeUsd = (size * indexPrice) / (10 ** indexDecimal);
+
+        _increase(collateral, index, collateralAmount, sizeUsd, isLong);
     }
 
     function decreasePosition(
@@ -536,114 +541,54 @@ contract GmxV1Adapter is IAdapter {
         bool isLong
     ) private {
         if (isLong && (collateral != index)) {
-            uint256 amountOut;
-
-            if (collateral == _weth) {
-                amountOut = IExchange(_exchange).swap{value: collateralAmount}(
-                    address(0),
-                    index,
-                    collateralAmount
-                );
-            } else if (index == _weth) {
-                IERC20(collateral).approve(_exchange, collateralAmount);
-                amountOut = IExchange(_exchange).swap(
-                    collateral,
-                    address(0),
-                    collateralAmount
-                );
-            } else {
-                IERC20(collateral).approve(_exchange, collateralAmount);
-                amountOut = IExchange(_exchange).swap(
-                    collateral,
-                    index,
-                    collateralAmount
-                );
-            }
+            IERC20(collateral).approve(_exchange, collateralAmount);
+            uint256 amountOut = IExchange(_exchange).swap(
+                collateral,
+                index,
+                collateralAmount
+            );
 
             collateralAmount = amountOut;
             collateral = index;
         }
 
         if (!isLong && !(IExchange(_exchange).isStableToken(collateral))) {
-            uint256 amountOut;
             address defaultStableToken
                 = IExchange(_exchange).defaultStableToken(); // prettier-ignore
 
-            if (collateral == _weth) {
-                amountOut = IExchange(_exchange).swap{value: collateralAmount}(
-                    address(0),
-                    defaultStableToken,
-                    collateralAmount
-                );
-            } else {
-                IERC20(collateral).approve(_exchange, collateralAmount);
-                amountOut = IExchange(_exchange).swap(
-                    collateral,
-                    defaultStableToken,
-                    collateralAmount
-                );
-            }
+            IERC20(collateral).approve(_exchange, collateralAmount);
+            uint256 amountOut = IExchange(_exchange).swap(
+                collateral,
+                defaultStableToken,
+                collateralAmount
+            );
 
             collateralAmount = amountOut;
             collateral = defaultStableToken;
         }
 
         uint256 price = isLong ? type(uint256).max : 0;
-        uint256 adapterExecutionFee = IPositionRouter(_positionRouter)
+        uint256 executionFee = IPositionRouter(_positionRouter)
             .minExecutionFee();
 
         address[] memory path = new address[](1);
         path[0] = collateral;
 
-        if (isLong) {
-            if (collateral == _weth) {
-                IPositionRouter(_positionRouter).createIncreasePositionETH{
-                    value: collateralAmount + adapterExecutionFee
-                }(
-                    path,
-                    index,
-                    0,
-                    size,
-                    isLong,
-                    price,
-                    adapterExecutionFee,
-                    0x0,
-                    address(0)
-                );
-            } else {
-                IERC20(collateral).approve(_router, collateralAmount);
-                IPositionRouter(_positionRouter).createIncreasePosition{
-                    value: adapterExecutionFee
-                }(
-                    path,
-                    index,
-                    collateralAmount,
-                    0,
-                    size,
-                    isLong,
-                    price,
-                    adapterExecutionFee,
-                    0x0,
-                    address(0)
-                );
-            }
-        } else {
-            IERC20(collateral).approve(_router, collateralAmount);
-            IPositionRouter(_positionRouter).createIncreasePosition{
-                value: adapterExecutionFee
-            }(
-                path,
-                index,
-                collateralAmount,
-                0,
-                size,
-                isLong,
-                price,
-                adapterExecutionFee,
-                0x0,
-                address(0)
-            );
-        }
+        IERC20(collateral).approve(_router, collateralAmount);
+        IPositionRouter(_positionRouter).createIncreasePosition{
+            value: executionFee
+        }(
+            path,
+            index,
+            collateralAmount,
+            0,
+            size,
+            isLong,
+            price,
+            executionFee,
+            0x0,
+            address(0)
+        );
     }
 
     function _decrease(
@@ -654,13 +599,15 @@ contract GmxV1Adapter is IAdapter {
         bool isLong
     ) private {
         uint256 price = isLong ? 0 : type(uint256).max;
-        uint256 fee = IPositionRouter(_positionRouter).minExecutionFee();
+        uint256 executionFee = IPositionRouter(_positionRouter)
+            .minExecutionFee();
 
         address[] memory path = new address[](1);
         path[0] = collateral;
 
-        bool withdrawETH = collateral == _weth ? true : false;
-        IPositionRouter(_positionRouter).createDecreasePosition{value: fee}(
+        IPositionRouter(_positionRouter).createDecreasePosition{
+            value: executionFee
+        }(
             path,
             index,
             collateralAmount,
@@ -669,8 +616,8 @@ contract GmxV1Adapter is IAdapter {
             address(this),
             price,
             0,
-            fee,
-            withdrawETH,
+            executionFee,
+            false, // withdrawETH,
             address(0)
         );
     }

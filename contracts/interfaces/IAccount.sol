@@ -26,31 +26,31 @@ interface IAccount {
 
     function getBalance(address token) external view returns (uint256);
 
-    function depositETH(uint256 amount) external payable;
+    // function depositETH(uint256 amount) external payable;
 
     function deposit(address token, uint256 amount) external;
 
-    function withdrawETH(uint256 amount) external;
+    // function withdrawETH(uint256 amount) external;
 
     function withdraw(address token, uint256 amount) external;
 
-    function increasePosition(
-        address adapter,
-        IExchange.MarketOrder calldata marketOrder
-    ) external payable;
+    // function increasePosition(
+    //     address adapter,
+    //     IExchange.MarketOrder calldata marketOrder
+    // ) external payable;
 
-    function decreasePosition(
-        address adapter,
-        IExchange.MarketOrder calldata marketOrder
-    ) external payable;
+    // function decreasePosition(
+    //     address adapter,
+    //     IExchange.MarketOrder calldata marketOrder
+    // ) external payable;
 
-    function increaseCollateral(
-        address adapter,
-        IExchange.MarketOrder calldata marketOrder
-    ) external payable;
+    // function increaseCollateral(
+    //     address adapter,
+    //     IExchange.MarketOrder calldata marketOrder
+    // ) external payable;
 
-    function decreaseCollateral(
-        address adapter,
-        IExchange.MarketOrder calldata marketOrder
-    ) external payable;
+    // function decreaseCollateral(
+    //     address adapter,
+    //     IExchange.MarketOrder calldata marketOrder
+    // ) external payable;
 }

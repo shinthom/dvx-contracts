@@ -116,39 +116,8 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         uint256 size,
         bool isLong,
         uint256 triggerPrice,
-        uint256 acceptablePrice,
-        uint256 adapterExecutionFee
+        uint256 acceptablePrice
     ) external payable override onlyExchange {
-        require(
-            adapterExecutionFee == msg.value,
-            "adapterExecutionFee: not match"
-        );
-
-        require(
-            (isLong && triggerPrice <= acceptablePrice) ||
-                (!isLong && triggerPrice >= acceptablePrice),
-            "triggerPrice: invalid"
-        );
-
-        if (priceMinDeviation > 0) {
-            uint256 minDeviation = (triggerPrice * priceMinDeviation) /
-                BASIS_POINTS_DIVISOR;
-            require(
-                (isLong && acceptablePrice - triggerPrice <= minDeviation) ||
-                    (!isLong && triggerPrice - acceptablePrice <= minDeviation),
-                "acceptablePrice: out of deviation"
-            );
-        }
-
-        uint256 balance = collateral == _weth
-            ? IAccount(account).getBalance(address(0))
-            : IAccount(account).getBalance(collateral);
-        require(
-            balance - lockedBalances[account][collateral] >= collateralAmount,
-            "collateralAmount: over balance"
-        );
-        lockedBalances[account][collateral] += collateralAmount;
-
         LimitOrder memory limitOrder = LimitOrder({
             id: _limitOrders[account].length,
             state: LimitOrderState.Pending,
@@ -159,7 +128,6 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
             isLong: isLong,
             triggerPrice: triggerPrice,
             acceptablePrice: acceptablePrice,
-            adapterExecutionFee: adapterExecutionFee,
             createdAt: block.timestamp
         });
         _limitOrders[account].push(limitOrder);
@@ -169,30 +137,34 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
     function cancelLimitOrder(
         address account,
         uint256 id
-    ) external override onlyExchange {
-        require(_limitOrders[account].length >= id + 1, "id: out of range");
-
-        LimitOrder memory limitOrder = _limitOrders[account][id];
+    )
+        external
+        override
+        onlyExchange
+        returns (IWarehouse.LimitOrder memory limitOrder)
+    {
+        limitOrder = _limitOrders[account][id];
         require(
             limitOrder.state == LimitOrderState.Pending,
             "state: not pending"
         );
-        lockedBalances[account][limitOrder.collateral] -= limitOrder.collateralAmount; // prettier-ignore
 
         _limitOrders[account][id].state = LimitOrderState.Canceled;
         emit LimitOrderCanceled(account, id);
-
-        payable(account).transfer(limitOrder.adapterExecutionFee);
     }
 
     function executeLimitOrder(
         address account,
         address adapter,
         uint256 id
-    ) external payable onlyOrderKeeper {
-        require(_limitOrders[account].length >= id + 1, "id: out of range");
-
-        IWarehouse.LimitOrder memory limitOrder = _limitOrders[account][id];
+    )
+        external
+        payable
+        override
+        onlyExchange
+        returns (IWarehouse.LimitOrder memory limitOrder)
+    {
+        limitOrder = _limitOrders[account][id];
         require(
             limitOrder.state == LimitOrderState.Pending,
             "state: not pending"
@@ -207,31 +179,9 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
                 (!limitOrder.isLong && markPrice >= limitOrder.acceptablePrice),
             "price: not acceptable"
         );
-        lockedBalances[account][limitOrder.collateral] -= limitOrder.collateralAmount; // prettier-ignore
 
         _limitOrders[account][id].state = LimitOrderState.Executed;
         emit LimitOrderExecuted(account, id);
-
-        uint256 adapterMinExecutionFee = IAdapter(adapter).getMinExecutionFee();
-        if (adapterMinExecutionFee > limitOrder.adapterExecutionFee) {
-            payable(account).transfer(
-                adapterMinExecutionFee - limitOrder.adapterExecutionFee
-            );
-        }
-
-        IExchange.MarketOrder memory marketOrder = IAdapter(adapter)
-            .makeMarketOrder(
-                limitOrder.collateral,
-                limitOrder.index,
-                limitOrder.collateralAmount,
-                limitOrder.size,
-                limitOrder.isLong
-            );
-        IExchange(exchange).executeLimitOrder{value: adapterMinExecutionFee}(
-            account,
-            adapter,
-            marketOrder
-        );
     }
 
     function createTriggerOrder(
@@ -365,8 +315,8 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
             size: triggerOrder.size,
             isLong: triggerOrder.isLong
         });
-        IExchange(exchange).executeTriggerOrder{
-            value: triggerOrder.adapterExecutionFee
-        }(triggerOrder.account, triggerOrder.adapter, marketOrder);
+        // IExchange(exchange).executeTriggerOrder{
+        //     value: triggerOrder.adapterExecutionFee
+        // }(triggerOrder.account, triggerOrder.adapter, marketOrder);
     }
 }

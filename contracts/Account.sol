@@ -2,21 +2,28 @@
 pragma solidity 0.8.7;
 
 import {IAccount} from "./interfaces/IAccount.sol";
+import {ILogger} from "./interfaces/ILogger.sol";
 import {IExchange} from "./interfaces/IExchange.sol";
+import {IWarehouse} from "./interfaces/IWarehouse.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
 
-// todo: lockedBalance -> transfer assets (limit order)
-
 contract Account is IAccount {
+    address private constant _weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
+
     address public immutable override owner;
     address public immutable override exchange;
 
-    receive() external payable {}
+    mapping(address => uint256) private _lockedBalances;
+
+    receive() external payable {
+        if (msg.sender != _weth) {
+            IERC20(_weth).deposit{value: msg.value}();
+        }
+    }
 
     constructor(address _owner, address _exchange) {
         require(_owner != address(0), "owner: zero address");
         require(_exchange != address(0), "exchange: zero address");
-
         owner = _owner;
         exchange = _exchange;
     }
@@ -31,32 +38,30 @@ contract Account is IAccount {
         _;
     }
 
+    modifier onlyOrderKeeper() {
+        require(
+            IExchange(exchange).isOrderKeeper(msg.sender),
+            "msg.sender: not order keeper"
+        );
+        _;
+    }
+
     function getBalance(
         address token
     ) public view virtual override returns (uint256) {
-        return
-            token == address(0)
-                ? address(this).balance
-                : IERC20(token).balanceOf(address(this));
+        return IERC20(token).balanceOf(address(this));
     }
 
     function getLockedBalance(
         address token
     ) public view virtual returns (uint256) {
-        return IExchange(exchange).lockedBalances(address(this), token);
+        return _lockedBalances[token];
     }
 
     function getWithdrawableBalance(
         address token
     ) public view virtual returns (uint256) {
         return getBalance(token) - getLockedBalance(token);
-    }
-
-    function depositETH(uint256 amount) external payable override onlyOwner {
-        require(amount > 0, "amount: zero");
-        require(msg.value == amount, "amount: not exact");
-
-        emit Deposited(msg.sender, address(0), msg.value);
     }
 
     function deposit(
@@ -67,16 +72,6 @@ contract Account is IAccount {
 
         IERC20(token).transferFrom(msg.sender, address(this), amount);
         emit Deposited(msg.sender, token, amount);
-    }
-
-    function withdrawETH(uint256 amount) external override onlyOwner {
-        require(amount > 0, "amount: zero");
-
-        uint256 withdrawableBalance = getWithdrawableBalance(address(0));
-        require(amount <= withdrawableBalance, "amount: exceed balance");
-
-        payable(owner).transfer(amount);
-        emit Withdrawn(address(0), amount);
     }
 
     function withdraw(
@@ -92,120 +87,320 @@ contract Account is IAccount {
         emit Withdrawn(token, amount);
     }
 
-    // todo: eth native swap
     function swap(
         address tokenIn,
         address tokenOut,
         uint256 amountIn
     ) external virtual onlyOwner returns (uint256 amountOut) {
-        require(tokenIn != tokenOut, "same tokens");
-
         uint256 balance = getBalance(tokenIn);
         require(amountIn <= balance, "amountIn: exceed balance");
 
-        if (tokenIn == address(0)) {
-            amountOut = IExchange(exchange).swap{value: amountIn}(
-                tokenIn,
-                tokenOut,
-                amountIn
-            );
-        } else {
-            IERC20(tokenIn).approve(exchange, amountIn);
-            amountOut = IExchange(exchange).swap(tokenIn, tokenOut, amountIn);
-        }
+        IERC20(tokenIn).approve(exchange, amountIn);
+        amountOut = IExchange(exchange).swap(tokenIn, tokenOut, amountIn);
         emit Swapped(address(this), tokenIn, tokenOut, amountIn, amountOut);
     }
 
+    // todo: reentrancy guard
     function increasePosition(
         address adapter,
-        IExchange.MarketOrder calldata marketOrder
-    ) external payable virtual override onlyExchange {
-        require(adapter != address(0), "adapter: zero address");
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        uint256 size,
+        bool isLong,
+        uint256 executionFee // network fee + adapter fee (collateral token amount)
+    ) external payable onlyOwner {
+        _increasePosition(
+            adapter,
+            collateral,
+            index,
+            collateralAmount,
+            size,
+            isLong,
+            executionFee
+        );
+    }
 
-        // // todo
-        // uint256 feeCollateral
-        //     = IExchange(exchange).getOpenPositionFee(marketOrder.collateralAmount); // prettier-ignore
-        // uint256 collateralAmount = marketOrder.collateralAmount - feeCollateral;
+    function _increasePosition(
+        address adapter,
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        uint256 size,
+        bool isLong,
+        uint256 executionFee // network fee + adapter fee (collateral token amount)
+    ) private {
+        require(
+            IExchange(exchange).isRegisteredAdapter(adapter),
+            "adapter: not registered"
+        );
+        require(
+            collateralAmount <= getBalance(collateral),
+            "amount: less than balance"
+        );
 
-        // if (feeCollateral > 0) {
-        //     if (marketOrder.collateral == address(0)) {
-        //         payable(exchange).transfer(feeCollateral);
-        //     } else {
-        //         IERC20(marketOrder.collateral).transfer(
-        //             exchange,
-        //             collateralAmount
-        //         );
-        //     }
-        // }
+        uint256 positionFee = IExchange(exchange).getPositionFee(
+            adapter,
+            collateral,
+            index,
+            size,
+            isLong
+        );
 
-        // slither-disable-next-line controlled-delegatecall,low-level-calls
+        uint256 fees = positionFee + executionFee;
+        require(collateralAmount >= fees, "amount: less than fees");
+
+        address feeCollector = IExchange(exchange).feeCollector();
+        IERC20(collateral).transfer(feeCollector, fees);
+
+        collateralAmount -= fees;
+
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
                 "increasePosition(address,address,uint256,uint256,bool)",
-                marketOrder.collateral,
-                marketOrder.index,
-                marketOrder.collateralAmount,
-                marketOrder.size,
-                marketOrder.isLong
+                collateral,
+                index,
+                collateralAmount,
+                size,
+                isLong
             )
         );
         require(success, string(data));
+
+        address logger = IExchange(exchange).logger();
+        if (logger != address(0)) {
+            ILogger(logger).logIncreasePosition(
+                address(this),
+                adapter,
+                collateral,
+                index,
+                collateralAmount,
+                size,
+                isLong,
+                executionFee,
+                positionFee
+            );
+        }
     }
 
     function decreasePosition(
         address adapter,
-        IExchange.MarketOrder calldata marketOrder
-    ) external payable virtual override onlyExchange {
-        require(adapter != address(0), "adapter: zero address");
-
+        address collateral,
+        address index,
+        bool isLong,
+        uint256 size,
+        uint256 executionFee
+    ) external payable onlyOwner {
         // slither-disable-next-line controlled-delegatecall,low-level-calls
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
                 "decreasePosition(address,address,uint256,bool)",
-                marketOrder.collateral,
-                marketOrder.index,
-                marketOrder.size,
-                marketOrder.isLong
+                collateral,
+                index,
+                size,
+                isLong
             )
         );
         require(success, string(data));
+
+        address logger = IExchange(exchange).logger();
+        if (logger != address(0)) {
+            ILogger(logger).logDecreasePosition(
+                address(this),
+                adapter,
+                collateral,
+                index,
+                size,
+                isLong,
+                executionFee
+            );
+        }
     }
 
     function increaseCollateral(
         address adapter,
-        IExchange.MarketOrder calldata marketOrder
-    ) external payable virtual override onlyExchange {
-        require(adapter != address(0), "adapter: zero address");
+        address collateral,
+        address index,
+        bool isLong,
+        address tokenIn,
+        uint256 amountIn,
+        uint256 executionFee
+    ) external payable onlyOwner {
+        uint256 collateralAmount = amountIn;
+        if (tokenIn != collateral) {
+            collateralAmount = IExchange(exchange).swap(
+                tokenIn,
+                collateral,
+                amountIn
+            );
+        }
+
+        uint256 depositFee = IExchange(exchange).getDepositFee(
+            collateralAmount
+        );
+        require(collateralAmount >= depositFee, "amount: less than fees");
+
+        address feeCollector = IExchange(exchange).feeCollector();
+        IERC20(collateral).transfer(feeCollector, depositFee);
+
+        collateralAmount -= depositFee;
 
         // slither-disable-next-line controlled-delegatecall,low-level-calls
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
                 "increaseCollateral(address,address,uint256,bool)",
-                marketOrder.collateral,
-                marketOrder.index,
-                marketOrder.collateralAmount,
-                marketOrder.isLong
+                collateral,
+                index,
+                collateralAmount,
+                isLong
             )
         );
         require(success, string(data));
+
+        address logger = IExchange(exchange).logger();
+        if (logger != address(0)) {
+            ILogger(logger).logIncreaseCollateral(
+                address(this),
+                adapter,
+                collateral,
+                index,
+                collateralAmount,
+                executionFee
+            );
+        }
     }
 
     function decreaseCollateral(
         address adapter,
-        IExchange.MarketOrder calldata marketOrder
-    ) external payable virtual override onlyExchange {
-        require(adapter != address(0), "adapter: zero address");
-
+        address collateral,
+        address index,
+        bool isLong,
+        uint256 collateralAmount,
+        uint256 executionFee
+    ) external payable onlyOwner {
         // slither-disable-next-line controlled-delegatecall,low-level-calls
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
                 "decreaseCollateral(address,address,uint256,bool)",
-                marketOrder.collateral,
-                marketOrder.index,
-                marketOrder.collateralAmount,
-                marketOrder.isLong
+                collateral,
+                index,
+                collateralAmount,
+                isLong
             )
         );
         require(success, string(data));
+
+        address logger = IExchange(exchange).logger();
+        if (logger != address(0)) {
+            ILogger(logger).logDecreaseCollateral(
+                address(this),
+                adapter,
+                collateral,
+                index,
+                collateralAmount,
+                executionFee
+            );
+        }
+    }
+
+    function createLimitOrder(
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        uint256 size,
+        bool isLong,
+        uint256 executionFee,
+        uint256 triggerPrice,
+        uint256 acceptablePrice
+    ) external payable onlyOwner {
+        require(collateralAmount >= executionFee, "amount: less than fees");
+        require(
+            collateralAmount <= getWithdrawableBalance(collateral),
+            "amount: exceed balance"
+        );
+
+        address feeCollector = IExchange(exchange).feeCollector();
+        IERC20(collateral).transfer(feeCollector, executionFee);
+
+        collateralAmount -= executionFee;
+
+        _lockedBalances[collateral] += collateralAmount;
+
+        IExchange(exchange).createLimitOrder(
+            collateral,
+            index,
+            collateralAmount,
+            size,
+            isLong,
+            triggerPrice,
+            acceptablePrice
+        );
+
+        address logger = IExchange(exchange).logger();
+        if (logger != address(0)) {
+            ILogger(logger).logCreateLimitOrder(
+                address(this),
+                collateral,
+                index,
+                collateralAmount,
+                size,
+                isLong,
+                executionFee,
+                triggerPrice,
+                acceptablePrice
+            );
+        }
+    }
+
+    function cancelLimitOrder(
+        uint256 orderId,
+        uint256 executionFee
+    ) external payable onlyOwner {
+        IWarehouse.LimitOrder memory limitOrder
+            = IExchange(exchange).cancelLimitOrder(address(this), orderId); // prettier-ignore
+
+        address feeCollector = IExchange(exchange).feeCollector();
+        IERC20(limitOrder.collateral).transfer(feeCollector, executionFee);
+
+        _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
+
+        address logger = IExchange(exchange).logger();
+        if (logger != address(0)) {
+            ILogger(logger).logCancelLimitOrder(
+                address(this),
+                orderId,
+                executionFee
+            );
+        }
+    }
+
+    function executeLimitOrder(
+        uint256 orderId,
+        address adapter,
+        uint256 executionFee
+    ) external payable onlyOrderKeeper {
+        IWarehouse.LimitOrder memory limitOrder
+            = IExchange(exchange).executeLimitOrder(address(this), adapter, orderId); // prettier-ignore
+
+        _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
+
+        _increasePosition(
+            adapter,
+            limitOrder.collateral,
+            limitOrder.index,
+            limitOrder.collateralAmount,
+            limitOrder.size,
+            limitOrder.isLong,
+            executionFee
+        );
+
+        address logger = IExchange(exchange).logger();
+        if (logger != address(0)) {
+            ILogger(logger).logExecuteLimitOrder(
+                address(this),
+                orderId,
+                executionFee
+            );
+        }
     }
 }

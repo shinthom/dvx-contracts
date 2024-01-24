@@ -172,7 +172,7 @@ contract MuxAdapter is IAdapter {
     uint256 public constant PRICE_DECIMALS = 18;
     uint256 public constant USD = 1 * (10 ** PRICE_DECIMALS);
 
-    uint8 private constant ETH = 3;
+    uint8 private constant _wethId = 3;
     uint8 private immutable _defaultProfitTokenId;
 
     address private immutable _liquidityPool;
@@ -430,7 +430,9 @@ contract MuxAdapter is IAdapter {
             isLong
         );
 
-        if (collateralId == ETH) {
+        if (collateralId == _wethId) {
+            IERC20(collateral).withdraw(collateralAmount);
+
             IOrderBook(_orderBook).placePositionOrder3{value: collateralAmount}(
                 subAccountId,
                 uint96(collateralAmount),
@@ -504,7 +506,9 @@ contract MuxAdapter is IAdapter {
             isLong
         );
 
-        if (collateralId == ETH) {
+        if (collateralId == _wethId) {
+            IERC20(collateral).withdraw(collateralAmount);
+
             IOrderBook(_orderBook).depositCollateral{value: collateralAmount}(
                 subAccountId,
                 collateralAmount

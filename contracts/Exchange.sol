@@ -18,18 +18,25 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     uint256 public constant BASIS_POINTS = 100_000_000;
 
     address public override warehouse;
+    address public override logger;
     mapping(address => address) public accounts;
 
     address[] private registeredAdapters;
     mapping(address => bool) public override isRegisteredAdapter;
     mapping(address => bool) public override isStableToken;
 
+    mapping(address => bool) public override isOrderKeeper;
+
     mapping(uint8 => uint256) public tiers;
     mapping(address => uint8) public referralTiers;
 
+    address public override feeCollector; // todo: feeCollectorContract
+
     uint256 public minExecutionFee; // limit / trigger order execution fee
 
-    uint256 public increasePositionFeeRate; // open position fee rate
+    uint256 public positionFeeRate; // open position fee rate
+    uint256 public depositFeeRate; // increase collateral fee rate
+
     uint256 public swapFeeRate;
 
     address public override defaultStableToken =
@@ -57,9 +64,33 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address newImplementation
     ) internal override onlyOwner {}
 
+    function setLogger(address _logger) external onlyOwner {
+        require(_logger != address(0), "logger: zero address");
+
+        logger = _logger;
+        emit LoggerSet(_logger);
+    }
+
     function setWarehouse(address _warehouse) external onlyOwner {
         warehouse = _warehouse;
         emit WarehouseSet(_warehouse);
+    }
+
+    function setFeeCollector(address _feeCollector) external onlyOwner {
+        require(_feeCollector != address(0), "feeCollector: zero address");
+
+        feeCollector = _feeCollector;
+        emit FeeCollectorSet(_feeCollector);
+    }
+
+    function setOrderKeeper(
+        address orderKeeper,
+        bool isActive
+    ) external onlyOwner {
+        require(orderKeeper != address(0), "exchange: zero address");
+
+        isOrderKeeper[orderKeeper] = isActive;
+        emit OrderKeeperSet(orderKeeper, isActive);
     }
 
     function registerAdapter(address adapter) external onlyOwner {
@@ -104,11 +135,18 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         emit DefaultStableTokenSet(stableToken);
     }
 
-    function setIncreasePositionFeeRate(uint256 _feeRate) external onlyOwner {
+    function setPositionFeeRate(uint256 _feeRate) external onlyOwner {
         require(_feeRate <= BASIS_POINTS, "feeRate: invalid");
 
-        increasePositionFeeRate = _feeRate;
-        emit IncreasePositionFeeRateSet(_feeRate);
+        positionFeeRate = _feeRate;
+        emit PositionFeeRateSet(_feeRate);
+    }
+
+    function setDepositFeeRate(uint256 _feeRate) external onlyOwner {
+        require(_feeRate <= BASIS_POINTS, "feeRate: invalid");
+
+        depositFeeRate = _feeRate;
+        emit DepositFeeRateSet(_feeRate);
     }
 
     function setSwapFeeRate(uint256 _feeRate) external onlyOwner {
@@ -141,13 +179,39 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         return IWarehouse(warehouse).lockedBalances(account, token);
     }
 
-    function getOpenPositionFee(
-        uint256 amount
+    function getPositionFee(
+        address adapter,
+        address collateral,
+        address index,
+        uint256 size,
+        bool isLong
     ) public view override returns (uint256) {
-        if (increasePositionFeeRate == 0) {
+        if (size == 0 || positionFeeRate == 0) {
             return 0;
         }
-        return (amount * increasePositionFeeRate) / BASIS_POINTS;
+
+        uint256 indexPrice = IAdapter(adapter).getWrapPrice(index, isLong);
+        uint8 indexDecimals = IERC20(index).decimals();
+        uint256 feeUsd = (size * indexPrice * positionFeeRate) /
+            BASIS_POINTS /
+            (10 ** indexDecimals);
+
+        uint256 collateralPrice = IAdapter(adapter).getWrapPrice(
+            collateral,
+            isLong
+        );
+        uint8 collateralDecimals = IERC20(collateral).decimals();
+        return (feeUsd * (10 ** collateralDecimals)) / collateralPrice;
+    }
+
+    function getDepositFee(
+        uint256 collateralAmount
+    ) public view override returns (uint256) {
+        if (collateralAmount == 0 || depositFeeRate == 0) {
+            return 0;
+        }
+
+        return (collateralAmount * depositFeeRate) / BASIS_POINTS;
     }
 
     function getSwapFee(
@@ -175,14 +239,9 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     ) external payable override returns (address account) {
         account = createAccount();
 
-        if (token == address(0)) {
-            require(msg.value == amount, "amount: not exact");
-            IAccount(account).depositETH{value: amount}(amount);
-        } else {
-            IERC20(token).transferFrom(msg.sender, address(this), amount);
-            IERC20(token).approve(account, amount);
-            IAccount(account).deposit(token, amount);
-        }
+        IERC20(token).transferFrom(msg.sender, address(this), amount);
+        IERC20(token).approve(account, amount);
+        IAccount(account).deposit(token, amount);
     }
 
     function swap(
@@ -190,301 +249,88 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address tokenOut,
         uint256 amountIn
     ) public payable virtual override returns (uint256 amountOut) {
+        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
+
         uint256 swapFee = getSwapFee(amountIn);
+        if (swapFee > 0) {
+            IERC20(tokenIn).transfer(feeCollector, swapFee);
+        }
+
         amountIn -= swapFee;
 
-        require(tokenIn != tokenOut, "same tokens");
-        if (tokenOut == address(0)) {
-            tokenOut = _weth;
-        }
-
-        if (tokenIn == address(0)) {
-            require(amountIn == msg.value, "amount: not exact");
-            IERC20(_weth).deposit{value: amountIn}();
-            IERC20(_weth).approve(_swapRouter, amountIn);
-
-            ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
-                .ExactInputSingleParams({
-                    tokenIn: _weth,
-                    tokenOut: tokenOut,
-                    fee: 3000,
-                    recipient: address(this),
-                    deadline: block.timestamp,
-                    amountIn: amountIn,
-                    amountOutMinimum: 0,
-                    sqrtPriceLimitX96: 0
-                });
-            amountOut = ISwapRouter(_swapRouter).exactInputSingle(params);
-        } else {
-            IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
-            IERC20(tokenIn).approve(_swapRouter, amountIn);
-
-            ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
-                .ExactInputSingleParams({
-                    tokenIn: tokenIn,
-                    tokenOut: tokenOut,
-                    fee: 3000,
-                    recipient: address(this),
-                    deadline: block.timestamp,
-                    amountIn: amountIn,
-                    amountOutMinimum: 0,
-                    sqrtPriceLimitX96: 0
-                });
-
-            amountOut = ISwapRouter(_swapRouter).exactInputSingle(params);
-        }
-
-        if (tokenOut == _weth) {
-            IERC20(_weth).withdraw(amountOut);
-            payable(msg.sender).transfer(amountOut);
-        } else {
-            IERC20(tokenOut).transfer(msg.sender, amountOut);
-        }
-    }
-
-    function increasePosition(
-        address account,
-        address adapter,
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 size,
-        bool isLong,
-        uint256 adapterExecutionFee
-    ) external payable onlyAccountOwner(account) {
-        require(isRegisteredAdapter[adapter], "adapter: not registered");
-        require(
-            adapterExecutionFee >= IAdapter(adapter).getMinExecutionFee(),
-            "adapterExecutionFee: insufficient"
-        );
-
-        uint256 openPositionFee = getOpenPositionFee(collateralAmount);
-        collateralAmount -= openPositionFee;
-
-        IAccount(account).increasePosition{value: adapterExecutionFee}(
-            adapter,
-            MarketOrder({
-                collateral: collateral,
-                index: index,
-                collateralAmount: collateralAmount,
-                size: size,
-                isLong: isLong
-            })
-        );
-    }
-
-    function decreasePosition(
-        address account,
-        address adapter,
-        address collateral,
-        address index,
-        uint256 size,
-        bool isLong,
-        uint256 adapterExecutionFee
-    ) external payable onlyAccountOwner(account) {
-        IAccount(account).decreasePosition{value: adapterExecutionFee}(
-            adapter,
-            MarketOrder({
-                collateral: collateral,
-                index: index,
-                collateralAmount: 0,
-                size: size,
-                isLong: isLong
-            })
-        );
-    }
-
-    function increaseCollateral(
-        address account,
-        address adapter,
-        address collateral,
-        address index,
-        bool isLong,
-        address tokenIn,
-        uint256 amountIn,
-        uint256 adapterExecutionFee
-    ) external payable onlyAccountOwner(account) {
-        uint256 collateralAmount = amountIn;
-
-        if (collateral != tokenIn) {
-            collateralAmount = swap(tokenIn, collateral, amountIn);
-        }
-
-        IAccount(account).increaseCollateral{value: adapterExecutionFee}(
-            adapter,
-            MarketOrder({
-                collateral: collateral,
-                index: index,
-                collateralAmount: collateralAmount,
-                size: 0,
-                isLong: isLong
-            })
-        );
-    }
-
-    function decreaseCollateral(
-        address account,
-        address adapter,
-        address collateral,
-        address index,
-        bool isLong,
-        uint256 collateralAmount,
-        uint256 adapterExecutionFee
-    ) external payable onlyAccountOwner(account) {
-        IAccount(account).decreaseCollateral{value: adapterExecutionFee}(
-            adapter,
-            MarketOrder({
-                collateral: collateral,
-                index: index,
-                collateralAmount: collateralAmount,
-                size: 0,
-                isLong: isLong
-            })
-        );
-    }
-
-    function getMaxAdapterExecutionFee()
-        public
-        view
-        override
-        returns (uint256)
-    {
-        uint256 maxAdapterExecutionFee;
-        for (uint256 i = 0; i < registeredAdapters.length; i++) {
-            uint256 executionFee = IAdapter(registeredAdapters[i])
-                .getMinExecutionFee();
-
-            if (executionFee > maxAdapterExecutionFee) {
-                maxAdapterExecutionFee = executionFee;
-            }
-        }
-        return maxAdapterExecutionFee;
+        IERC20(tokenIn).approve(_swapRouter, amountIn);
+        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
+            .ExactInputSingleParams({
+                tokenIn: tokenIn,
+                tokenOut: tokenOut,
+                fee: 3000,
+                recipient: address(this),
+                deadline: block.timestamp,
+                amountIn: amountIn,
+                amountOutMinimum: 0,
+                sqrtPriceLimitX96: 0
+            });
+        amountOut = ISwapRouter(_swapRouter).exactInputSingle(params);
     }
 
     function createLimitOrder(
-        address account,
         address collateral,
         address index,
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
         uint256 triggerPrice,
-        uint256 acceptablePrice,
-        uint256 executionFee,
-        uint256 adapterExecutionFee
-    ) external payable onlyAccountOwner(account) {
-        require(executionFee >= minExecutionFee, "executionFee: insufficient");
+        uint256 acceptablePrice
+    ) external override {
         require(
-            adapterExecutionFee >= getMaxAdapterExecutionFee(),
-            "adapterExecutionFee: insufficient"
-        );
-        require(
-            executionFee + adapterExecutionFee == msg.value,
-            "msg.value: insufficient"
+            (isLong && triggerPrice <= acceptablePrice) ||
+                (!isLong && triggerPrice >= acceptablePrice),
+            "triggerPrice: invalid"
         );
 
-        IWarehouse(warehouse).createLimitOrder{value: adapterExecutionFee}(
-            account,
+        IWarehouse(warehouse).createLimitOrder(
+            msg.sender,
             collateral,
             index,
             collateralAmount,
             size,
             isLong,
             triggerPrice,
-            acceptablePrice,
-            adapterExecutionFee
+            acceptablePrice
         );
     }
 
     function cancelLimitOrder(
         address account,
         uint256 id
-    ) external onlyAccountOwner(account) {
-        IWarehouse(warehouse).cancelLimitOrder(account, id);
+    ) external override returns (IWarehouse.LimitOrder memory) {
+        return IWarehouse(warehouse).cancelLimitOrder(account, id);
     }
 
     function executeLimitOrder(
         address account,
         address adapter,
-        MarketOrder calldata marketOrder
-    ) external payable virtual override onlyWarehouse {
-        require(isRegisteredAdapter[adapter], "adapter: not registered");
-
-        IAccount(account).increasePosition{value: msg.value}(
-            adapter,
-            marketOrder
-        );
-    }
-
-    function createTriggerOrder(
-        address account,
-        address adapter,
-        address collateral,
-        address index,
-        bool isLong,
-        uint256 size,
-        IWarehouse.TriggerOrderType orderType,
-        uint256 triggerPrice,
-        uint256 acceptablePrice,
-        uint256 executionFee,
-        uint256 adapterExecutionFee
-    ) external payable onlyAccountOwner(account) {
-        require(executionFee >= minExecutionFee, "executionFee: insufficient");
-        require(
-            adapterExecutionFee == IAdapter(adapter).getMinExecutionFee(),
-            "adapterExecutionFee: not match"
-        );
-        require(
-            executionFee + adapterExecutionFee == msg.value,
-            "msg.value: not match"
-        );
-
-        IWarehouse(warehouse).createTriggerOrder{value: adapterExecutionFee}(
-            account,
-            adapter,
-            collateral,
-            index,
-            isLong,
-            size,
-            orderType,
-            triggerPrice,
-            acceptablePrice,
-            adapterExecutionFee
-        );
-    }
-
-    function cancelTriggerOrder(
-        address account,
-        bytes32 positionKey,
         uint256 id
-    ) external onlyAccountOwner(account) {
-        IWarehouse(warehouse).cancelTriggerOrder(account, positionKey, id);
+    ) external payable override returns (IWarehouse.LimitOrder memory) {
+        return IWarehouse(warehouse).executeLimitOrder(account, adapter, id);
     }
 
-    function executeTriggerOrder(
-        address account,
-        address adapter,
-        MarketOrder calldata marketOrder
-    ) external payable virtual override onlyWarehouse {
-        IAccount(account).decreasePosition{value: msg.value}(
-            adapter,
-            marketOrder
-        );
-    }
+    // function cancelLimitOrder(
+    //     address account,
+    //     uint256 id
+    // ) external override returns (address, uint256) {
+    //     return IWarehouse(warehouse).cancelLimitOrder(account, id);
+    // }
 
-    function withdraw(
-        address receiver,
-        address token,
-        uint256 amount
-    ) external onlyOwner {
-        require(receiver != address(0), "receiver: zero address");
-        require(amount > 0, "amount: zero");
+    // function executeLimitOrder(
+    //     address account,
+    //     uint256 id
+    // ) external payable override returns (address, uint256) {
+    //     return IWarehouse(warehouse).executeLimitOrder(account, id);
+    // }
 
-        if (token == address(0)) {
-            payable(msg.sender).transfer(amount);
-        } else {
-            IERC20(token).transfer(msg.sender, amount);
-        }
-        emit Withdrawn(msg.sender, token, amount);
-    }
+    // function executeLimitOrder(address account, uint256 id) external {
+    //     IWarehouse.LimitOrder memory limitOrder = IWarehouse(warehouse)
+    //         .executeLimitOrder(account, id);
+    // }
 }

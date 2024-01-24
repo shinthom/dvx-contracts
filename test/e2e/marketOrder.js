@@ -15,11 +15,9 @@ describe("marketOrder", () => {
       const {
         user,
         account,
-        exchange,
-        quoter,
         gmxV1Adapter,
-        muxAdapter,
         WETH,
+        checkBalance,
         deposit,
         executeIncreasePosition,
         executeDecreasePosition,
@@ -31,104 +29,77 @@ describe("marketOrder", () => {
       const size = ethers.parseEther("10");
       const isLong = true;
 
-      await deposit(collateral, collateralAmount);
+      await deposit(WETH, collateralAmount);
+      await checkBalance(account);
 
-      const request = { collateral, index, collateralAmount, size, isLong };
-      const answers = await quoter.quote(
-        account.target,
-        [gmxV1Adapter.target],
-        request
-      );
+      // const request = { collateral, index, collateralAmount, size, isLong };
+      // const answers = await quoter.quote(
+      //   account.target,
+      //   [gmxV1Adapter.target],
+      //   request
+      // );
 
-      await exchange
+      const executionFee = await gmxV1Adapter.getMinExecutionFee();
+      await account
         .connect(user)
         .increasePosition(
-          account.target,
-          answers[0].adapter,
-          answers[0].marketOrder.collateral,
-          answers[0].marketOrder.index,
-          answers[0].marketOrder.collateralAmount,
-          answers[0].marketOrder.size,
-          answers[0].marketOrder.isLong,
-          answers[0].adapterExecutionFee,
-          {
-            value: answers[0].adapterExecutionFee,
-          }
-        );
-      await executeIncreasePosition(account.target);
-      console.log(
-        await gmxV1Adapter.getPosition(
-          account.target,
-          collateral,
-          index,
-          isLong
-        )
-      );
-
-      const adapterExecutionFee = await gmxV1Adapter.getMinExecutionFee();
-
-      await deposit(collateral, collateralAmount);
-      await exchange
-        .connect(user)
-        .increaseCollateral(
-          account.target,
           gmxV1Adapter.target,
           collateral,
           index,
-          isLong,
-          collateral,
           collateralAmount,
-          adapterExecutionFee,
-          {
-            value: adapterExecutionFee,
-          }
-        );
-      await executeIncreasePosition(account.target);
-      console.log(
-        await gmxV1Adapter.getPosition(
-          account.target,
-          collateral,
-          index,
-          isLong
-        )
-      );
-
-      await exchange
-        .connect(user)
-        .decreaseCollateral(
-          account.target,
-          gmxV1Adapter.target,
-          collateral,
-          index,
-          isLong,
-          collateralAmount,
-          adapterExecutionFee,
-          {
-            value: adapterExecutionFee,
-          }
-        );
-      await executeDecreasePosition(account.target);
-      console.log(
-        await gmxV1Adapter.getPosition(
-          account.target,
-          collateral,
-          index,
-          isLong
-        )
-      );
-
-      await exchange
-        .connect(user)
-        .decreasePosition(
-          account.target,
-          gmxV1Adapter.target,
-          collateral,
-          index,
           size,
           isLong,
-          adapterExecutionFee,
+          0,
+          { value: executionFee }
+        );
+      await executeIncreasePosition(account.target);
+      console.log(
+        await gmxV1Adapter.getPosition(
+          account.target,
+          collateral,
+          index,
+          isLong
+        )
+      );
+      await checkBalance(account);
+
+      await deposit(collateral, collateralAmount);
+      await account
+        .connect(user)
+        .increaseCollateral(
+          gmxV1Adapter.target,
+          collateral,
+          index,
+          isLong,
+          collateral,
+          collateralAmount,
+          executionFee,
           {
-            value: adapterExecutionFee,
+            value: executionFee,
+          }
+        );
+      await executeIncreasePosition(account.target);
+      console.log(
+        await gmxV1Adapter.getPosition(
+          account.target,
+          collateral,
+          index,
+          isLong
+        )
+      );
+      await checkBalance(account);
+
+      await account
+        .connect(user)
+        .decreaseCollateral(
+          gmxV1Adapter.target,
+          collateral,
+          index,
+          isLong,
+          collateralAmount,
+          executionFee,
+          {
+            value: executionFee,
           }
         );
       await executeDecreasePosition(account.target);
@@ -140,6 +111,31 @@ describe("marketOrder", () => {
           isLong
         )
       );
+      await checkBalance(account);
+
+      await account
+        .connect(user)
+        .decreasePosition(
+          gmxV1Adapter.target,
+          collateral,
+          index,
+          isLong,
+          size,
+          executionFee,
+          {
+            value: executionFee,
+          }
+        );
+      await executeDecreasePosition(account.target);
+      console.log(
+        await gmxV1Adapter.getPosition(
+          account.target,
+          collateral,
+          index,
+          isLong
+        )
+      );
+      await checkBalance(account);
     });
   });
 
@@ -148,10 +144,9 @@ describe("marketOrder", () => {
       const {
         user,
         account,
-        exchange,
-        quoter,
         muxAdapter,
         WETH,
+        checkBalance,
         deposit,
         fillPositionOrder,
         fillWithdrawalOrder,
@@ -163,94 +158,90 @@ describe("marketOrder", () => {
       const size = ethers.parseEther("10");
       const isLong = true;
 
-      await deposit(collateral, collateralAmount);
+      await deposit(WETH, collateralAmount);
+      await checkBalance(account);
 
-      const request = { collateral, index, collateralAmount, size, isLong };
-      const answers = await quoter.quote(
-        account.target,
-        [muxAdapter.target],
-        request
-      );
+      // const request = { collateral, index, collateralAmount, size, isLong };
+      // const answers = await quoter.quote(
+      //   account.target,
+      //   [gmxV1Adapter.target],
+      //   request
+      // );
 
-      await exchange
+      const executionFee = await muxAdapter.getMinExecutionFee();
+      await account
         .connect(user)
         .increasePosition(
-          account.target,
-          answers[0].adapter,
-          answers[0].marketOrder.collateral,
-          answers[0].marketOrder.index,
-          answers[0].marketOrder.collateralAmount,
-          answers[0].marketOrder.size,
-          answers[0].marketOrder.isLong,
-          answers[0].adapterExecutionFee,
-          {
-            value: answers[0].adapterExecutionFee,
-          }
-        );
-      await fillPositionOrder();
-      console.log(
-        await muxAdapter.getPosition(account.target, collateral, index, isLong)
-      );
-
-      const adapterExecutionFee = await muxAdapter.getMinExecutionFee();
-
-      await deposit(collateral, collateralAmount);
-      await exchange
-        .connect(user)
-        .increaseCollateral(
-          account.target,
           muxAdapter.target,
           collateral,
           index,
-          isLong,
-          collateral,
           collateralAmount,
-          adapterExecutionFee,
-          {
-            value: adapterExecutionFee,
-          }
-        );
-      console.log(
-        await muxAdapter.getPosition(account.target, collateral, index, isLong)
-      );
-
-      await exchange
-        .connect(user)
-        .decreaseCollateral(
-          account.target,
-          muxAdapter.target,
-          collateral,
-          index,
-          isLong,
-          collateralAmount,
-          adapterExecutionFee,
-          {
-            value: adapterExecutionFee,
-          }
-        );
-      await fillWithdrawalOrder();
-      console.log(
-        await muxAdapter.getPosition(account.target, collateral, index, isLong)
-      );
-
-      await exchange
-        .connect(user)
-        .decreasePosition(
-          account.target,
-          muxAdapter.target,
-          collateral,
-          index,
           size,
           isLong,
-          adapterExecutionFee,
-          {
-            value: adapterExecutionFee,
-          }
+          0,
+          { value: executionFee }
         );
       await fillPositionOrder();
       console.log(
         await muxAdapter.getPosition(account.target, collateral, index, isLong)
       );
+      await checkBalance(account);
+
+      await deposit(collateral, collateralAmount);
+      await account
+        .connect(user)
+        .increaseCollateral(
+          muxAdapter.target,
+          collateral,
+          index,
+          isLong,
+          collateral,
+          collateralAmount,
+          executionFee,
+          {
+            value: executionFee,
+          }
+        );
+      console.log(
+        await muxAdapter.getPosition(account.target, collateral, index, isLong)
+      );
+      await checkBalance(account);
+
+      await account
+        .connect(user)
+        .decreaseCollateral(
+          muxAdapter.target,
+          collateral,
+          index,
+          isLong,
+          collateralAmount,
+          executionFee,
+          {
+            value: executionFee,
+          }
+        );
+      await fillWithdrawalOrder(account.target);
+      console.log(
+        await muxAdapter.getPosition(account.target, collateral, index, isLong)
+      );
+      await checkBalance(account);
+
+      await account
+        .connect(user)
+        .decreasePosition(
+          muxAdapter.target,
+          collateral,
+          index,
+          isLong,
+          size,
+          executionFee,
+          { value: executionFee }
+        );
+      await fillPositionOrder();
+      console.log(
+        await muxAdapter.getPosition(account.target, collateral, index, isLong)
+      );
+      await checkBalance(account);
     });
   });
 });

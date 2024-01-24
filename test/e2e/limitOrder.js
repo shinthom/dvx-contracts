@@ -13,6 +13,7 @@ describe("limitOrder", () => {
       gmxV1Adapter,
       muxAdapter,
       WETH,
+      checkBalance,
       deposit,
       executeIncreasePosition,
       fillPositionOrder,
@@ -25,98 +26,81 @@ describe("limitOrder", () => {
     const size = ethers.parseEther("10");
     const isLong = true;
 
-    const executionFee = await exchange.minExecutionFee();
-    const adapterExecutionFee = await exchange.getMaxAdapterExecutionFee();
-
-    var triggerPrice = ethers.parseUnits("2000", 18);
-    var acceptablePrice = ethers.parseUnits("2000", 18); // calculated by slippage tolerance
     var price = ethers.parseUnits("2000", 30);
     await setPrice(gmxV1Adapter, WETH, price, price, false);
 
+    var triggerPrice = ethers.parseUnits("2000", 18);
+    var acceptablePrice = ethers.parseUnits("2000", 18); // calculated by slippage tolerance
+
     await deposit(collateral, collateralAmount);
-    await exchange
+    await checkBalance(account);
+
+    var executionFee = 0;
+    await account
       .connect(user)
       .createLimitOrder(
-        account.target,
         collateral,
         index,
         collateralAmount,
         size,
         isLong,
-        triggerPrice,
-        acceptablePrice,
         executionFee,
-        adapterExecutionFee,
-        { value: executionFee + adapterExecutionFee }
+        triggerPrice,
+        acceptablePrice
       );
+    console.log(await warehouse.getLimitOrders(account.target));
 
-    await exchange.connect(user).cancelLimitOrder(account.target, 0);
+    await account.connect(user).cancelLimitOrder(0, executionFee);
+    console.log(await warehouse.getLimitOrders(account.target));
 
-    await exchange
+    await account
       .connect(user)
       .createLimitOrder(
-        account.target,
         collateral,
         index,
         collateralAmount,
         size,
         isLong,
-        triggerPrice,
-        acceptablePrice,
         executionFee,
-        adapterExecutionFee,
-        { value: executionFee + adapterExecutionFee }
+        triggerPrice,
+        acceptablePrice
       );
 
-    // quoter should choose the best router(adapter).
-
-    await warehouse.setOrderKeeper(orderKeeper.address, true);
-    await warehouse
+    var executionFee = await gmxV1Adapter.getMinExecutionFee();
+    await account
       .connect(orderKeeper)
-      .executeLimitOrder(account.target, gmxV1Adapter.target, 1);
+      .executeLimitOrder(1, gmxV1Adapter.target, 0, {
+        value: executionFee,
+      });
     await executeIncreasePosition(account.target);
     console.log(
-      await gmxV1Adapter.getWrapPosition(
-        account.target,
-        collateral,
-        index,
-        isLong
-      )
+      await gmxV1Adapter.getPosition(account.target, collateral, index, isLong)
     );
 
-    var triggerPrice = ethers.parseUnits("2000", 18);
-    var acceptablePrice = ethers.parseUnits("2000", 18);
-    var price = ethers.parseUnits("2000", 8);
-    await setPrice(muxAdapter, WETH, price, price, false);
+    var ethPrice = ethers.parseUnits("2000", 8);
+    await setPrice(muxAdapter, WETH, ethPrice, ethPrice, false);
 
     await deposit(collateral, collateralAmount);
-    await exchange
+    await account
       .connect(user)
       .createLimitOrder(
-        account.target,
         collateral,
         index,
         collateralAmount,
         size,
         isLong,
-        triggerPrice,
-        acceptablePrice,
         executionFee,
-        adapterExecutionFee,
-        { value: executionFee + adapterExecutionFee }
+        triggerPrice,
+        acceptablePrice
       );
-
-    await warehouse
+    await account
       .connect(orderKeeper)
-      .executeLimitOrder(account.target, muxAdapter.target, 2);
-    await fillPositionOrder(account.target);
+      .executeLimitOrder(2, muxAdapter.target, 0, {
+        value: 0,
+      });
+    await fillPositionOrder();
     console.log(
-      await muxAdapter.getWrapPosition(
-        account.target,
-        collateral,
-        index,
-        isLong
-      )
+      await muxAdapter.getPosition(account.target, collateral, index, isLong)
     );
   });
 });

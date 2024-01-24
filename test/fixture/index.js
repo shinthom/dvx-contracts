@@ -19,6 +19,7 @@ const USDCe = "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8";
 let deployer;
 let user;
 let other;
+let feeCollector;
 // gmx accounts
 let impersonatedAdmin;
 let impersonatedGov;
@@ -53,7 +54,8 @@ let reader;
 let account;
 
 const deploy = async (noAccount) => {
-  [deployer, user, other, orderKeeper] = await ethers.getSigners();
+  [deployer, user, other, orderKeeper, feeCollector] =
+    await ethers.getSigners();
   // gmx accounts
   impersonatedAdmin = await ethers.getImpersonatedSigner(
     "0xb4d2603b2494103c90b2c607261dd85484b49ef0"
@@ -130,6 +132,8 @@ const deploy = async (noAccount) => {
   reader = await ethers.deployContract("Reader", [warehouse.target]);
 
   await exchange.setWarehouse(warehouse.target);
+  await exchange.setFeeCollector(feeCollector.address);
+  await exchange.setOrderKeeper(orderKeeper.address, true);
   await exchange.registerAdapter(gmxV1Adapter.target);
   await exchange.registerAdapter(muxAdapter.target);
   await exchange.setStableToken(USDC, true);
@@ -146,10 +150,28 @@ const deploy = async (noAccount) => {
     );
   }
 
+  const checkBalance = async (account) => {
+    console.log(`
+non-stable:
+- ETH   : ${await ethers.provider.getBalance(account.target)}
+- WETH  : ${await account.getBalance(WETH)}
+- WBTC  : ${await account.getBalance(WBTC)}
+stable:
+- USDC.e: ${await account.getBalance(USDCe)}
+- USDT  : ${await account.getBalance(USDT)}
+- DAI   : ${await account.getBalance(
+      "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1"
+    )}
+- USDC  : ${await account.getBalance(USDC)}
+`);
+  };
+
   const faucet = async (token, tokenAmount) => {
     const abiCoder = new ethers.AbiCoder();
-
-    if (token == USDC) {
+    if (token == WETH) {
+      const weth = await ethers.getContractAt("IERC20", WETH);
+      await weth.connect(user).deposit({ value: tokenAmount });
+    } else if (token == USDC) {
       const storageSlot = 9n;
       const encoded = abiCoder.encode(
         ["address", "uint256"],
@@ -177,16 +199,10 @@ const deploy = async (noAccount) => {
   };
 
   const deposit = async (token, tokenAmount) => {
-    if (token == ETH || token == WETH) {
-      await account.connect(user).depositETH(tokenAmount, {
-        value: tokenAmount,
-      });
-    } else {
-      await faucet(token, tokenAmount);
-      const erc20 = await ethers.getContractAt("IERC20", token);
-      await erc20.connect(user).approve(account.target, tokenAmount);
-      await account.connect(user).deposit(token, tokenAmount);
-    }
+    await faucet(token, tokenAmount);
+    const erc20 = await ethers.getContractAt("IERC20", token);
+    await erc20.connect(user).approve(account.target, tokenAmount);
+    await account.connect(user).deposit(token, tokenAmount);
   };
 
   const increasePosition = async (
@@ -484,6 +500,7 @@ const deploy = async (noAccount) => {
     USDC,
     USDCe,
     USDT,
+    checkBalance,
     faucet,
     deposit,
     executeIncreasePosition,
