@@ -4,6 +4,7 @@ pragma solidity 0.8.7;
 import {IAdapter} from "../interfaces/IAdapter.sol";
 import {IExchange} from "../interfaces/IExchange.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
+import {BaseAdapter} from "./BaseAdapter.sol";
 
 interface IVault {
     struct Position {
@@ -176,7 +177,7 @@ interface IVaultPriceFeed {
     function setSecondaryPriceFeed(address _secondaryPriceFeed) external;
 }
 
-contract GmxV1Adapter is IAdapter {
+contract GmxV1Adapter is BaseAdapter {
     uint256 public constant BASIS_POINTS_DIVISOR = 10000;
 
     uint256 public constant PRICE_DECIMALS = 30;
@@ -193,12 +194,15 @@ contract GmxV1Adapter is IAdapter {
     address private immutable _vault;
     address private immutable _exchange;
 
+    address private immutable _this;
+
     constructor(
         address positionRouter,
         address router,
         address vault,
-        address exchange
-    ) {
+        address exchange,
+        address logger
+    ) BaseAdapter(logger) {
         require(positionRouter != address(0), "positionRouter: zero address");
         require(router != address(0), "router: zero address");
         require(vault != address(0), "vault: zero address");
@@ -208,6 +212,8 @@ contract GmxV1Adapter is IAdapter {
         _router = router;
         _vault = vault;
         _exchange = exchange;
+
+        _this = address(this);
     }
 
     function getMinExecutionFee() external view override returns (uint256) {
@@ -473,6 +479,16 @@ contract GmxV1Adapter is IAdapter {
         uint256 sizeUsd = (size * indexPrice) / (10 ** indexDecimal);
 
         _increase(collateral, index, collateralAmount, sizeUsd, isLong);
+
+        logIncreasePosition(
+            address(this),
+            _this,
+            collateral,
+            index,
+            collateralAmount,
+            size,
+            isLong
+        );
     }
 
     function decreasePosition(
@@ -495,6 +511,15 @@ contract GmxV1Adapter is IAdapter {
         }
 
         _decrease(collateral, index, 0, sizeUsd, isLong);
+
+        logDecreasePosition(
+            address(this),
+            _this,
+            collateral,
+            index,
+            size,
+            isLong
+        );
     }
 
     function increaseCollateral(
@@ -507,6 +532,14 @@ contract GmxV1Adapter is IAdapter {
         require(index != address(0), "index: zero address");
 
         _increase(collateral, index, collateralAmount, 0, isLong);
+
+        logIncreaseCollateral(
+            address(this),
+            _this,
+            collateral,
+            index,
+            collateralAmount
+        );
     }
 
     function decreaseCollateral(
@@ -531,6 +564,14 @@ contract GmxV1Adapter is IAdapter {
         }
 
         _decrease(collateral, index, collateralAmountUsd, 0, isLong);
+
+        logDecreaseCollateral(
+            address(this),
+            _this,
+            collateral,
+            index,
+            collateralAmount
+        );
     }
 
     function _increase(

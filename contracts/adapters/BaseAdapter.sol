@@ -1,9 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.7;
 
-import {ILogger} from "./interfaces/ILogger.sol";
+import {IAdapter} from "../interfaces/IAdapter.sol";
+import {ILogger} from "../interfaces/ILogger.sol";
 
-contract Logger is ILogger {
+abstract contract BaseAdapter is IAdapter {
+    address private immutable _logger;
+
+    constructor(address logger) {
+        _logger = logger;
+    }
+
     function logIncreasePosition(
         address account,
         address adapter,
@@ -12,8 +19,8 @@ contract Logger is ILogger {
         uint256 collateralAmount,
         uint256 size,
         bool isLong
-    ) external override {
-        emit PositionIncreased(
+    ) internal {
+        ILogger(_logger).logIncreasePosition(
             account,
             adapter,
             collateral,
@@ -31,8 +38,8 @@ contract Logger is ILogger {
         address index,
         uint256 size,
         bool isLong
-    ) external override {
-        emit PositionDecreased(
+    ) internal {
+        ILogger(_logger).logDecreasePosition(
             account,
             adapter,
             collateral,
@@ -48,8 +55,8 @@ contract Logger is ILogger {
         address collateral,
         address index,
         uint256 collateralAmount
-    ) external override {
-        emit CollateralIncreased(
+    ) internal {
+        ILogger(_logger).logIncreaseCollateral(
             account,
             adapter,
             collateral,
@@ -64,53 +71,13 @@ contract Logger is ILogger {
         address collateral,
         address index,
         uint256 collateralAmount
-    ) external override {
-        emit CollateralDecreased(
+    ) internal {
+        ILogger(_logger).logDecreaseCollateral(
             account,
             adapter,
             collateral,
             index,
             collateralAmount
         );
-    }
-
-    function logCreateLimitOrder(
-        address account,
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 size,
-        bool isLong,
-        uint256 executionFee,
-        uint256 triggerPrice,
-        uint256 acceptablePrice
-    ) external override {
-        emit LimitOrderCreated(
-            account,
-            collateral,
-            index,
-            collateralAmount,
-            size,
-            isLong,
-            executionFee,
-            triggerPrice,
-            acceptablePrice
-        );
-    }
-
-    function logCancelLimitOrder(
-        address account,
-        uint256 orderId,
-        uint256 executionFee
-    ) external override {
-        emit LimitOrderCanceled(account, orderId, executionFee);
-    }
-
-    function logExecuteLimitOrder(
-        address account,
-        uint256 orderId,
-        uint256 executionFee
-    ) external override {
-        emit LimitOrderExecuted(account, orderId, executionFee);
     }
 }

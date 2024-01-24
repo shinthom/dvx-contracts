@@ -315,22 +315,44 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         return IWarehouse(warehouse).executeLimitOrder(account, adapter, id);
     }
 
-    // function cancelLimitOrder(
-    //     address account,
-    //     uint256 id
-    // ) external override returns (address, uint256) {
-    //     return IWarehouse(warehouse).cancelLimitOrder(account, id);
-    // }
+    function createTriggerOrder(
+        address account,
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong,
+        uint256 size,
+        IWarehouse.TriggerOrderType orderType,
+        uint256 triggerPrice,
+        uint256 acceptablePrice,
+        uint256 executionFee
+    ) external override {
+        IWarehouse(warehouse).createTriggerOrder(
+            account,
+            adapter,
+            collateral,
+            index,
+            isLong,
+            size,
+            orderType,
+            triggerPrice,
+            acceptablePrice,
+            executionFee
+        );
+    }
 
-    // function executeLimitOrder(
-    //     address account,
-    //     uint256 id
-    // ) external payable override returns (address, uint256) {
-    //     return IWarehouse(warehouse).executeLimitOrder(account, id);
-    // }
+    function cancelTriggerOrder(
+        address account,
+        bytes32 positionKey,
+        uint256 orderId
+    ) external override {
+        IWarehouse(warehouse).cancelTriggerOrder(account, positionKey, orderId);
+    }
 
-    // function executeLimitOrder(address account, uint256 id) external {
-    //     IWarehouse.LimitOrder memory limitOrder = IWarehouse(warehouse)
-    //         .executeLimitOrder(account, id);
-    // }
+    function executeTriggerOrder(
+        bytes32 positionKey,
+        uint256 orderId
+    ) external override returns (IWarehouse.TriggerOrder memory) {
+        return IWarehouse(warehouse).executeTriggerOrder(positionKey, orderId);
+    }
 }

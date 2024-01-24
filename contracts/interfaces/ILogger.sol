@@ -9,9 +9,7 @@ interface ILogger {
         address index,
         uint256 collateralAmount,
         uint256 size,
-        bool isLong,
-        uint256 executionFee,
-        uint256 positionFee
+        bool isLong
     );
 
     event PositionDecreased(
@@ -20,8 +18,7 @@ interface ILogger {
         address collateral,
         address index,
         uint256 size,
-        bool isLong,
-        uint256 executionFee
+        bool isLong
     );
 
     event CollateralIncreased(
@@ -29,8 +26,7 @@ interface ILogger {
         address adapter,
         address collateral,
         address index,
-        uint256 collateralAmount,
-        uint256 executionFee
+        uint256 collateralAmount
     );
 
     event CollateralDecreased(
@@ -38,8 +34,7 @@ interface ILogger {
         address adapter,
         address collateral,
         address index,
-        uint256 collateralAmount,
-        uint256 executionFee
+        uint256 collateralAmount
     );
 
     event LimitOrderCreated(
@@ -73,9 +68,7 @@ interface ILogger {
         address index,
         uint256 collateralAmount,
         uint256 size,
-        bool isLong,
-        uint256 executionFee,
-        uint256 positionFee
+        bool isLong
     ) external;
 
     function logDecreasePosition(
@@ -84,8 +77,7 @@ interface ILogger {
         address collateral,
         address index,
         uint256 size,
-        bool isLong,
-        uint256 executionFee
+        bool isLong
     ) external;
 
     function logIncreaseCollateral(
@@ -93,8 +85,7 @@ interface ILogger {
         address adapter,
         address collateral,
         address index,
-        uint256 collateralAmount,
-        uint256 executionFee
+        uint256 collateralAmount
     ) external;
 
     function logDecreaseCollateral(
@@ -102,8 +93,7 @@ interface ILogger {
         address adapter,
         address collateral,
         address index,
-        uint256 collateralAmount,
-        uint256 executionFee
+        uint256 collateralAmount
     ) external;
 
     function logCreateLimitOrder(

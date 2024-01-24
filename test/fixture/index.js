@@ -50,6 +50,7 @@ let gmxV1Adapter;
 let muxAdapter;
 let quoter;
 let reader;
+let logger;
 
 let account;
 
@@ -117,15 +118,19 @@ const deploy = async (noAccount) => {
   warehouse = await ethers.getContractAt("Warehouse", warehouseProxy.target);
   await warehouse.initialize();
 
+  logger = await ethers.deployContract("Logger", []);
+
   gmxV1Adapter = await ethers.deployContract("GmxV1Adapter", [
     PositionRouter,
     Router,
     Vault,
     exchange.target,
+    logger.target,
   ]);
   muxAdapter = await ethers.deployContract("MuxAdapter", [
     OrderBook,
     LiquidityPool,
+    logger.target,
     0, // usdc.e
   ]);
   quoter = await ethers.deployContract("Quoter");

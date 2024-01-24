@@ -24,6 +24,7 @@ contract Account is IAccount {
     constructor(address _owner, address _exchange) {
         require(_owner != address(0), "owner: zero address");
         require(_exchange != address(0), "exchange: zero address");
+
         owner = _owner;
         exchange = _exchange;
     }
@@ -150,11 +151,9 @@ contract Account is IAccount {
         uint256 fees = positionFee + executionFee;
         require(collateralAmount >= fees, "amount: less than fees");
 
-        address feeCollector = IExchange(exchange).feeCollector();
-        IERC20(collateral).transfer(feeCollector, fees);
+        _collectFee(collateral, fees);
 
         collateralAmount -= fees;
-
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
                 "increasePosition(address,address,uint256,uint256,bool)",
@@ -166,21 +165,6 @@ contract Account is IAccount {
             )
         );
         require(success, string(data));
-
-        address logger = IExchange(exchange).logger();
-        if (logger != address(0)) {
-            ILogger(logger).logIncreasePosition(
-                address(this),
-                adapter,
-                collateral,
-                index,
-                collateralAmount,
-                size,
-                isLong,
-                executionFee,
-                positionFee
-            );
-        }
     }
 
     function decreasePosition(
@@ -191,6 +175,24 @@ contract Account is IAccount {
         uint256 size,
         uint256 executionFee
     ) external payable onlyOwner {
+        _decreasePosition(
+            adapter,
+            collateral,
+            index,
+            isLong,
+            size,
+            executionFee
+        );
+    }
+
+    function _decreasePosition(
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong,
+        uint256 size,
+        uint256 executionFee
+    ) private {
         // slither-disable-next-line controlled-delegatecall,low-level-calls
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
@@ -202,19 +204,6 @@ contract Account is IAccount {
             )
         );
         require(success, string(data));
-
-        address logger = IExchange(exchange).logger();
-        if (logger != address(0)) {
-            ILogger(logger).logDecreasePosition(
-                address(this),
-                adapter,
-                collateral,
-                index,
-                size,
-                isLong,
-                executionFee
-            );
-        }
     }
 
     function increaseCollateral(
@@ -240,8 +229,7 @@ contract Account is IAccount {
         );
         require(collateralAmount >= depositFee, "amount: less than fees");
 
-        address feeCollector = IExchange(exchange).feeCollector();
-        IERC20(collateral).transfer(feeCollector, depositFee);
+        _collectFee(collateral, depositFee);
 
         collateralAmount -= depositFee;
 
@@ -256,18 +244,6 @@ contract Account is IAccount {
             )
         );
         require(success, string(data));
-
-        address logger = IExchange(exchange).logger();
-        if (logger != address(0)) {
-            ILogger(logger).logIncreaseCollateral(
-                address(this),
-                adapter,
-                collateral,
-                index,
-                collateralAmount,
-                executionFee
-            );
-        }
     }
 
     function decreaseCollateral(
@@ -289,18 +265,6 @@ contract Account is IAccount {
             )
         );
         require(success, string(data));
-
-        address logger = IExchange(exchange).logger();
-        if (logger != address(0)) {
-            ILogger(logger).logDecreaseCollateral(
-                address(this),
-                adapter,
-                collateral,
-                index,
-                collateralAmount,
-                executionFee
-            );
-        }
     }
 
     function createLimitOrder(
@@ -319,12 +283,14 @@ contract Account is IAccount {
             "amount: exceed balance"
         );
 
-        address feeCollector = IExchange(exchange).feeCollector();
-        IERC20(collateral).transfer(feeCollector, executionFee);
-
-        collateralAmount -= executionFee;
-
         _lockedBalances[collateral] += collateralAmount;
+
+        if (executionFee > 0) {
+            address feeCollector = IExchange(exchange).feeCollector();
+            IERC20(collateral).transfer(feeCollector, executionFee);
+
+            collateralAmount -= executionFee;
+        }
 
         IExchange(exchange).createLimitOrder(
             collateral,
@@ -335,21 +301,6 @@ contract Account is IAccount {
             triggerPrice,
             acceptablePrice
         );
-
-        address logger = IExchange(exchange).logger();
-        if (logger != address(0)) {
-            ILogger(logger).logCreateLimitOrder(
-                address(this),
-                collateral,
-                index,
-                collateralAmount,
-                size,
-                isLong,
-                executionFee,
-                triggerPrice,
-                acceptablePrice
-            );
-        }
     }
 
     function cancelLimitOrder(
@@ -359,19 +310,12 @@ contract Account is IAccount {
         IWarehouse.LimitOrder memory limitOrder
             = IExchange(exchange).cancelLimitOrder(address(this), orderId); // prettier-ignore
 
-        address feeCollector = IExchange(exchange).feeCollector();
-        IERC20(limitOrder.collateral).transfer(feeCollector, executionFee);
+        if (executionFee > 0) {
+            address feeCollector = IExchange(exchange).feeCollector();
+            IERC20(limitOrder.collateral).transfer(feeCollector, executionFee);
+        }
 
         _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
-
-        address logger = IExchange(exchange).logger();
-        if (logger != address(0)) {
-            ILogger(logger).logCancelLimitOrder(
-                address(this),
-                orderId,
-                executionFee
-            );
-        }
     }
 
     function executeLimitOrder(
@@ -393,14 +337,63 @@ contract Account is IAccount {
             limitOrder.isLong,
             executionFee
         );
+    }
 
-        address logger = IExchange(exchange).logger();
-        if (logger != address(0)) {
-            ILogger(logger).logExecuteLimitOrder(
-                address(this),
-                orderId,
-                executionFee
-            );
-        }
+    function createTriggerOrder(
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong,
+        uint256 size,
+        IWarehouse.TriggerOrderType orderType,
+        uint256 triggerPrice,
+        uint256 acceptablePrice,
+        uint256 executionFee
+    ) external payable onlyOwner {
+        IExchange(exchange).createTriggerOrder(
+            address(this),
+            adapter,
+            collateral,
+            index,
+            isLong,
+            size,
+            orderType,
+            triggerPrice,
+            acceptablePrice,
+            executionFee
+        );
+    }
+
+    function cancelTriggerOrder(
+        bytes32 positionKey,
+        uint256 orderId
+    ) external onlyOwner {
+        IExchange(exchange).cancelTriggerOrder(
+            address(this),
+            positionKey,
+            orderId
+        );
+    }
+
+    function executeTriggerOrder(
+        bytes32 positionKey,
+        uint256 orderId
+    ) external payable {
+        IWarehouse.TriggerOrder memory triggerOrder = IExchange(exchange)
+            .executeTriggerOrder(positionKey, orderId);
+
+        _decreasePosition(
+            triggerOrder.adapter,
+            triggerOrder.collateral,
+            triggerOrder.index,
+            triggerOrder.isLong,
+            triggerOrder.size,
+            triggerOrder.executionFee
+        );
+    }
+
+    function _collectFee(address token, uint256 amount) private {
+        address feeCollector = IExchange(exchange).feeCollector();
+        IERC20(token).transfer(feeCollector, amount);
     }
 }

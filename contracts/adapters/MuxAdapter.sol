@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.7;
 
-import {IExchange} from "../interfaces/IExchange.sol";
 import {IAdapter} from "../interfaces/IAdapter.sol";
+import {IExchange} from "../interfaces/IExchange.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
+import {BaseAdapter} from "./BaseAdapter.sol";
 
 interface ILiquidityPool {
     enum ReferenceOracleType {
@@ -168,7 +169,7 @@ interface IChainlink {
     // );
 }
 
-contract MuxAdapter is IAdapter {
+contract MuxAdapter is BaseAdapter {
     uint256 public constant PRICE_DECIMALS = 18;
     uint256 public constant USD = 1 * (10 ** PRICE_DECIMALS);
 
@@ -178,17 +179,22 @@ contract MuxAdapter is IAdapter {
     address private immutable _liquidityPool;
     address private immutable _orderBook;
 
+    address private immutable _this;
+
     constructor(
         address orderBook,
         address liquidityPool,
+        address logger,
         uint8 defaultProfitTokenId
-    ) {
+    ) BaseAdapter(logger) {
         require(orderBook != address(0), "orderBook: zero address");
         require(liquidityPool != address(0), "liquidityPool: zero address");
 
         _orderBook = orderBook;
         _liquidityPool = liquidityPool;
         _defaultProfitTokenId = defaultProfitTokenId;
+
+        _this = address(this);
     }
 
     function _assembleSubAccountId(
@@ -459,6 +465,16 @@ contract MuxAdapter is IAdapter {
                 IOrderBook.PositionOrderExtra(0, 0, 0, 0)
             );
         }
+
+        logIncreasePosition(
+            address(this),
+            _this,
+            collateral,
+            index,
+            collateralAmount,
+            size,
+            isLong
+        );
     }
 
     function decreasePosition(
@@ -487,6 +503,15 @@ contract MuxAdapter is IAdapter {
             0,
             0x0,
             IOrderBook.PositionOrderExtra(0, 0, 0, 0)
+        );
+
+        logDecreasePosition(
+            address(this),
+            _this,
+            collateral,
+            index,
+            size,
+            isLong
         );
     }
 
@@ -521,6 +546,14 @@ contract MuxAdapter is IAdapter {
                 collateralAmount
             );
         }
+
+        logIncreaseCollateral(
+            address(this),
+            _this,
+            collateral,
+            index,
+            collateralAmount
+        );
     }
 
     function decreaseCollateral(
@@ -544,6 +577,14 @@ contract MuxAdapter is IAdapter {
             uint96(collateralAmount),
             _defaultProfitTokenId,
             false // isProfit
+        );
+
+        logDecreaseCollateral(
+            address(this),
+            _this,
+            collateral,
+            index,
+            collateralAmount
         );
     }
 }

@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.7;
 
-import {IERC20} from "./interfaces/IERC20.sol";
-import {IAccount} from "./interfaces/IAccount.sol";
 import {IAdapter} from "./interfaces/IAdapter.sol";
-import {IExchange} from "./interfaces/IExchange.sol";
 import {IWarehouse} from "./interfaces/IWarehouse.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -194,28 +191,13 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         TriggerOrderType orderType,
         uint256 triggerPrice, // 1e18
         uint256 acceptablePrice, // 1e18
-        uint256 adapterExecutionFee
+        uint256 executionFee
     ) external payable override onlyExchange {
-        require(
-            adapterExecutionFee == msg.value,
-            "adapterExecutionFee: not match"
-        );
-
         require(
             (isLong && triggerPrice >= acceptablePrice) ||
                 (!isLong && triggerPrice <= acceptablePrice),
             "triggerPrice: invalid"
         );
-
-        if (priceMinDeviation > 0) {
-            uint256 minDeviation = (triggerPrice * priceMinDeviation) /
-                BASIS_POINTS_DIVISOR;
-            require(
-                (isLong && triggerPrice - acceptablePrice <= minDeviation) ||
-                    (!isLong && acceptablePrice - triggerPrice <= minDeviation),
-                "acceptablePrice: out of deviation"
-            );
-        }
 
         IAdapter.Position memory position = IAdapter(adapter).getPosition(
             account,
@@ -245,7 +227,7 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
             orderType: orderType,
             triggerPrice: triggerPrice,
             acceptablePrice: acceptablePrice,
-            adapterExecutionFee: adapterExecutionFee,
+            executionFee: executionFee,
             createdAt: block.timestamp
         });
         _triggerOrders[positionKey].push(triggerOrder);
@@ -274,20 +256,13 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
 
         _triggerOrders[positionKey][id].state = TriggerOrderState.Canceled;
         emit TriggerOrderCanceled(triggerOrder.account, positionKey, id);
-
-        payable(account).transfer(triggerOrder.adapterExecutionFee);
     }
 
     function executeTriggerOrder(
         bytes32 positionKey,
         uint256 id
-    ) external payable onlyOrderKeeper {
-        require(
-            _triggerOrders[positionKey].length >= id + 1,
-            "id: out of range"
-        );
-
-        TriggerOrder memory triggerOrder = _triggerOrders[positionKey][id];
+    ) external override returns (TriggerOrder memory triggerOrder) {
+        triggerOrder = _triggerOrders[positionKey][id];
         require(
             triggerOrder.state == TriggerOrderState.Pending,
             "state: not pending"
@@ -307,16 +282,5 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
 
         _triggerOrders[positionKey][id].state = TriggerOrderState.Executed;
         emit TriggerOrderExecuted(triggerOrder.account, positionKey, id);
-
-        IExchange.MarketOrder memory marketOrder = IExchange.MarketOrder({
-            collateral: triggerOrder.collateral,
-            index: triggerOrder.index,
-            collateralAmount: 0,
-            size: triggerOrder.size,
-            isLong: triggerOrder.isLong
-        });
-        // IExchange(exchange).executeTriggerOrder{
-        //     value: triggerOrder.adapterExecutionFee
-        // }(triggerOrder.account, triggerOrder.adapter, marketOrder);
     }
 }

@@ -44,7 +44,7 @@ interface IWarehouse {
         TriggerOrderType orderType;
         uint256 triggerPrice;
         uint256 acceptablePrice;
-        uint256 adapterExecutionFee;
+        uint256 executionFee;
         uint256 createdAt;
     }
 
@@ -155,4 +155,9 @@ interface IWarehouse {
         bytes32 positionKey,
         uint256 id
     ) external;
+
+    function executeTriggerOrder(
+        bytes32 positionKey,
+        uint256 id
+    ) external returns (IWarehouse.TriggerOrder memory triggerOrder);
 }

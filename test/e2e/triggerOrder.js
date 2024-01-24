@@ -14,12 +14,11 @@ describe("triggerOrder", () => {
     it("should execute a trigger order", async () => {
       const {
         user,
-        orderKeeper,
         account,
-        exchange,
         warehouse,
         gmxV1Adapter,
         WETH,
+        checkBalance,
         deposit,
         executeIncreasePosition,
         executeDecreasePosition,
@@ -32,31 +31,21 @@ describe("triggerOrder", () => {
       const size = ethers.parseEther("10");
       const isLong = true;
 
-      const adapterExecutionFee = await gmxV1Adapter.getMinExecutionFee();
+      await deposit(WETH, collateralAmount);
+      await checkBalance(account);
 
-      await deposit(collateral, collateralAmount);
-      const marketOrder = await gmxV1Adapter.makeMarketOrder(
-        collateral,
-        index,
-        collateralAmount,
-        size,
-        isLong
-      );
-      await exchange
+      const executionFee = await gmxV1Adapter.getMinExecutionFee();
+      await account
         .connect(user)
-        .executeMarketOrder(
-          account.target,
-          orderType.increasePosition,
+        .increasePosition(
           gmxV1Adapter.target,
-          marketOrder.collateral,
-          marketOrder.index,
-          marketOrder.collateralAmount,
-          marketOrder.size,
-          marketOrder.isLong,
-          adapterExecutionFee,
-          {
-            value: adapterExecutionFee,
-          }
+          collateral,
+          index,
+          collateralAmount,
+          size,
+          isLong,
+          0,
+          { value: executionFee }
         );
       await executeIncreasePosition(account.target);
       console.log(
@@ -67,47 +56,26 @@ describe("triggerOrder", () => {
           isLong
         )
       );
+      await checkBalance(account);
 
-      const triggerOrderType = { takeProfit: 0, stopLoss: 1 };
-      var triggerPrice = ethers.parseUnits("2000", 18);
-      var acceptablePrice = ethers.parseUnits("2000", 18); // calculated by slippage tolerance
       var price = ethers.parseUnits("2000", 30);
       await setPrice(gmxV1Adapter, WETH, price, price, false);
 
-      const executionFee = await exchange.minExecutionFee();
+      var triggerPrice = ethers.parseUnits("2000", 18);
+      var acceptablePrice = ethers.parseUnits("2000", 18); // calculated by slippage tolerance
 
-      await exchange
+      await account
         .connect(user)
         .createTriggerOrder(
-          account.target,
           gmxV1Adapter.target,
           collateral,
           index,
           isLong,
           size,
-          triggerOrderType.takeProfit,
+          0,
           triggerPrice,
           acceptablePrice,
-          executionFee,
-          adapterExecutionFee,
-          { value: executionFee + adapterExecutionFee }
-        );
-
-      await exchange
-        .connect(user)
-        .createTriggerOrder(
-          account.target,
-          gmxV1Adapter.target,
-          collateral,
-          index,
-          isLong,
-          size,
-          triggerOrderType.takeProfit,
-          triggerPrice,
-          acceptablePrice,
-          executionFee,
-          adapterExecutionFee,
-          { value: executionFee + adapterExecutionFee }
+          0
         );
 
       const positionKey = await warehouse.getPositionKey(
@@ -117,12 +85,28 @@ describe("triggerOrder", () => {
         index,
         isLong
       );
-      await exchange
-        .connect(user)
-        .cancelTriggerOrder(account.target, positionKey, 0);
+      console.log(await warehouse.getTriggerOrders(positionKey));
 
-      await warehouse.setOrderKeeper(orderKeeper.address, true);
-      await warehouse.connect(orderKeeper).executeTriggerOrder(positionKey, 1);
+      await account.connect(user).cancelTriggerOrder(positionKey, 0);
+      console.log(await warehouse.getTriggerOrders(positionKey));
+
+      await account
+        .connect(user)
+        .createTriggerOrder(
+          gmxV1Adapter.target,
+          collateral,
+          index,
+          isLong,
+          size,
+          0,
+          triggerPrice,
+          acceptablePrice,
+          0
+        );
+
+      await account.executeTriggerOrder(positionKey, 1, {
+        value: executionFee,
+      });
       await executeDecreasePosition(account.target);
       console.log(
         await gmxV1Adapter.getPosition(
@@ -132,129 +116,106 @@ describe("triggerOrder", () => {
           isLong
         )
       );
+      await checkBalance(account);
     });
+  });
 
-    describe("mux", () => {
-      it("should execute a trigger order", async () => {
-        const {
-          user,
-          account,
-          exchange,
-          warehouse,
-          muxAdapter,
-          WETH,
-          deposit,
-          fillPositionOrder,
-          setPrice,
-        } = await loadFixture(deploy);
+  describe("mux", () => {
+    it("should execute a trigger order", async () => {
+      const {
+        user,
+        account,
+        warehouse,
+        muxAdapter,
+        WETH,
+        checkBalance,
+        deposit,
+        fillPositionOrder,
+        setPrice,
+      } = await loadFixture(deploy);
 
-        const collateral = WETH;
-        const index = WETH;
-        const collateralAmount = ethers.parseEther("1");
-        const size = ethers.parseEther("10");
-        const isLong = true;
+      const collateral = WETH;
+      const index = WETH;
+      const collateralAmount = ethers.parseEther("1");
+      const size = ethers.parseEther("10");
+      const isLong = true;
 
-        const adapterExecutionFee = await muxAdapter.getMinExecutionFee();
-        await deposit(collateral, collateralAmount);
-        const marketOrder = await muxAdapter.makeMarketOrder(
+      await deposit(WETH, collateralAmount);
+      await checkBalance(account);
+
+      const executionFee = await muxAdapter.getMinExecutionFee();
+      await account
+        .connect(user)
+        .increasePosition(
+          muxAdapter.target,
           collateral,
           index,
           collateralAmount,
           size,
-          isLong
+          isLong,
+          0,
+          { value: executionFee }
         );
-        await exchange
-          .connect(user)
-          .executeMarketOrder(
-            account.target,
-            orderType.increasePosition,
-            muxAdapter.target,
-            marketOrder.collateral,
-            marketOrder.index,
-            marketOrder.collateralAmount,
-            marketOrder.size,
-            marketOrder.isLong,
-            adapterExecutionFee,
-            {
-              value: adapterExecutionFee,
-            }
-          );
-        await fillPositionOrder();
-        console.log(
-          await muxAdapter.getPosition(
-            account.target,
-            collateral,
-            index,
-            isLong
-          )
-        );
+      await fillPositionOrder();
+      console.log(
+        await muxAdapter.getPosition(account.target, collateral, index, isLong)
+      );
+      await checkBalance(account);
 
-        const triggerOrderType = { takeProfit: 0, stopLoss: 1 };
-        var triggerPrice = ethers.parseUnits("2000", 18);
-        var acceptablePrice = ethers.parseUnits("2000", 18); // calculated by slippage tolerance
-        var price = ethers.parseUnits("2000", 8);
-        await setPrice(muxAdapter, WETH, price, price, false);
+      var price = ethers.parseUnits("2000", 8);
+      await setPrice(muxAdapter, WETH, price, price, false);
 
-        const executionFee = await exchange.minExecutionFee();
+      var triggerPrice = ethers.parseUnits("2000", 18);
+      var acceptablePrice = ethers.parseUnits("2000", 18); // calculated by slippage tolerance
 
-        await exchange
-          .connect(user)
-          .createTriggerOrder(
-            account.target,
-            muxAdapter.target,
-            collateral,
-            index,
-            isLong,
-            size,
-            triggerOrderType.takeProfit,
-            triggerPrice,
-            acceptablePrice,
-            executionFee,
-            adapterExecutionFee,
-            { value: executionFee + adapterExecutionFee }
-          );
-        await exchange
-          .connect(user)
-          .createTriggerOrder(
-            account.target,
-            muxAdapter.target,
-            collateral,
-            index,
-            isLong,
-            size,
-            triggerOrderType.takeProfit,
-            triggerPrice,
-            acceptablePrice,
-            executionFee,
-            adapterExecutionFee,
-            { value: executionFee + adapterExecutionFee }
-          );
-
-        const positionKey = await warehouse.getPositionKey(
-          account.target,
+      await account
+        .connect(user)
+        .createTriggerOrder(
           muxAdapter.target,
           collateral,
           index,
-          isLong
+          isLong,
+          size,
+          0,
+          triggerPrice,
+          acceptablePrice,
+          0
         );
-        await exchange
-          .connect(user)
-          .cancelTriggerOrder(account.target, positionKey, 0);
 
-        await warehouse.setOrderKeeper(orderKeeper.address, true);
-        await warehouse
-          .connect(orderKeeper)
-          .executeTriggerOrder(positionKey, 1);
-        await fillPositionOrder();
-        console.log(
-          await muxAdapter.getPosition(
-            account.target,
-            collateral,
-            index,
-            isLong
-          )
+      const positionKey = await warehouse.getPositionKey(
+        account.target,
+        muxAdapter.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(await warehouse.getTriggerOrders(positionKey));
+
+      await account.connect(user).cancelTriggerOrder(positionKey, 0);
+      console.log(await warehouse.getTriggerOrders(positionKey));
+
+      await account
+        .connect(user)
+        .createTriggerOrder(
+          muxAdapter.target,
+          collateral,
+          index,
+          isLong,
+          size,
+          0,
+          triggerPrice,
+          acceptablePrice,
+          0
         );
+
+      await account.executeTriggerOrder(positionKey, 1, {
+        value: executionFee,
       });
+      await fillPositionOrder();
+      console.log(
+        await muxAdapter.getPosition(account.target, collateral, index, isLong)
+      );
+      await checkBalance(account);
     });
   });
 });

@@ -122,15 +122,27 @@ interface IExchange {
         uint256 id
     ) external payable returns (IWarehouse.LimitOrder memory limitOrder);
 
-    // function executeTriggerOrder(
-    //     address account,
-    //     address adapter,
-    //     MarketOrder memory marketOrder
-    // ) external payable;
+    function createTriggerOrder(
+        address account,
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong,
+        uint256 size,
+        IWarehouse.TriggerOrderType orderType,
+        uint256 triggerPrice,
+        uint256 acceptablePrice,
+        uint256 executionFee
+    ) external;
 
-    // function executeLimitOrder(
-    //     address account,
-    //     address adapter,
-    //     MarketOrder memory marketOrder
-    // ) external payable;
+    function cancelTriggerOrder(
+        address account,
+        bytes32 positionKey,
+        uint256 id
+    ) external;
+
+    function executeTriggerOrder(
+        bytes32 positionKey,
+        uint256 id
+    ) external returns (IWarehouse.TriggerOrder memory triggerOrder);
 }
