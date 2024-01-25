@@ -37,30 +37,6 @@ interface ILogger {
         uint256 collateralAmount
     );
 
-    event LimitOrderCreated(
-        address indexed account,
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 size,
-        bool isLong,
-        uint256 executionFee,
-        uint256 triggerPrice,
-        uint256 acceptablePrice
-    );
-
-    event LimitOrderCanceled(
-        address indexed account,
-        uint256 orderId,
-        uint256 executionFee
-    );
-
-    event LimitOrderExecuted(
-        address indexed account,
-        uint256 orderId,
-        uint256 executionFee
-    );
-
     function logIncreasePosition(
         address account,
         address adapter,
@@ -94,29 +70,5 @@ interface ILogger {
         address collateral,
         address index,
         uint256 collateralAmount
-    ) external;
-
-    function logCreateLimitOrder(
-        address account,
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 size,
-        bool isLong,
-        uint256 executionFee,
-        uint256 triggerPrice,
-        uint256 acceptablePrice
-    ) external;
-
-    function logCancelLimitOrder(
-        address account,
-        uint256 orderId,
-        uint256 executionFee
-    ) external;
-
-    function logExecuteLimitOrder(
-        address account,
-        uint256 orderId,
-        uint256 executionFee
     ) external;
 }

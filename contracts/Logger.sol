@@ -73,44 +73,4 @@ contract Logger is ILogger {
             collateralAmount
         );
     }
-
-    function logCreateLimitOrder(
-        address account,
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 size,
-        bool isLong,
-        uint256 executionFee,
-        uint256 triggerPrice,
-        uint256 acceptablePrice
-    ) external override {
-        emit LimitOrderCreated(
-            account,
-            collateral,
-            index,
-            collateralAmount,
-            size,
-            isLong,
-            executionFee,
-            triggerPrice,
-            acceptablePrice
-        );
-    }
-
-    function logCancelLimitOrder(
-        address account,
-        uint256 orderId,
-        uint256 executionFee
-    ) external override {
-        emit LimitOrderCanceled(account, orderId, executionFee);
-    }
-
-    function logExecuteLimitOrder(
-        address account,
-        uint256 orderId,
-        uint256 executionFee
-    ) external override {
-        emit LimitOrderExecuted(account, orderId, executionFee);
-    }
 }
