@@ -2,7 +2,6 @@
 pragma solidity 0.8.7;
 
 import {IAccount} from "./interfaces/IAccount.sol";
-import {ILogger} from "./interfaces/ILogger.sol";
 import {IExchange} from "./interfaces/IExchange.sol";
 import {IWarehouse} from "./interfaces/IWarehouse.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
@@ -101,7 +100,6 @@ contract Account is IAccount {
         emit Swapped(address(this), tokenIn, tokenOut, amountIn, amountOut);
     }
 
-    // todo: reentrancy guard
     function increasePosition(
         address adapter,
         address collateral,
@@ -378,7 +376,7 @@ contract Account is IAccount {
     function executeTriggerOrder(
         bytes32 positionKey,
         uint256 orderId
-    ) external payable {
+    ) external payable onlyOrderKeeper {
         IWarehouse.TriggerOrder memory triggerOrder = IExchange(exchange)
             .executeTriggerOrder(positionKey, orderId);
 

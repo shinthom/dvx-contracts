@@ -217,42 +217,52 @@ stable:
     collateralAmount,
     size,
     isLong,
-    adapterExecutionFee
+    executionFee
   ) => {
-    const orderType = {
-      increasePosition: 0,
-      increaseCollateral: 1,
-      decreasePosition: 2,
-      decreaseCollateral: 3,
-    };
-
-    const marketOrder = await adapter.makeMarketOrder(
-      collateral,
-      index,
-      collateralAmount,
-      size,
-      isLong
-    );
-
-    await exchange
+    const adapterFee = await adapter.getMinExecutionFee();
+    await account
       .connect(user)
-      .executeMarketOrder(
-        account.target,
-        orderType.increasePosition,
-        adapter.target,
-        marketOrder.collateral,
-        marketOrder.index,
-        marketOrder.collateralAmount,
-        marketOrder.size,
-        marketOrder.isLong,
-        adapterExecutionFee,
-        {
-          value: adapterExecutionFee,
-        }
+      .increasePosition(
+        gmxV1Adapter.target,
+        collateral,
+        index,
+        collateralAmount,
+        size,
+        isLong,
+        0,
+        { value: adapterFee }
       );
 
     if (adapter.target == gmxV1Adapter.target) {
       await executeIncreasePosition(account.target);
+    } else if (adapter.target == muxAdapter.target) {
+      await fillPositionOrder();
+    }
+  };
+
+  const decreasePosition = async (
+    adapter,
+    collateral,
+    index,
+    isLong,
+    size,
+    executionFee
+  ) => {
+    const adapterFee = await adapter.getMinExecutionFee();
+    await account
+      .connect(user)
+      .decreasePosition(
+        adapter.target,
+        collateral,
+        index,
+        isLong,
+        size,
+        executionFee,
+        { value: adapterFee }
+      );
+
+    if (adapter.target == gmxV1Adapter.target) {
+      await executeDecreasePosition(account.target);
     } else if (adapter.target == muxAdapter.target) {
       await fillPositionOrder();
     }
@@ -514,6 +524,7 @@ stable:
     fillWithdrawalOrder,
     setPrice,
     increasePosition,
+    decreasePosition,
     createLimitOrder,
     createTriggerOrder,
   };

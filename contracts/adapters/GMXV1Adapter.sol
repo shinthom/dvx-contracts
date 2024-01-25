@@ -184,10 +184,6 @@ contract GmxV1Adapter is BaseAdapter {
     uint256 public constant USD = 1 * (10 ** PRICE_DECIMALS);
 
     address private constant _weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
-    // address private constant _defaultStableToken =
-    //     0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8; // usdc.e
-    address private constant _defaultStableToken =
-        0xaf88d065e77c8cC2239327C5EDb3A432268e5831; // usdc
 
     address private immutable _positionRouter;
     address private immutable _router;
@@ -426,27 +422,6 @@ contract GmxV1Adapter is BaseAdapter {
         override
         returns (IExchange.MarketOrder memory marketOrder)
     {
-        // address[] memory path;
-        // if (isLong) {
-        //     if (collateral == index) {
-        //         path = new address[](1);
-        //         path[0] = collateral;
-        //     } else {
-        //         path = new address[](2);
-        //         path[0] = collateral;
-        //         path[1] = index;
-        //     }
-        // } else {
-        //     if (IExchange(_exchange).isStableToken(collateral)) {
-        //         path = new address[](1);
-        //         path[0] = collateral;
-        //     } else {
-        //         path = new address[](2);
-        //         path[0] = collateral;
-        //         path[1] = _defaultStableToken;
-        //     }
-        // }
-
         uint8 indexDecimal = IERC20(index).decimals();
         uint256 indexPrice = getPrice(index, isLong);
 
@@ -598,6 +573,7 @@ contract GmxV1Adapter is BaseAdapter {
                 = IExchange(_exchange).defaultStableToken(); // prettier-ignore
 
             IERC20(collateral).approve(_exchange, collateralAmount);
+
             uint256 amountOut = IExchange(_exchange).swap(
                 collateral,
                 defaultStableToken,

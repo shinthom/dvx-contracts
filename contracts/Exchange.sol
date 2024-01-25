@@ -264,7 +264,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
                 tokenIn: tokenIn,
                 tokenOut: tokenOut,
                 fee: 3000,
-                recipient: address(this),
+                recipient: msg.sender,
                 deadline: block.timestamp,
                 amountIn: amountIn,
                 amountOutMinimum: 0,

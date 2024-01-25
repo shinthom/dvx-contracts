@@ -16,17 +16,11 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
     mapping(address => mapping(address => uint256)) public override lockedBalances; // prettier-ignore
 
     address public exchange;
-    mapping(address => bool) public isOrderKeeper;
 
     uint256 public priceMinDeviation;
 
     modifier onlyExchange() {
         require(msg.sender == exchange, "msg.sender: not exchange");
-        _;
-    }
-
-    modifier onlyOrderKeeper() {
-        require(isOrderKeeper[msg.sender], "msg.sender: not orderKeeper");
         _;
     }
 
@@ -44,16 +38,6 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
 
         exchange = _exchange;
         emit ExchangeSet(_exchange);
-    }
-
-    function setOrderKeeper(
-        address orderKeeper,
-        bool isActive
-    ) external onlyOwner {
-        require(orderKeeper != address(0), "exchange: zero address");
-
-        isOrderKeeper[orderKeeper] = isActive;
-        emit OrderKeeperSet(orderKeeper, isActive);
     }
 
     function setPriceMinDeviation(uint256 deviation) external onlyOwner {
@@ -261,7 +245,12 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
     function executeTriggerOrder(
         bytes32 positionKey,
         uint256 id
-    ) external override returns (TriggerOrder memory triggerOrder) {
+    )
+        external
+        override
+        onlyExchange
+        returns (TriggerOrder memory triggerOrder)
+    {
         triggerOrder = _triggerOrders[positionKey][id];
         require(
             triggerOrder.state == TriggerOrderState.Pending,
