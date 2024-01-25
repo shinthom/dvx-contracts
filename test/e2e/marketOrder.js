@@ -73,7 +73,7 @@ describe("marketOrder", () => {
           isLong,
           collateral,
           collateralAmount,
-          executionFee,
+          0,
           {
             value: executionFee,
           }
@@ -97,7 +97,7 @@ describe("marketOrder", () => {
           index,
           isLong,
           collateralAmount,
-          executionFee,
+          0,
           {
             value: executionFee,
           }
@@ -121,7 +121,7 @@ describe("marketOrder", () => {
           index,
           isLong,
           size,
-          executionFee,
+          0,
           {
             value: executionFee,
           }
@@ -197,7 +197,7 @@ describe("marketOrder", () => {
           isLong,
           collateral,
           collateralAmount,
-          executionFee,
+          0,
           {
             value: executionFee,
           }
@@ -215,7 +215,7 @@ describe("marketOrder", () => {
           index,
           isLong,
           collateralAmount,
-          executionFee,
+          0,
           {
             value: executionFee,
           }
@@ -234,7 +234,7 @@ describe("marketOrder", () => {
           index,
           isLong,
           size,
-          executionFee,
+          0,
           { value: executionFee }
         );
       await fillPositionOrder();
