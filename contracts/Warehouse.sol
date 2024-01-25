@@ -13,7 +13,6 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
 
     mapping(bytes32 => TriggerOrder[]) private _triggerOrders;
     mapping(address => LimitOrder[]) private _limitOrders;
-    mapping(address => mapping(address => uint256)) public override lockedBalances; // prettier-ignore
 
     address public exchange;
 

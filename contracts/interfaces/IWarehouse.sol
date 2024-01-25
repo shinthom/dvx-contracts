@@ -92,11 +92,6 @@ interface IWarehouse {
         bool isLong
     ) external view returns (bytes32);
 
-    function lockedBalances(
-        address account,
-        address token
-    ) external view returns (uint256);
-
     function getTriggerOrders(
         bytes32 positionKey
     ) external view returns (TriggerOrder[] memory);

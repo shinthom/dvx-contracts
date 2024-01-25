@@ -57,11 +57,6 @@ interface IExchange {
 
     function defaultStableToken() external view returns (address);
 
-    function lockedBalances(
-        address account,
-        address token
-    ) external view returns (uint256);
-
     function logger() external returns (address);
 
     function warehouse() external returns (address);

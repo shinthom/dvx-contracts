@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.7;
 
-import {IAccount, Account} from "./Account.sol";
+import {Account, IAccount} from "./Account.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
 import {IAdapter} from "./interfaces/IAdapter.sol";
 import {IExchange} from "./interfaces/IExchange.sol";
@@ -167,16 +167,6 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     function setReferralTier(address account, uint8 tierId) external onlyOwner {
         referralTiers[account] = tierId;
         emit ReferralTierSet(account, tierId);
-    }
-
-    function lockedBalances(
-        address account,
-        address token
-    ) external view virtual override returns (uint256) {
-        if (warehouse == address(0)) {
-            return 0;
-        }
-        return IWarehouse(warehouse).lockedBalances(account, token);
     }
 
     function getPositionFee(

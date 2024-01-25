@@ -216,8 +216,7 @@ stable:
     index,
     collateralAmount,
     size,
-    isLong,
-    executionFee
+    isLong
   ) => {
     const adapterFee = await adapter.getMinExecutionFee();
     await account
@@ -292,6 +291,22 @@ stable:
       );
   };
 
+  const executeLimitOrder = async (orderId, adapter, executionFee) => {
+    const adapterExecutionFee = await adapter.getMinExecutionFee();
+
+    await account
+      .connect(orderKeeper)
+      .executeLimitOrder(orderId, adapter.target, executionFee, {
+        value: adapterExecutionFee,
+      });
+
+    if (adapter.target == gmxV1Adapter.target) {
+      await executeIncreasePosition(account.target);
+    } else if (adapter.target == muxAdapter.target) {
+      await fillPositionOrder();
+    }
+  };
+
   const createTriggerOrder = async (
     adapter,
     collateral,
@@ -300,14 +315,11 @@ stable:
     size,
     triggerOrderType,
     triggerPrice,
-    acceptablePrice,
-    executionFee,
-    adapterExecutionFee
+    acceptablePrice
   ) => {
-    await exchange
+    await account
       .connect(user)
       .createTriggerOrder(
-        account.target,
         adapter.target,
         collateral,
         index,
@@ -316,10 +328,32 @@ stable:
         triggerOrderType,
         triggerPrice,
         acceptablePrice,
-        executionFee,
-        adapterExecutionFee,
-        { value: executionFee + adapterExecutionFee }
+        0
       );
+  };
+
+  const executeTriggerOrder = async (positionKey, orderId) => {
+    const triggerOrder = await warehouse.getTriggerOrder(positionKey, orderId);
+    console.log(triggerOrder);
+
+    const adapter = await ethers.getContractAt(
+      "IAdapter",
+      triggerOrder.adapter
+    );
+    const adapterExecutionFee = await adapter.getMinExecutionFee();
+    console.log(adapterExecutionFee);
+
+    await account
+      .connect(orderKeeper)
+      .executeTriggerOrder(positionKey, orderId, {
+        value: adapterExecutionFee,
+      });
+
+    if (adapter.target == gmxV1Adapter.target) {
+      await executeDecreasePosition(account.target);
+    } else if (adapter.target == muxAdapter.target) {
+      await fillPositionOrder();
+    }
   };
 
   const executeIncreasePosition = async (account) => {
@@ -444,6 +478,26 @@ stable:
     }
   };
 
+  const setDummyPrice = async () => {
+    var ethPrice = ethers.parseUnits("2000", 30);
+    var btcPrice = ethers.parseUnits("40000", 30);
+    var usd = ethers.parseUnits("1", 30);
+    await setPrice(gmxV1Adapter, WETH, ethPrice, ethPrice, false);
+    await setPrice(gmxV1Adapter, WBTC, btcPrice, btcPrice, true);
+    await setPrice(gmxV1Adapter, USDT, usd, usd, true);
+    await setPrice(gmxV1Adapter, USDC, usd, usd, true);
+    await setPrice(gmxV1Adapter, USDCe, usd, usd, true);
+
+    var ethPrice = ethers.parseUnits("2000", 8);
+    var btcPrice = ethers.parseUnits("40000", 8);
+    var usd = ethers.parseUnits("1", 8);
+    await setPrice(muxAdapter, WETH, ethPrice, ethPrice, false);
+    await setPrice(muxAdapter, WBTC, btcPrice, btcPrice, true);
+    await setPrice(muxAdapter, USDT, usd, usd, true);
+    await setPrice(muxAdapter, USDC, usd, usd, true);
+    await setPrice(muxAdapter, USDCe, usd, usd, true);
+  };
+
   const increaseTime = async (seconds) => {
     await hre.network.provider.request({
       method: "evm_increaseTime",
@@ -520,10 +574,13 @@ stable:
     fillPositionOrder,
     fillWithdrawalOrder,
     setPrice,
+    setDummyPrice,
     increasePosition,
     decreasePosition,
     createLimitOrder,
+    executeLimitOrder,
     createTriggerOrder,
+    executeTriggerOrder,
   };
 };
 
