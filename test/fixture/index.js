@@ -276,23 +276,19 @@ stable:
     isLong,
     triggerPrice,
     acceptablePrice,
-    executionFee,
-    adapterExecutionFee
+    executionFee
   ) => {
-    await exchange
+    await account
       .connect(user)
       .createLimitOrder(
-        account.target,
         collateral,
         index,
         collateralAmount,
         size,
         isLong,
-        triggerPrice,
-        acceptablePrice,
         executionFee,
-        adapterExecutionFee,
-        { value: executionFee + adapterExecutionFee }
+        triggerPrice,
+        acceptablePrice
       );
   };
 

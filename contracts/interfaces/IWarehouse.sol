@@ -20,7 +20,7 @@ interface IWarehouse {
     }
 
     struct LimitOrder {
-        uint256 id;
+        uint256 orderId;
         LimitOrderState state;
         address collateral;
         address index;
@@ -33,7 +33,7 @@ interface IWarehouse {
     }
 
     struct TriggerOrder {
-        uint256 id;
+        uint256 orderId;
         TriggerOrderState state;
         address account;
         address adapter;

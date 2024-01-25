@@ -12,6 +12,7 @@ async function main() {
     warehouse,
     reader,
     quoter,
+    logger,
     ETH,
     WETH,
     WBTC,
@@ -20,24 +21,25 @@ async function main() {
     createLimitOrder,
   } = await deploy(noAccount);
   console.log(`
-- user     : ${user.address}
-- gmxV1    : ${gmxV1Adapter.target}
-- mux      : ${muxAdapter.target}
-- exchange : ${exchange.target}
-- warehouse: ${warehouse.target}
-- reader   : ${reader.target}
-- quoter   : ${quoter.target}
-- account  : ${noAccount ? "null" : account.target}
+- user        : ${user.address}
+- gmxV1Adapter: ${gmxV1Adapter.target}
+- muxAdapter  : ${muxAdapter.target}
+- exchange    : ${exchange.target}
+- warehouse   : ${warehouse.target}
+- reader      : ${reader.target}
+- quoter      : ${quoter.target}
+- logger      : ${logger.target}
+- account     : ${noAccount ? "null" : account.target}
   `);
 
-  const ethAmount = ethers.parseEther("100");
+  const wethAmount = ethers.parseEther("100");
   const wbtcAmount = ethers.parseUnits("100", 8);
   const usdcAmount = ethers.parseUnits("1000000", 6);
 
-  await deposit(ETH, ethAmount);
+  await deposit(WETH, wethAmount);
   await deposit(WBTC, wbtcAmount);
   await deposit(USDC, usdcAmount);
-  console.log("-  eth: " + (await account.getBalance(ethers.ZeroAddress)));
+  console.log("- weth: " + (await account.getBalance(WETH)));
   console.log("- wbtc: " + (await account.getBalance(WBTC)));
   console.log("- usdc: " + (await account.getBalance(USDC)));
 

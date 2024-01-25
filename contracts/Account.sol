@@ -308,12 +308,12 @@ contract Account is IAccount {
         IWarehouse.LimitOrder memory limitOrder
             = IExchange(exchange).cancelLimitOrder(address(this), orderId); // prettier-ignore
 
+        _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
+
         if (executionFee > 0) {
             address feeCollector = IExchange(exchange).feeCollector();
             IERC20(limitOrder.collateral).transfer(feeCollector, executionFee);
         }
-
-        _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
     }
 
     function executeLimitOrder(

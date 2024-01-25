@@ -8,7 +8,6 @@ describe("limitOrder", () => {
       user,
       orderKeeper,
       account,
-      exchange,
       warehouse,
       gmxV1Adapter,
       muxAdapter,
@@ -35,36 +34,34 @@ describe("limitOrder", () => {
     await deposit(collateral, collateralAmount);
     await checkBalance(account);
 
-    var executionFee = 0;
-    await account
-      .connect(user)
-      .createLimitOrder(
-        collateral,
-        index,
-        collateralAmount,
-        size,
-        isLong,
-        executionFee,
-        triggerPrice,
-        acceptablePrice
-      );
+    await account.connect(user).createLimitOrder(
+      collateral,
+      index,
+      collateralAmount,
+      size,
+      isLong,
+      0, // execution fee
+      triggerPrice,
+      acceptablePrice
+    );
     console.log(await warehouse.getLimitOrders(account.target));
 
-    await account.connect(user).cancelLimitOrder(0, executionFee);
-    console.log(await warehouse.getLimitOrders(account.target));
+    const limitOrder = await warehouse.getLimitOrder(account.target, 0);
+    await account.connect(user).cancelLimitOrder(
+      limitOrder.orderId,
+      0 // execution fee
+    );
 
-    await account
-      .connect(user)
-      .createLimitOrder(
-        collateral,
-        index,
-        collateralAmount,
-        size,
-        isLong,
-        executionFee,
-        triggerPrice,
-        acceptablePrice
-      );
+    await account.connect(user).createLimitOrder(
+      collateral,
+      index,
+      collateralAmount,
+      size,
+      isLong,
+      0, // execution fee
+      triggerPrice,
+      acceptablePrice
+    );
 
     var executionFee = await gmxV1Adapter.getMinExecutionFee();
     await account

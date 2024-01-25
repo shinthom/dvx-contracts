@@ -71,9 +71,9 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
 
     function getTriggerOrder(
         bytes32 positionKey,
-        uint256 id
+        uint256 orderId
     ) public view override returns (TriggerOrder memory) {
-        return _triggerOrders[positionKey][id];
+        return _triggerOrders[positionKey][orderId];
     }
 
     function getLimitOrders(
@@ -84,9 +84,9 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
 
     function getLimitOrder(
         address account,
-        uint256 id
+        uint256 orderId
     ) public view override returns (LimitOrder memory) {
-        return _limitOrders[account][id];
+        return _limitOrders[account][orderId];
     }
 
     function createLimitOrder(
@@ -100,7 +100,7 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         uint256 acceptablePrice
     ) external payable override onlyExchange {
         LimitOrder memory limitOrder = LimitOrder({
-            id: _limitOrders[account].length,
+            orderId: _limitOrders[account].length,
             state: LimitOrderState.Pending,
             collateral: collateral,
             index: index,
@@ -112,32 +112,32 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
             createdAt: block.timestamp
         });
         _limitOrders[account].push(limitOrder);
-        emit LimitOrderCreated(account, limitOrder.id);
+        emit LimitOrderCreated(account, limitOrder.orderId);
     }
 
     function cancelLimitOrder(
         address account,
-        uint256 id
+        uint256 orderId
     )
         external
         override
         onlyExchange
         returns (IWarehouse.LimitOrder memory limitOrder)
     {
-        limitOrder = _limitOrders[account][id];
+        limitOrder = _limitOrders[account][orderId];
         require(
             limitOrder.state == LimitOrderState.Pending,
             "state: not pending"
         );
 
-        _limitOrders[account][id].state = LimitOrderState.Canceled;
-        emit LimitOrderCanceled(account, id);
+        _limitOrders[account][orderId].state = LimitOrderState.Canceled;
+        emit LimitOrderCanceled(account, orderId);
     }
 
     function executeLimitOrder(
         address account,
         address adapter,
-        uint256 id
+        uint256 orderId
     )
         external
         payable
@@ -145,7 +145,7 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         onlyExchange
         returns (IWarehouse.LimitOrder memory limitOrder)
     {
-        limitOrder = _limitOrders[account][id];
+        limitOrder = _limitOrders[account][orderId];
         require(
             limitOrder.state == LimitOrderState.Pending,
             "state: not pending"
@@ -161,8 +161,8 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
             "price: not acceptable"
         );
 
-        _limitOrders[account][id].state = LimitOrderState.Executed;
-        emit LimitOrderExecuted(account, id);
+        _limitOrders[account][orderId].state = LimitOrderState.Executed;
+        emit LimitOrderExecuted(account, orderId);
     }
 
     function createTriggerOrder(
@@ -200,7 +200,7 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         );
 
         TriggerOrder memory triggerOrder = TriggerOrder({
-            id: _triggerOrders[positionKey].length,
+            orderId: _triggerOrders[positionKey].length,
             state: TriggerOrderState.Pending,
             account: account,
             adapter: adapter,
@@ -215,20 +215,15 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
             createdAt: block.timestamp
         });
         _triggerOrders[positionKey].push(triggerOrder);
-        emit TriggerOrderCreated(account, positionKey, triggerOrder.id);
+        emit TriggerOrderCreated(account, positionKey, triggerOrder.orderId);
     }
 
     function cancelTriggerOrder(
         address account,
         bytes32 positionKey,
-        uint256 id
+        uint256 orderId
     ) external override onlyExchange {
-        require(
-            _triggerOrders[positionKey].length >= id + 1,
-            "id: out of range"
-        );
-
-        TriggerOrder memory triggerOrder = _triggerOrders[positionKey][id];
+        TriggerOrder memory triggerOrder = _triggerOrders[positionKey][orderId];
         require(
             triggerOrder.account == account,
             "triggerOrder: not belong to account"
@@ -238,20 +233,20 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
             "triggerOrder: not pending"
         );
 
-        _triggerOrders[positionKey][id].state = TriggerOrderState.Canceled;
-        emit TriggerOrderCanceled(triggerOrder.account, positionKey, id);
+        _triggerOrders[positionKey][orderId].state = TriggerOrderState.Canceled;
+        emit TriggerOrderCanceled(triggerOrder.account, positionKey, orderId);
     }
 
     function executeTriggerOrder(
         bytes32 positionKey,
-        uint256 id
+        uint256 orderId
     )
         external
         override
         onlyExchange
         returns (TriggerOrder memory triggerOrder)
     {
-        triggerOrder = _triggerOrders[positionKey][id];
+        triggerOrder = _triggerOrders[positionKey][orderId];
         require(
             triggerOrder.state == TriggerOrderState.Pending,
             "state: not pending"
@@ -269,7 +264,7 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
             "price: not acceptable"
         );
 
-        _triggerOrders[positionKey][id].state = TriggerOrderState.Executed;
-        emit TriggerOrderExecuted(triggerOrder.account, positionKey, id);
+        _triggerOrders[positionKey][orderId].state = TriggerOrderState.Executed;
+        emit TriggerOrderExecuted(triggerOrder.account, positionKey, orderId);
     }
 }
