@@ -16,6 +16,55 @@ const USDC = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
 const USDT = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9";
 const USDCe = "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8";
 
+const collateralList = [
+  {
+    name: "WETH",
+    address: WETH,
+    collateralAmount: ethers.parseEther("1"),
+  },
+  {
+    name: "WBTC",
+    address: WBTC,
+    collateralAmount: ethers.parseUnits("0.1", 8),
+  },
+  {
+    name: "USDC",
+    address: USDC,
+    collateralAmount: ethers.parseUnits("1000", 6),
+  },
+  {
+    name: "USDCe",
+    address: USDCe,
+    collateralAmount: ethers.parseUnits("1000", 6),
+  },
+  {
+    name: "USDT",
+    address: USDT,
+    collateralAmount: ethers.parseUnits("1000", 6),
+  },
+];
+
+const indexList = [
+  {
+    name: "WETH",
+    address: WETH,
+    size: ethers.parseEther("10"),
+    gmxLongPrice: ethers.parseUnits("2200", 30),
+    gmxShortPrice: ethers.parseUnits("1800", 30),
+    muxLongPrice: ethers.parseUnits("2200", 8),
+    muxShortPrice: ethers.parseUnits("1800", 8),
+  },
+  {
+    name: "WBTC",
+    address: WBTC,
+    size: ethers.parseUnits("1", 8),
+    gmxLongPrice: ethers.parseUnits("44000", 30),
+    gmxShortPrice: ethers.parseUnits("36000", 30),
+    muxLongPrice: ethers.parseUnits("44000", 8),
+    muxShortPrice: ethers.parseUnits("36000", 8),
+  },
+];
+
 let deployer;
 let user;
 let other;
@@ -130,6 +179,7 @@ const deploy = async (noAccount) => {
   muxAdapter = await ethers.deployContract("MuxAdapter", [
     OrderBook,
     LiquidityPool,
+    exchange.target,
     logger.target,
     0, // usdc.e
   ]);
@@ -161,6 +211,7 @@ non-stable:
 - ETH   : ${await ethers.provider.getBalance(account.target)}
 - WETH  : ${await account.getBalance(WETH)}
 - WBTC  : ${await account.getBalance(WBTC)}
+
 stable:
 - USDC.e: ${await account.getBalance(USDCe)}
 - USDT  : ${await account.getBalance(USDT)}
@@ -566,6 +617,8 @@ stable:
     USDC,
     USDCe,
     USDT,
+    collateralList,
+    indexList,
     checkBalance,
     faucet,
     deposit,

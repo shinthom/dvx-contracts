@@ -435,6 +435,21 @@ contract GmxV1Adapter is BaseAdapter {
         });
     }
 
+    function getPnLToken(
+        address collateral,
+        address index,
+        bool isLong
+    ) external view override returns (address) {
+        if (isLong) {
+            return index;
+        } else {
+            if (IExchange(_exchange).isStableToken(collateral)) {
+                return collateral;
+            }
+            return IExchange(_exchange).defaultStableToken();
+        }
+    }
+
     function increasePosition(
         address collateral,
         address index,

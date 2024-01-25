@@ -170,6 +170,7 @@ interface IChainlink {
 }
 
 contract MuxAdapter is BaseAdapter {
+    uint256 public constant TOKEN_DEFAULT_DECIMALS = 18;
     uint256 public constant PRICE_DECIMALS = 18;
     uint256 public constant USD = 1 * (10 ** PRICE_DECIMALS);
 
@@ -179,11 +180,13 @@ contract MuxAdapter is BaseAdapter {
     address private immutable _liquidityPool;
     address private immutable _orderBook;
 
+    address private immutable _exchange;
     address private immutable _this;
 
     constructor(
         address orderBook,
         address liquidityPool,
+        address exchange,
         address logger,
         uint8 defaultProfitTokenId
     ) BaseAdapter(logger) {
@@ -194,6 +197,7 @@ contract MuxAdapter is BaseAdapter {
         _liquidityPool = liquidityPool;
         _defaultProfitTokenId = defaultProfitTokenId;
 
+        _exchange = exchange;
         _this = address(this);
     }
 
@@ -390,7 +394,10 @@ contract MuxAdapter is BaseAdapter {
         uint8 collateralDecimals = IERC20(collateral).decimals();
         collateralAmount =
             collateralAmount /
-            (10 ** (PRICE_DECIMALS - collateralDecimals));
+            (10 ** (TOKEN_DEFAULT_DECIMALS - collateralDecimals));
+
+        uint8 indexDecimals = IERC20(index).decimals();
+        size = size / (10 ** (TOKEN_DEFAULT_DECIMALS - indexDecimals));
 
         return
             IAdapter.Position(
@@ -420,6 +427,32 @@ contract MuxAdapter is BaseAdapter {
             });
     }
 
+    function getPnLToken(
+        address collateral,
+        address index,
+        bool isLong
+    ) external view override returns (address) {
+        if (isLong) {
+            return index;
+        } else {
+            return IExchange(_exchange).defaultStableToken();
+        }
+    }
+
+    // https://github.com/mux-world/mux-protocol/blob/e93946a555a59fcd9532517c88fff980d382a279/contracts/orderbook/OrderBook.sol#L137
+    function _adjustSizeDecimal(
+        address token,
+        uint256 size
+    ) private returns (uint256) {
+        uint8 decimals = IERC20(token).decimals();
+
+        if (decimals <= 18) {
+            return size * (10 ** (18 - decimals));
+        } else {
+            return size / (10 ** (decimals - 18));
+        }
+    }
+
     function increasePosition(
         address collateral,
         address index,
@@ -436,13 +469,15 @@ contract MuxAdapter is BaseAdapter {
             isLong
         );
 
+        uint256 adjustedSize = _adjustSizeDecimal(index, size);
+
         if (collateralId == _wethId) {
             IERC20(collateral).withdraw(collateralAmount);
 
             IOrderBook(_orderBook).placePositionOrder3{value: collateralAmount}(
                 subAccountId,
                 uint96(collateralAmount),
-                uint96(size),
+                uint96(adjustedSize),
                 0,
                 0,
                 192,
@@ -456,7 +491,7 @@ contract MuxAdapter is BaseAdapter {
             IOrderBook(_orderBook).placePositionOrder3(
                 subAccountId,
                 uint96(collateralAmount),
-                uint96(size),
+                uint96(adjustedSize),
                 0,
                 0,
                 192,
@@ -495,10 +530,13 @@ contract MuxAdapter is BaseAdapter {
             isLong
         );
 
+        // https://github.com/mux-world/mux-protocol/blob/e93946a555a59fcd9532517c88fff980d382a279/contracts/orderbook/OrderBook.sol#L137
+        uint256 adjustedSize = _adjustSizeDecimal(index, size);
+
         IOrderBook(_orderBook).placePositionOrder3(
             subAccountId,
             0,
-            uint96(size),
+            uint96(adjustedSize),
             0,
             _defaultProfitTokenId,
             96,

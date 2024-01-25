@@ -28,6 +28,12 @@ interface IAdapter {
     //     IExchange.MarketOrder memory marketOrder
     // ) external view returns (uint256);
 
+    function getPnLToken(
+        address collateral,
+        address index,
+        bool isLong
+    ) external view returns (address);
+
     function getFundingFee(
         address collateral,
         address index,
