@@ -213,6 +213,15 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         return (tokenAmount * swapFeeRate) / BASIS_POINTS;
     }
 
+    function getPnLToken(
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong
+    ) public view override returns (address) {
+        return IAdapter(adapter).getPnLToken(collateral, index, isLong);
+    }
+
     function createAccount() public override returns (address) {
         require(accounts[msg.sender] == address(0), "account: already created");
 

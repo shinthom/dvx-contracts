@@ -77,6 +77,13 @@ interface IExchange {
         bool isLong
     ) external view returns (uint256);
 
+    function getPnLToken(
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong
+    ) external view returns (address);
+
     function getSwapFee(uint256 amount) external view returns (uint256);
 
     function getDepositFee(uint256 amount) external view returns (uint256);
