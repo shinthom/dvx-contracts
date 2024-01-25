@@ -5,6 +5,7 @@ import {IAccount} from "./interfaces/IAccount.sol";
 import {IExchange} from "./interfaces/IExchange.sol";
 import {IWarehouse} from "./interfaces/IWarehouse.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
+import {ILogger} from "./interfaces/ILogger.sol";
 
 contract Account is IAccount {
     address private constant _weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
@@ -72,6 +73,11 @@ contract Account is IAccount {
 
         IERC20(token).transferFrom(msg.sender, address(this), amount);
         emit Deposited(msg.sender, token, amount);
+
+        address logger = IExchange(exchange).logger();
+        if (logger != address(0)) {
+            ILogger(logger).logDeposit(address(this), token, amount);
+        }
     }
 
     function withdraw(
@@ -85,6 +91,11 @@ contract Account is IAccount {
 
         IERC20(token).transfer(msg.sender, amount);
         emit Withdrawn(token, amount);
+
+        address logger = IExchange(exchange).logger();
+        if (logger != address(0)) {
+            ILogger(logger).logDeposit(address(this), token, amount);
+        }
     }
 
     function swap(

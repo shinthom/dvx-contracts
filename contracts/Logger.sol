@@ -73,4 +73,20 @@ contract Logger is ILogger {
             collateralAmount
         );
     }
+
+    function logDeposit(
+        address account,
+        address token,
+        uint256 amount
+    ) external override {
+        emit Deposited(account, token, amount);
+    }
+
+    function logWithdraw(
+        address account,
+        address token,
+        uint256 amount
+    ) external override {
+        emit Withdrawn(account, token, amount);
+    }
 }
