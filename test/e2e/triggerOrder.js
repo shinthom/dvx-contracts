@@ -15,6 +15,7 @@ describe("triggerOrder", () => {
       const {
         user,
         account,
+        orderKeeper,
         warehouse,
         gmxV1Adapter,
         WETH,
@@ -104,7 +105,7 @@ describe("triggerOrder", () => {
           0
         );
 
-      await account.executeTriggerOrder(positionKey, 1, {
+      await account.connect(orderKeeper).executeTriggerOrder(positionKey, 1, {
         value: executionFee,
       });
       await executeDecreasePosition(account.target);
@@ -208,7 +209,7 @@ describe("triggerOrder", () => {
           0
         );
 
-      await account.executeTriggerOrder(positionKey, 1, {
+      await account.connect(orderKeeper).executeTriggerOrder(positionKey, 1, {
         value: executionFee,
       });
       await fillPositionOrder();

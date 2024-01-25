@@ -223,7 +223,7 @@ stable:
     await account
       .connect(user)
       .increasePosition(
-        gmxV1Adapter.target,
+        adapter.target,
         collateral,
         index,
         collateralAmount,
@@ -508,6 +508,7 @@ stable:
     muxAdapter,
     quoter,
     reader,
+    logger,
     account,
     ETH,
     WETH,
