@@ -261,7 +261,7 @@ contract MuxAdapter is BaseAdapter {
     function getWrapPrice(
         address token,
         bool isLong
-    ) external view override returns (uint256) {
+    ) public view override returns (uint256) {
         return getPrice(token, isLong);
     }
 
@@ -466,6 +466,7 @@ contract MuxAdapter is BaseAdapter {
             );
         }
 
+        uint256 entryPrice = getWrapPrice(index, isLong);
         logIncreasePosition(
             address(this),
             _this,
@@ -473,7 +474,8 @@ contract MuxAdapter is BaseAdapter {
             index,
             collateralAmount,
             size,
-            isLong
+            isLong,
+            entryPrice
         );
     }
 

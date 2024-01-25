@@ -451,10 +451,12 @@ contract GmxV1Adapter is BaseAdapter {
         uint8 indexDecimal = IERC20(index).decimals();
         uint256 indexPrice = getPrice(index, isLong);
 
+        // 1e30
         uint256 sizeUsd = (size * indexPrice) / (10 ** indexDecimal);
 
         _increase(collateral, index, collateralAmount, sizeUsd, isLong);
 
+        uint256 entryPrice = indexPrice / 1e12; // 1e18
         logIncreasePosition(
             address(this),
             _this,
@@ -462,7 +464,8 @@ contract GmxV1Adapter is BaseAdapter {
             index,
             collateralAmount,
             size,
-            isLong
+            isLong,
+            entryPrice
         );
     }
 

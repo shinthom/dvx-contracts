@@ -18,7 +18,8 @@ abstract contract BaseAdapter is IAdapter {
         address index,
         uint256 collateralAmount,
         uint256 size,
-        bool isLong
+        bool isLong,
+        uint256 entryPrice
     ) internal {
         ILogger(_logger).logIncreasePosition(
             account,
@@ -27,7 +28,8 @@ abstract contract BaseAdapter is IAdapter {
             index,
             collateralAmount,
             size,
-            isLong
+            isLong,
+            entryPrice
         );
     }
 
