@@ -61,25 +61,25 @@ async function main() {
 
   var orderId = 0;
   await createLimitOrder(WETH, WETH, ethCollateralAmount, ethSize, true, triggerPrice, acceptablePrice, executionFee); // prettier-ignore
-  await executeLimitOrder(orderId++, gmxV1Adapter, 0);
-  console.log(await gmxV1Adapter.getPosition(account.target, WETH, WETH, true));
+  // await executeLimitOrder(orderId++, gmxV1Adapter, 0);
+  // console.log(await gmxV1Adapter.getPosition(account.target, WETH, WETH, true));
   await createLimitOrder(WETH, WETH, ethCollateralAmount, ethSize, true, triggerPrice, acceptablePrice, executionFee); // prettier-ignore
-  await executeLimitOrder(orderId++, muxAdapter, 0);
-  console.log(await muxAdapter.getPosition(account.target, WETH, WETH, true));
+  // await executeLimitOrder(orderId++, muxAdapter, 0);
+  // console.log(await muxAdapter.getPosition(account.target, WETH, WETH, true));
 
   await createLimitOrder(WBTC, WETH, wbtcCollateralAmount, ethSize, true, triggerPrice, acceptablePrice, executionFee); // prettier-ignore
-  await executeLimitOrder(orderId++, gmxV1Adapter, 0);
-  console.log(await gmxV1Adapter.getPosition(account.target, WETH, WETH, true));
+  // await executeLimitOrder(orderId++, gmxV1Adapter, 0);
+  // console.log(await gmxV1Adapter.getPosition(account.target, WETH, WETH, true));
   await createLimitOrder(WBTC, WETH, wbtcCollateralAmount, ethSize, true, triggerPrice, acceptablePrice, executionFee); // prettier-ignore
-  await executeLimitOrder(orderId++, muxAdapter, 0);
-  console.log(await muxAdapter.getPosition(account.target, WBTC, WETH, true));
+  // await executeLimitOrder(orderId++, muxAdapter, 0);
+  // console.log(await muxAdapter.getPosition(account.target, WBTC, WETH, true));
 
   await createLimitOrder(USDC, WETH, usdcCollateralAmount, ethSize, true, triggerPrice, acceptablePrice, executionFee); // prettier-ignore
-  await executeLimitOrder(orderId++, gmxV1Adapter, 0);
-  console.log(await gmxV1Adapter.getPosition(account.target, WETH, WETH, true));
+  // await executeLimitOrder(orderId++, gmxV1Adapter, 0);
+  // console.log(await gmxV1Adapter.getPosition(account.target, WETH, WETH, true));
   await createLimitOrder(USDC, WETH, usdcCollateralAmount, ethSize, true, triggerPrice, acceptablePrice, executionFee); // prettier-ignore
-  await executeLimitOrder(orderId++, muxAdapter, 0);
-  console.log(await muxAdapter.getPosition(account.target, USDC, WETH, true));
+  // await executeLimitOrder(orderId++, muxAdapter, 0);
+  // console.log(await muxAdapter.getPosition(account.target, USDC, WETH, true));
 
   var triggerPrice = ethers.parseUnits("2000", 18);
   var acceptablePrice = ethers.parseUnits("1980", 18);

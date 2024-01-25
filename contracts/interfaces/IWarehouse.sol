@@ -22,6 +22,7 @@ interface IWarehouse {
     struct LimitOrder {
         uint256 orderId;
         LimitOrderState state;
+        address account;
         address collateral;
         address index;
         uint256 collateralAmount;

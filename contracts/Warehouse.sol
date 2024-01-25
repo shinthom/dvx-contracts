@@ -101,6 +101,7 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         LimitOrder memory limitOrder = LimitOrder({
             orderId: _limitOrders[account].length,
             state: LimitOrderState.Pending,
+            account: account,
             collateral: collateral,
             index: index,
             collateralAmount: collateralAmount,
