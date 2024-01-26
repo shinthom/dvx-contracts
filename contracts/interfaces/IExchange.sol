@@ -19,9 +19,9 @@ interface IExchange {
         bool isLong;
     }
 
-    event WarehouseSet(address indexed warehouse);
+    event AccountFactorySet(address indexed accountFactory);
 
-    event AccountCreated(address indexed owner, address indexed account);
+    event WarehouseSet(address indexed warehouse);
 
     event LoggerSet(address indexed logger);
 

@@ -203,8 +203,8 @@ const deploy = async (noAccount) => {
   await exchange.setLogger(logger.target);
   await exchange.setFeeCollector(feeCollector.address);
   await exchange.setOrderKeeper(orderKeeper.address, true);
-  await exchange.setAdapter(gmxV1Adapter.target, true);
-  await exchange.setAdapter(muxAdapter.target, true);
+  await exchange.registerAdapter(gmxV1Adapter.target);
+  await exchange.registerAdapter(muxAdapter.target);
   await exchange.setStableToken(USDC, true);
   await exchange.setStableToken(USDT, true);
   await exchange.setStableToken(USDCe, true);

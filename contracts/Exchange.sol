@@ -84,6 +84,13 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         emit OrderKeeperSet(orderKeeper, isActive);
     }
 
+    function setAccountFactory(address _accountFactory) external onlyOwner {
+        require(_accountFactory != address(0), "accountFactory: zero address");
+
+        accountFactory = _accountFactory;
+        emit AccountFactorySet(_accountFactory);
+    }
+
     function registerAdapter(address adapter) external onlyOwner {
         require(adapter != address(0), "adapter: zero address");
         require(!isRegisteredAdapter[adapter], "adapter: already registered");
