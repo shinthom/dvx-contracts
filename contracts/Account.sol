@@ -74,10 +74,10 @@ contract Account is IAccount {
         IERC20(token).transferFrom(msg.sender, address(this), amount);
         emit Deposited(msg.sender, token, amount);
 
-        address logger = IExchange(exchange).logger();
-        if (logger != address(0)) {
-            ILogger(logger).logDeposit(address(this), token, amount);
-        }
+        // address logger = IExchange(exchange).logger();
+        // if (logger != address(0)) {
+        //     ILogger(logger).logDeposit(address(this), token, amount);
+        // }
     }
 
     function withdraw(
@@ -92,10 +92,10 @@ contract Account is IAccount {
         IERC20(token).transfer(msg.sender, amount);
         emit Withdrawn(token, amount);
 
-        address logger = IExchange(exchange).logger();
-        if (logger != address(0)) {
-            ILogger(logger).logDeposit(address(this), token, amount);
-        }
+        // address logger = IExchange(exchange).logger();
+        // if (logger != address(0)) {
+        //     ILogger(logger).logDeposit(address(this), token, amount);
+        // }
     }
 
     function swap(
