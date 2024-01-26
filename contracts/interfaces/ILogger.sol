@@ -22,26 +22,6 @@ interface ILogger {
         uint256 amountOut
     );
 
-    function logDeposit(
-        address account,
-        address token,
-        uint256 amount
-    ) external;
-
-    function logWithdraw(
-        address account,
-        address token,
-        uint256 amount
-    ) external;
-
-    function logSwap(
-        address account,
-        address tokenIn,
-        address tokenOut,
-        uint256 amountIn,
-        uint256 amountOut
-    ) external;
-
     event PositionIncreased(
         address indexed account,
         address adapter,
@@ -77,6 +57,26 @@ interface ILogger {
         address index,
         uint256 collateralAmount
     );
+
+    function logDeposit(
+        address account,
+        address token,
+        uint256 amount
+    ) external;
+
+    function logWithdraw(
+        address account,
+        address token,
+        uint256 amount
+    ) external;
+
+    function logSwap(
+        address account,
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 amountOut
+    ) external;
 
     function logIncreasePosition(
         address account,
