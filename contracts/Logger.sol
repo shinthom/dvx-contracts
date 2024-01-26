@@ -20,6 +20,16 @@ contract Logger is ILogger {
         emit Withdrawn(account, token, amount);
     }
 
+    function logSwap(
+        address account,
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 amountOut
+    ) external override {
+        emit Swapped(account, tokenIn, tokenOut, amountIn, amountOut);
+    }
+
     function logIncreasePosition(
         address account,
         address adapter,

@@ -14,6 +14,14 @@ interface ILogger {
         uint256 amount
     );
 
+    event Swapped(
+        address indexed account,
+        address indexed tokenIn,
+        address indexed tokenOut,
+        uint256 amountIn,
+        uint256 amountOut
+    );
+
     function logDeposit(
         address account,
         address token,
@@ -24,6 +32,14 @@ interface ILogger {
         address account,
         address token,
         uint256 amount
+    ) external;
+
+    function logSwap(
+        address account,
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 amountOut
     ) external;
 
     event PositionIncreased(

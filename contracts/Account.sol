@@ -103,7 +103,17 @@ contract Account is IAccount {
 
         IERC20(tokenIn).approve(exchange, amountIn);
         amountOut = IExchange(exchange).swap(tokenIn, tokenOut, amountIn);
-        emit Swapped(address(this), tokenIn, tokenOut, amountIn, amountOut);
+
+        address logger = IExchange(exchange).logger();
+        if (logger != address(0)) {
+            ILogger(logger).logSwap(
+                address(this),
+                tokenIn,
+                tokenOut,
+                amountIn,
+                amountOut
+            );
+        }
     }
 
     function increasePosition(
