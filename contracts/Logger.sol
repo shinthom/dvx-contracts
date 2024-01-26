@@ -4,6 +4,22 @@ pragma solidity 0.8.7;
 import {ILogger} from "./interfaces/ILogger.sol";
 
 contract Logger is ILogger {
+    function logDeposit(
+        address account,
+        address token,
+        uint256 amount
+    ) external override {
+        emit Deposited(account, token, amount);
+    }
+
+    function logWithdraw(
+        address account,
+        address token,
+        uint256 amount
+    ) external override {
+        emit Withdrawn(account, token, amount);
+    }
+
     function logIncreasePosition(
         address account,
         address adapter,
@@ -74,21 +90,5 @@ contract Logger is ILogger {
             index,
             collateralAmount
         );
-    }
-
-    function logDeposit(
-        address account,
-        address token,
-        uint256 amount
-    ) external override {
-        emit Deposited(account, token, amount);
-    }
-
-    function logWithdraw(
-        address account,
-        address token,
-        uint256 amount
-    ) external override {
-        emit Withdrawn(account, token, amount);
     }
 }

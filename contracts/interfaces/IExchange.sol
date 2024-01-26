@@ -57,9 +57,11 @@ interface IExchange {
 
     function defaultStableToken() external view returns (address);
 
-    function logger() external returns (address);
+    function accountFactory() external returns (address);
 
     function warehouse() external returns (address);
+
+    function logger() external returns (address);
 
     function feeCollector() external returns (address);
 

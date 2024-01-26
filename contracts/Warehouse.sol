@@ -98,6 +98,12 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         uint256 triggerPrice,
         uint256 acceptablePrice
     ) external payable override onlyExchange {
+        require(
+            (isLong && triggerPrice <= acceptablePrice) ||
+                (!isLong && triggerPrice >= acceptablePrice),
+            "triggerPrice: invalid"
+        );
+
         LimitOrder memory limitOrder = LimitOrder({
             orderId: _limitOrders[account].length,
             state: LimitOrderState.Pending,

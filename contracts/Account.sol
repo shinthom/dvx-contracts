@@ -13,7 +13,7 @@ contract Account is IAccount {
     address public immutable override owner;
     address public immutable override exchange;
 
-    mapping(address => uint256) private _lockedBalances;
+    mapping(address => uint256) public _lockedBalances;
 
     receive() external payable {
         if (msg.sender != _weth) {
@@ -31,11 +31,6 @@ contract Account is IAccount {
 
     modifier onlyOwner() {
         require(msg.sender == owner, "msg.sender: not owner");
-        _;
-    }
-
-    modifier onlyExchange() {
-        require(msg.sender == exchange, "msg.sender: not exchange");
         _;
     }
 
@@ -74,17 +69,17 @@ contract Account is IAccount {
         IERC20(token).transferFrom(msg.sender, address(this), amount);
         emit Deposited(msg.sender, token, amount);
 
-        // address logger = IExchange(exchange).logger();
-        // if (logger != address(0)) {
-        //     ILogger(logger).logDeposit(address(this), token, amount);
-        // }
+        address logger = IExchange(exchange).logger();
+        if (logger != address(0)) {
+            ILogger(logger).logDeposit(address(this), token, amount);
+        }
     }
 
     function withdraw(
         address token,
         uint256 amount
     ) external override onlyOwner {
-        require(amount > 0, "amount: zero");
+        require(amount != 0, "amount: zero");
 
         uint256 withdrawableBalance = getWithdrawableBalance(token);
         require(amount <= withdrawableBalance, "amount: exceed balance");
@@ -92,10 +87,10 @@ contract Account is IAccount {
         IERC20(token).transfer(msg.sender, amount);
         emit Withdrawn(token, amount);
 
-        // address logger = IExchange(exchange).logger();
-        // if (logger != address(0)) {
-        //     ILogger(logger).logDeposit(address(this), token, amount);
-        // }
+        address logger = IExchange(exchange).logger();
+        if (logger != address(0)) {
+            ILogger(logger).logDeposit(address(this), token, amount);
+        }
     }
 
     function swap(
@@ -129,6 +124,34 @@ contract Account is IAccount {
             isLong,
             executionFee
         );
+    }
+
+    function increasePositionMulti(
+        address[] calldata adapters,
+        address collateral,
+        address index,
+        uint256[] calldata collateralAmounts,
+        uint256[] calldata sizes,
+        bool isLong,
+        uint256 executionFee
+    ) external payable onlyOwner {
+        require(
+            adapters.length == collateralAmounts.length &&
+                adapters.length == sizes.length,
+            "length: not match"
+        );
+
+        for (uint256 i = 0; i < adapters.length; i++) {
+            _increasePosition(
+                adapters[i],
+                collateral,
+                index,
+                collateralAmounts[i],
+                sizes[i],
+                isLong,
+                executionFee
+            );
+        }
     }
 
     function _increasePosition(

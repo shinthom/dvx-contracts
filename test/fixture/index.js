@@ -93,6 +93,7 @@ let fastPriceFeed;
 let vaultPriceFeed;
 let secondaryPriceFeedMock;
 // dvx contracts
+let accountFactory;
 let exchange;
 let warehouse;
 let gmxV1Adapter;
@@ -159,6 +160,17 @@ const deploy = async (noAccount) => {
   exchange = await ethers.getContractAt("Exchange", exchangeProxy.target);
   await exchange.initialize();
 
+  const accountFactoryImpl = await ethers.deployContract("AccountFactory", []);
+  const accountFactoryProxy = await ethers.deployContract("ERC1967Proxy", [
+    accountFactoryImpl.target,
+    "0x",
+  ]);
+  accountFactory = await ethers.getContractAt(
+    "AccountFactory",
+    accountFactoryProxy.target
+  );
+  await accountFactory.initialize(exchange.target);
+
   const warehouseImpl = await ethers.deployContract("Warehouse", []);
   const warehouseProxy = await ethers.deployContract("ERC1967Proxy", [
     warehouseImpl.target,
@@ -186,22 +198,26 @@ const deploy = async (noAccount) => {
   quoter = await ethers.deployContract("Quoter");
   reader = await ethers.deployContract("Reader", [warehouse.target]);
 
+  await exchange.setAccountFactory(accountFactory.target);
   await exchange.setWarehouse(warehouse.target);
+  await exchange.setLogger(logger.target);
   await exchange.setFeeCollector(feeCollector.address);
   await exchange.setOrderKeeper(orderKeeper.address, true);
-  await exchange.registerAdapter(gmxV1Adapter.target);
-  await exchange.registerAdapter(muxAdapter.target);
+  await exchange.setAdapter(gmxV1Adapter.target, true);
+  await exchange.setAdapter(muxAdapter.target, true);
   await exchange.setStableToken(USDC, true);
   await exchange.setStableToken(USDT, true);
   await exchange.setStableToken(USDCe, true);
   await exchange.setDefaultStableToken(USDCe);
+
   await warehouse.setExchange(exchange.target);
 
-  await exchange.connect(user).createAccount();
   if (!noAccount) {
+    await exchange.connect(user).createAccount();
+
     account = await ethers.getContractAt(
       "Account",
-      await exchange.accounts(user.address)
+      await accountFactory.accounts(user.address)
     );
   }
 
@@ -385,14 +401,12 @@ stable:
 
   const executeTriggerOrder = async (positionKey, orderId) => {
     const triggerOrder = await warehouse.getTriggerOrder(positionKey, orderId);
-    console.log(triggerOrder);
 
     const adapter = await ethers.getContractAt(
       "IAdapter",
       triggerOrder.adapter
     );
     const adapterExecutionFee = await adapter.getMinExecutionFee();
-    console.log(adapterExecutionFee);
 
     await account
       .connect(orderKeeper)

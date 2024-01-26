@@ -4,6 +4,7 @@ pragma solidity 0.8.7;
 import {Account, IAccount} from "./Account.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
 import {IAdapter} from "./interfaces/IAdapter.sol";
+import {IAccountFactory} from "./interfaces/IAccountFactory.sol";
 import {IExchange} from "./interfaces/IExchange.sol";
 import {IWarehouse} from "./interfaces/IWarehouse.sol";
 import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
@@ -17,6 +18,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
     uint256 public constant BASIS_POINTS = 100_000_000;
 
+    address public override accountFactory;
     address public override warehouse;
     address public override logger;
     mapping(address => address) public accounts;
@@ -43,17 +45,6 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8; // usdc.e
 
     receive() external payable {}
-
-    modifier onlyAccountOwner(address account) {
-        require(account != address(0), "account: zero");
-        require(accounts[msg.sender] == account, "account: not owner");
-        _;
-    }
-
-    modifier onlyWarehouse() {
-        require(msg.sender == warehouse, "msg.sender: not warehouse");
-        _;
-    }
 
     function initialize() external virtual initializer {
         __Ownable_init();
@@ -223,13 +214,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function createAccount() public override returns (address) {
-        require(accounts[msg.sender] == address(0), "account: already created");
-
-        Account account = new Account(msg.sender, address(this));
-        accounts[msg.sender] = address(account);
-        emit AccountCreated(msg.sender, address(account));
-
-        return address(account);
+        return IAccountFactory(accountFactory).createAccount(msg.sender);
     }
 
     function createAccountAndDeposit(
@@ -281,12 +266,6 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         uint256 triggerPrice,
         uint256 acceptablePrice
     ) external override {
-        require(
-            (isLong && triggerPrice <= acceptablePrice) ||
-                (!isLong && triggerPrice >= acceptablePrice),
-            "triggerPrice: invalid"
-        );
-
         IWarehouse(warehouse).createLimitOrder(
             msg.sender,
             collateral,

@@ -26,11 +26,7 @@ interface IAccount {
 
     function getBalance(address token) external view returns (uint256);
 
-    // function depositETH(uint256 amount) external payable;
-
     function deposit(address token, uint256 amount) external;
-
-    // function withdrawETH(uint256 amount) external;
 
     function withdraw(address token, uint256 amount) external;
 

@@ -1,4 +1,5 @@
 require("@nomicfoundation/hardhat-toolbox");
+require("hardhat-contract-sizer");
 
 task("mine", "Mine a block").setAction(async (_args, hre) => {
   await hre.network.provider.request({
@@ -140,7 +141,7 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
-      runs: 1,
+        runs: 200,
       },
     },
   },
