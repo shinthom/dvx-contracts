@@ -20,7 +20,7 @@ interface IWarehouse {
     }
 
     struct LimitOrder {
-        uint256 orderId;
+        uint256 limitOrderId;
         LimitOrderState state;
         address account;
         address collateral;
@@ -34,7 +34,7 @@ interface IWarehouse {
     }
 
     struct TriggerOrder {
-        uint256 orderId;
+        uint256 triggerOrderId;
         TriggerOrderState state;
         address account;
         address adapter;
@@ -55,28 +55,37 @@ interface IWarehouse {
 
     event PriceMinDeviationSet(uint256 indexed deviation);
 
-    event LimitOrderCreated(address indexed account, uint256 indexed orderId);
+    event LimitOrderCreated(
+        address indexed account,
+        uint256 indexed limitOrderId
+    );
 
-    event LimitOrderCanceled(address indexed account, uint256 indexed orderId);
+    event LimitOrderCanceled(
+        address indexed account,
+        uint256 indexed limitOrderId
+    );
 
-    event LimitOrderExecuted(address indexed account, uint256 indexed orderId);
+    event LimitOrderExecuted(
+        address indexed account,
+        uint256 indexed limitOrderId
+    );
 
     event TriggerOrderCreated(
         address indexed account,
         bytes32 indexed positionKey,
-        uint256 indexed orderId
+        uint256 indexed triggerOrderId
     );
 
     event TriggerOrderCanceled(
         address indexed account,
         bytes32 indexed positionKey,
-        uint256 indexed orderId
+        uint256 indexed triggerOrderId
     );
 
     event TriggerOrderExecuted(
         address indexed account,
         bytes32 indexed positionKey,
-        uint256 indexed orderId
+        uint256 indexed triggerOrderId
     );
 
     event Withdrawn(
@@ -99,7 +108,7 @@ interface IWarehouse {
 
     function getTriggerOrder(
         bytes32 positionKey,
-        uint256 id
+        uint256 triggerOrderId
     ) external view returns (TriggerOrder memory);
 
     function getLimitOrders(
@@ -108,7 +117,7 @@ interface IWarehouse {
 
     function getLimitOrder(
         address account,
-        uint256 id
+        uint256 limitOrderId
     ) external view returns (LimitOrder memory);
 
     function createLimitOrder(
@@ -124,19 +133,19 @@ interface IWarehouse {
 
     function cancelLimitOrder(
         address account,
-        uint256 orderId
+        uint256 limitOrderId
     ) external returns (IWarehouse.LimitOrder memory limitOrder);
 
     function executeLimitOrder(
         address account,
         address adapter,
-        uint256 orderId
+        uint256 limitOrderId
     ) external payable returns (IWarehouse.LimitOrder memory limitOrder);
 
     function executeLimitOrderMulti(
         address account,
         address[] calldata adapters,
-        uint256 orderId
+        uint256 limitOrderId
     ) external payable returns (IWarehouse.LimitOrder memory limitOrder);
 
     function createTriggerOrder(
@@ -155,11 +164,11 @@ interface IWarehouse {
     function cancelTriggerOrder(
         address account,
         bytes32 positionKey,
-        uint256 orderId
+        uint256 triggerOrderId
     ) external;
 
     function executeTriggerOrder(
         bytes32 positionKey,
-        uint256 orderId
+        uint256 triggerOrderId
     ) external returns (IWarehouse.TriggerOrder memory triggerOrder);
 }

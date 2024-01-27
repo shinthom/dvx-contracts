@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.7;
 
-import {IExchange} from "./IExchange.sol";
-
 interface IAccount {
     event Deposited(
         address indexed sender,
@@ -29,24 +27,4 @@ interface IAccount {
     function deposit(address token, uint256 amount) external;
 
     function withdraw(address token, uint256 amount) external;
-
-    // function increasePosition(
-    //     address adapter,
-    //     IExchange.MarketOrder calldata marketOrder
-    // ) external payable;
-
-    // function decreasePosition(
-    //     address adapter,
-    //     IExchange.MarketOrder calldata marketOrder
-    // ) external payable;
-
-    // function increaseCollateral(
-    //     address adapter,
-    //     IExchange.MarketOrder calldata marketOrder
-    // ) external payable;
-
-    // function decreaseCollateral(
-    //     address adapter,
-    //     IExchange.MarketOrder calldata marketOrder
-    // ) external payable;
 }

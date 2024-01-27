@@ -48,7 +48,7 @@ describe("limitOrder", () => {
 
     const limitOrder = await warehouse.getLimitOrder(account.target, 0);
     await account.connect(user).cancelLimitOrder(
-      limitOrder.orderId,
+      limitOrder.limitOrderId,
       0 // execution fee
     );
 

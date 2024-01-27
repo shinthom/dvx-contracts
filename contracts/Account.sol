@@ -13,7 +13,7 @@ contract Account is IAccount {
     address public immutable override owner;
     address public immutable override exchange;
 
-    uint256 private _orderId;
+    uint256 private _marketOrderId;
 
     mapping(address => uint256) public _lockedBalances;
 
@@ -127,9 +127,9 @@ contract Account is IAccount {
         bool isLong,
         uint256 executionFee // network fee + adapter fee (collateral token amount)
     ) external payable onlyOwner {
-        _orderId++;
+        _marketOrderId++;
         _increasePosition(
-            _orderId,
+            _marketOrderId,
             adapter,
             collateral,
             index,
@@ -155,10 +155,10 @@ contract Account is IAccount {
             "length: not match"
         );
 
-        _orderId++;
+        _marketOrderId++;
         for (uint256 i = 0; i < adapters.length; i++) {
             _increasePosition(
-                _orderId,
+                _marketOrderId,
                 adapters[i],
                 collateral,
                 index,
@@ -355,11 +355,11 @@ contract Account is IAccount {
     }
 
     function cancelLimitOrder(
-        uint256 orderId,
+        uint256 limitOrderId,
         uint256 executionFee
     ) external payable onlyOwner {
         IWarehouse.LimitOrder memory limitOrder
-            = IExchange(exchange).cancelLimitOrder(address(this), orderId); // prettier-ignore
+            = IExchange(exchange).cancelLimitOrder(address(this), limitOrderId); // prettier-ignore
 
         _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
 
@@ -370,18 +370,18 @@ contract Account is IAccount {
     }
 
     function executeLimitOrder(
-        uint256 orderId,
+        uint256 limitOrderId,
         address adapter,
         uint256 executionFee
     ) external payable onlyOrderKeeper {
         IWarehouse.LimitOrder memory limitOrder
-            = IExchange(exchange).executeLimitOrder(address(this), adapter, orderId); // prettier-ignore
+            = IExchange(exchange).executeLimitOrder(address(this), adapter, limitOrderId); // prettier-ignore
 
         _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
 
-        _orderId++;
+        _marketOrderId++;
         _increasePosition(
-            _orderId,
+            _marketOrderId,
             adapter,
             limitOrder.collateral,
             limitOrder.index,
@@ -393,7 +393,7 @@ contract Account is IAccount {
     }
 
     function executeLimitOrderMulti(
-        uint256 orderId,
+        uint256 limitOrderId,
         address[] calldata adapters,
         uint256[] calldata collateralAmounts,
         uint256[] calldata sizes,
@@ -406,7 +406,7 @@ contract Account is IAccount {
         );
 
         IWarehouse.LimitOrder memory limitOrder
-            = IExchange(exchange).executeLimitOrderMulti(address(this), adapters, orderId); // prettier-ignore
+            = IExchange(exchange).executeLimitOrderMulti(address(this), adapters, limitOrderId); // prettier-ignore
 
         uint256 totalCollateralAmount;
         for (uint256 i = 0; i < adapters.length; i++) {
@@ -425,10 +425,10 @@ contract Account is IAccount {
 
         _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
 
-        _orderId++;
+        _marketOrderId++;
         for (uint256 i = 0; i < adapters.length; i++) {
             _increasePosition(
-                _orderId,
+                _marketOrderId,
                 adapters[i],
                 limitOrder.collateral,
                 limitOrder.index,
@@ -467,21 +467,21 @@ contract Account is IAccount {
 
     function cancelTriggerOrder(
         bytes32 positionKey,
-        uint256 orderId
+        uint256 triggerOrderId
     ) external onlyOwner {
         IExchange(exchange).cancelTriggerOrder(
             address(this),
             positionKey,
-            orderId
+            triggerOrderId
         );
     }
 
     function executeTriggerOrder(
         bytes32 positionKey,
-        uint256 orderId
+        uint256 triggerOrderId
     ) external payable onlyOrderKeeper {
         IWarehouse.TriggerOrder memory triggerOrder = IExchange(exchange)
-            .executeTriggerOrder(positionKey, orderId);
+            .executeTriggerOrder(positionKey, triggerOrderId);
 
         _decreasePosition(
             triggerOrder.adapter,

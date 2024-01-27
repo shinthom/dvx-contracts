@@ -287,29 +287,34 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
     function cancelLimitOrder(
         address account,
-        uint256 id
+        uint256 limitOrderId
     ) external override returns (IWarehouse.LimitOrder memory) {
-        return IWarehouse(warehouse).cancelLimitOrder(account, id);
+        return IWarehouse(warehouse).cancelLimitOrder(account, limitOrderId);
     }
 
     function executeLimitOrder(
         address account,
         address adapter,
-        uint256 id
+        uint256 limitOrderId
     ) external payable override returns (IWarehouse.LimitOrder memory) {
-        return IWarehouse(warehouse).executeLimitOrder(account, adapter, id);
+        return
+            IWarehouse(warehouse).executeLimitOrder(
+                account,
+                adapter,
+                limitOrderId
+            );
     }
 
     function executeLimitOrderMulti(
         address account,
         address[] calldata adapters,
-        uint256 orderId
+        uint256 limitOrderId
     ) external payable override returns (IWarehouse.LimitOrder memory) {
         return
             IWarehouse(warehouse).executeLimitOrderMulti(
                 account,
                 adapters,
-                orderId
+                limitOrderId
             );
     }
 
@@ -342,15 +347,15 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     function cancelTriggerOrder(
         address account,
         bytes32 positionKey,
-        uint256 orderId
+        uint256 triggerOrderId
     ) external override {
-        IWarehouse(warehouse).cancelTriggerOrder(account, positionKey, orderId);
+        IWarehouse(warehouse).cancelTriggerOrder(account, positionKey, triggerOrderId);
     }
 
     function executeTriggerOrder(
         bytes32 positionKey,
-        uint256 orderId
+        uint256 triggerOrderId
     ) external override returns (IWarehouse.TriggerOrder memory) {
-        return IWarehouse(warehouse).executeTriggerOrder(positionKey, orderId);
+        return IWarehouse(warehouse).executeTriggerOrder(positionKey, triggerOrderId);
     }
 }

@@ -90,8 +90,6 @@ interface IExchange {
 
     function getDepositFee(uint256 amount) external view returns (uint256);
 
-    // function getMaxAdapterExecutionFee() external view returns (uint256);
-
     function createAccount() external returns (address account);
 
     function createAccountAndDeposit(
@@ -117,19 +115,19 @@ interface IExchange {
 
     function cancelLimitOrder(
         address account,
-        uint256 orderId
+        uint256 limitOrderId
     ) external returns (IWarehouse.LimitOrder memory limitOrder);
 
     function executeLimitOrder(
         address account,
         address adapter,
-        uint256 orderId
+        uint256 limitOrderId
     ) external payable returns (IWarehouse.LimitOrder memory limitOrder);
 
     function executeLimitOrderMulti(
         address account,
         address[] calldata adapters,
-        uint256 orderId
+        uint256 limitOrderId
     ) external payable returns (IWarehouse.LimitOrder memory limitOrder);
 
     function createTriggerOrder(
@@ -148,11 +146,11 @@ interface IExchange {
     function cancelTriggerOrder(
         address account,
         bytes32 positionKey,
-        uint256 orderId
+        uint256 triggerOrderId
     ) external;
 
     function executeTriggerOrder(
         bytes32 positionKey,
-        uint256 orderId
+        uint256 triggerOrderId
     ) external returns (IWarehouse.TriggerOrder memory triggerOrder);
 }
