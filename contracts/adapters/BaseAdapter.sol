@@ -12,7 +12,7 @@ abstract contract BaseAdapter is IAdapter {
     }
 
     function logIncreasePosition(
-        uint256 nonce,
+        uint256 marketOrderId,
         address account,
         address adapter,
         address collateral,
@@ -20,10 +20,11 @@ abstract contract BaseAdapter is IAdapter {
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
-        uint256 entryPrice
+        uint256 entryPrice,
+        uint256 fee
     ) internal {
         ILogger(_logger).logIncreasePosition(
-            nonce,
+            marketOrderId,
             account,
             adapter,
             collateral,
@@ -31,7 +32,8 @@ abstract contract BaseAdapter is IAdapter {
             collateralAmount,
             size,
             isLong,
-            entryPrice
+            100, // fixme: entryPrice
+            fee
         );
     }
 

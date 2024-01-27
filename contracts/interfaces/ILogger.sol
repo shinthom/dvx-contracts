@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.7;
 
+// prettier-ignore
+
 interface ILogger {
     event Deposited(
         address indexed account,
         address indexed token,
         uint256 amount
     );
-
     event Withdrawn(
         address indexed account,
         address indexed token,
         uint256 amount
     );
-
     event Swapped(
         address indexed account,
         address indexed tokenIn,
@@ -23,7 +23,7 @@ interface ILogger {
     );
 
     event PositionIncreased(
-        uint256 indexed nonce,
+        uint256 indexed marketOrderId,
         address indexed account,
         address adapter,
         address collateral,
@@ -31,9 +31,9 @@ interface ILogger {
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
-        uint256 entryPrice
+        uint256 entryPrice,
+        uint256 fee
     );
-
     event PositionDecreased(
         address indexed account,
         address adapter,
@@ -50,7 +50,6 @@ interface ILogger {
         address index,
         uint256 collateralAmount
     );
-
     event CollateralDecreased(
         address indexed account,
         address adapter,
@@ -64,13 +63,11 @@ interface ILogger {
         address token,
         uint256 amount
     ) external;
-
     function logWithdraw(
         address account,
         address token,
         uint256 amount
     ) external;
-
     function logSwap(
         address account,
         address tokenIn,
@@ -80,7 +77,7 @@ interface ILogger {
     ) external;
 
     function logIncreasePosition(
-        uint256 nonce,
+        uint256 marketOrderId,
         address account,
         address adapter,
         address collateral,
@@ -88,9 +85,9 @@ interface ILogger {
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
-        uint256 entryPrice
+        uint256 entryPrice,
+        uint256 fee
     ) external;
-
     function logDecreasePosition(
         address account,
         address adapter,
@@ -99,7 +96,6 @@ interface ILogger {
         uint256 size,
         bool isLong
     ) external;
-
     function logIncreaseCollateral(
         address account,
         address adapter,
@@ -107,7 +103,6 @@ interface ILogger {
         address index,
         uint256 collateralAmount
     ) external;
-
     function logDecreaseCollateral(
         address account,
         address adapter,

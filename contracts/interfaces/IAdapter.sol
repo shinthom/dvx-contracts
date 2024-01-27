@@ -3,6 +3,8 @@ pragma solidity 0.8.7;
 
 import {IExchange} from "./IExchange.sol";
 
+// prettier-ignore
+
 interface IAdapter {
     struct Position {
         uint256 collateralAmount;
@@ -13,6 +15,34 @@ interface IAdapter {
         bool isLong;
     }
 
+    function increasePosition(
+        uint256 marketOrderId,
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        uint256 size,
+        bool isLong,
+        uint256 fee
+    ) external payable;
+    function decreasePosition(
+        address collateral,
+        address index,
+        uint256 size,
+        bool isLong
+    ) external payable;
+    function increaseCollateral(
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        bool isLong
+    ) external payable;
+    function decreaseCollateral(
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        bool isLong
+    ) external payable;
+
     function makeMarketOrder(
         address collateral,
         address index,
@@ -21,12 +51,18 @@ interface IAdapter {
         bool isLong
     ) external view returns (IExchange.MarketOrder memory);
 
-    function getMinExecutionFee() external view returns (uint256);
-
-    // function getDepositFee(
-    //     address account,
-    //     IExchange.MarketOrder memory marketOrder
-    // ) external view returns (uint256);
+    function getPosition(
+        address account,
+        address collateral,
+        address index,
+        bool isLong
+    ) external view returns (Position memory);
+    function getWrapPosition(
+        address account,
+        address collateral,
+        address index,
+        bool isLong
+    ) external view returns (Position memory);
 
     function getPnLToken(
         address collateral,
@@ -34,6 +70,15 @@ interface IAdapter {
         bool isLong
     ) external view returns (address);
 
+    function getMinExecutionFee() external view returns (uint256);
+    function getPositionFee(
+        address index,
+        uint256 size
+    ) external view returns (uint256);
+    function getDepositFee(
+        address account,
+        IExchange.MarketOrder memory marketOrder
+    ) external view returns (uint256);
     function getFundingFee(
         address collateral,
         address index,
@@ -42,36 +87,15 @@ interface IAdapter {
         bool isLong
     ) external view returns (uint256);
 
-    function getPositionFee(
-        address index,
-        uint256 size
-    ) external view returns (uint256);
-
     function getPriceDecimals() external view returns (uint256);
-
     function getPrice(
         address collateral,
         bool isLong
     ) external view returns (uint256);
-
     function getWrapPrice(
         address collateral,
         bool isLong
     ) external view returns (uint256);
-
-    function getPosition(
-        address account,
-        address collateral,
-        address index,
-        bool isLong
-    ) external view returns (Position memory);
-
-    function getWrapPosition(
-        address account,
-        address collateral,
-        address index,
-        bool isLong
-    ) external view returns (Position memory);
 
     function getAvailableLiquidity(
         address index,

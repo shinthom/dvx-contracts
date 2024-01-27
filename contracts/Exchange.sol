@@ -21,28 +21,23 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     address public override accountFactory;
     address public override warehouse;
     address public override logger;
-    mapping(address => address) public accounts;
 
-    address[] private registeredAdapters;
+    address[] private _registeredAdapters;
     mapping(address => bool) public override isRegisteredAdapter;
     mapping(address => bool) public override isStableToken;
-
-    mapping(address => bool) public override isOrderKeeper;
-
-    mapping(uint8 => uint256) public tiers;
-    mapping(address => uint8) public referralTiers;
-
-    address public override feeCollector; // todo: feeCollectorContract
-
-    uint256 public minExecutionFee; // limit / trigger order execution fee
-
-    uint256 public positionFeeRate; // open position fee rate
-    uint256 public depositFeeRate; // increase collateral fee rate
-
-    uint256 public swapFeeRate;
-
     address public override defaultStableToken =
         0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8; // usdc.e
+
+    address public override feeCollector;
+    mapping(address => bool) public override isOrderKeeper;
+
+    uint256 public override minExecutionFee; // todo: limit/trigger
+    uint256 public override positionFeeRate; // open position fee rate
+    uint256 public override depositFeeRate; // increase collateral fee rate
+    uint256 public override swapFeeRate;
+
+    mapping(uint8 => uint256) public override tiers;
+    mapping(address => uint8) public override referralTiers;
 
     receive() external payable {}
 
@@ -51,23 +46,76 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         __UUPSUpgradeable_init();
     }
 
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal override onlyOwner {}
+    function setAccountFactory(
+        address _accountFactory
+    ) external override onlyOwner {
+        require(_accountFactory != address(0), "accountFactory: zero address");
 
-    function setLogger(address _logger) external onlyOwner {
+        accountFactory = _accountFactory;
+        emit AccountFactorySet(_accountFactory);
+    }
+
+    function setWarehouse(address _warehouse) external override onlyOwner {
+        require(_warehouse != address(0), "warehouse: zero address");
+
+        warehouse = _warehouse;
+        emit WarehouseSet(_warehouse);
+    }
+
+    function setLogger(address _logger) external override onlyOwner {
         require(_logger != address(0), "logger: zero address");
 
         logger = _logger;
         emit LoggerSet(_logger);
     }
 
-    function setWarehouse(address _warehouse) external onlyOwner {
-        warehouse = _warehouse;
-        emit WarehouseSet(_warehouse);
+    function registerAdapter(address adapter) external override onlyOwner {
+        require(adapter != address(0), "adapter: zero address");
+        require(!isRegisteredAdapter[adapter], "adapter: already registered");
+
+        _registeredAdapters.push(adapter);
+
+        isRegisteredAdapter[adapter] = true;
+        emit AdapterRegistered(adapter);
     }
 
-    function setFeeCollector(address _feeCollector) external onlyOwner {
+    function unregisterAdapter(address adapter) external override onlyOwner {
+        require(adapter != address(0), "adapter: zero address");
+        require(isRegisteredAdapter[adapter], "adapter: not registered");
+
+        uint256 length = _registeredAdapters.length;
+        for (uint256 i = 0; i < length; i++) {
+            if (_registeredAdapters[i] == adapter) {
+                _registeredAdapters[i] = _registeredAdapters[length - 1];
+                _registeredAdapters.pop();
+                break;
+            }
+        }
+
+        isRegisteredAdapter[adapter] = false;
+        emit AdapterUnregistered(adapter);
+    }
+
+    function setStableToken(
+        address token,
+        bool isStable
+    ) external override onlyOwner {
+        isStableToken[token] = isStable;
+        emit StableTokenSet(token, isStable);
+    }
+
+    function setDefaultStableToken(
+        address stableToken
+    ) external override onlyOwner {
+        require(stableToken != address(0), "stableToken: zero address");
+
+        defaultStableToken = stableToken;
+        emit DefaultStableTokenSet(stableToken);
+    }
+
+    function setFeeCollector(
+        address _feeCollector
+    ) external override onlyOwner {
         require(_feeCollector != address(0), "feeCollector: zero address");
 
         feeCollector = _feeCollector;
@@ -77,84 +125,43 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     function setOrderKeeper(
         address orderKeeper,
         bool isActive
-    ) external onlyOwner {
+    ) external override onlyOwner {
         require(orderKeeper != address(0), "exchange: zero address");
 
         isOrderKeeper[orderKeeper] = isActive;
         emit OrderKeeperSet(orderKeeper, isActive);
     }
 
-    function setAccountFactory(address _accountFactory) external onlyOwner {
-        require(_accountFactory != address(0), "accountFactory: zero address");
-
-        accountFactory = _accountFactory;
-        emit AccountFactorySet(_accountFactory);
-    }
-
-    function registerAdapter(address adapter) external onlyOwner {
-        require(adapter != address(0), "adapter: zero address");
-        require(!isRegisteredAdapter[adapter], "adapter: already registered");
-
-        registeredAdapters.push(adapter);
-
-        isRegisteredAdapter[adapter] = true;
-        emit AdapterRegistered(adapter);
-    }
-
-    function unregisterAdapter(address adapter) external onlyOwner {
-        require(adapter != address(0), "adapter: zero address");
-        require(isRegisteredAdapter[adapter], "adapter: not registered");
-
-        uint256 length = registeredAdapters.length;
-        for (uint256 i = 0; i < length; i++) {
-            if (registeredAdapters[i] == adapter) {
-                registeredAdapters[i] = registeredAdapters[length - 1];
-                registeredAdapters.pop();
-                break;
-            }
-        }
-
-        isRegisteredAdapter[adapter] = false;
-        emit AdapterUnregistered(adapter);
-    }
-
-    function setMinExecutionFee(uint256 fee) external onlyOwner {
+    function setMinExecutionFee(uint256 fee) external override onlyOwner {
         minExecutionFee = fee;
         emit MinExecutionFeeSet(fee);
     }
 
-    function setStableToken(address token, bool isStable) external onlyOwner {
-        isStableToken[token] = isStable;
-        emit StableTokenSet(token, isStable);
-    }
-
-    function setDefaultStableToken(address stableToken) external onlyOwner {
-        defaultStableToken = stableToken;
-        emit DefaultStableTokenSet(stableToken);
-    }
-
-    function setPositionFeeRate(uint256 _feeRate) external onlyOwner {
+    function setPositionFeeRate(uint256 _feeRate) external override onlyOwner {
         require(_feeRate <= BASIS_POINTS, "feeRate: invalid");
 
         positionFeeRate = _feeRate;
         emit PositionFeeRateSet(_feeRate);
     }
 
-    function setDepositFeeRate(uint256 _feeRate) external onlyOwner {
+    function setDepositFeeRate(uint256 _feeRate) external override onlyOwner {
         require(_feeRate <= BASIS_POINTS, "feeRate: invalid");
 
         depositFeeRate = _feeRate;
         emit DepositFeeRateSet(_feeRate);
     }
 
-    function setSwapFeeRate(uint256 _feeRate) external onlyOwner {
+    function setSwapFeeRate(uint256 _feeRate) external override onlyOwner {
         require(_feeRate <= BASIS_POINTS, "feeRate: invalid");
 
         swapFeeRate = _feeRate;
         emit SwapFeeRateSet(_feeRate);
     }
 
-    function setTier(uint8 tierId, uint256 discountRate) external onlyOwner {
+    function setTier(
+        uint8 tierId,
+        uint256 discountRate
+    ) external override onlyOwner {
         require(tierId != 0, "tierId: zero");
         require(discountRate <= BASIS_POINTS, "discountRate: invalid");
 
@@ -162,62 +169,12 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         emit TierSet(tierId, discountRate);
     }
 
-    function setReferralTier(address account, uint8 tierId) external onlyOwner {
+    function setReferralTier(
+        address account,
+        uint8 tierId
+    ) external override onlyOwner {
         referralTiers[account] = tierId;
         emit ReferralTierSet(account, tierId);
-    }
-
-    function getPositionFee(
-        address adapter,
-        address collateral,
-        address index,
-        uint256 size,
-        bool isLong
-    ) public view override returns (uint256) {
-        if (size == 0 || positionFeeRate == 0) {
-            return 0;
-        }
-
-        uint256 indexPrice = IAdapter(adapter).getWrapPrice(index, isLong);
-        uint8 indexDecimals = IERC20(index).decimals();
-        uint256 feeUsd = (size * indexPrice * positionFeeRate) /
-            BASIS_POINTS /
-            (10 ** indexDecimals);
-
-        uint256 collateralPrice = IAdapter(adapter).getWrapPrice(
-            collateral,
-            isLong
-        );
-        uint8 collateralDecimals = IERC20(collateral).decimals();
-        return (feeUsd * (10 ** collateralDecimals)) / collateralPrice;
-    }
-
-    function getDepositFee(
-        uint256 collateralAmount
-    ) public view override returns (uint256) {
-        if (collateralAmount == 0 || depositFeeRate == 0) {
-            return 0;
-        }
-
-        return (collateralAmount * depositFeeRate) / BASIS_POINTS;
-    }
-
-    function getSwapFee(
-        uint256 tokenAmount
-    ) public view override returns (uint256) {
-        if (swapFeeRate == 0) {
-            return 0;
-        }
-        return (tokenAmount * swapFeeRate) / BASIS_POINTS;
-    }
-
-    function getPnLToken(
-        address adapter,
-        address collateral,
-        address index,
-        bool isLong
-    ) public view override returns (address) {
-        return IAdapter(adapter).getPnLToken(collateral, index, isLong);
     }
 
     function createAccount() public override returns (address) {
@@ -366,4 +323,70 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
                 triggerOrderId
             );
     }
+
+    function getAllRegisteredAdapters()
+        external
+        view
+        override
+        returns (address[] memory)
+    {
+        return _registeredAdapters;
+    }
+
+    function getPositionFee(
+        address adapter,
+        address collateral,
+        address index,
+        uint256 size,
+        bool isLong
+    ) public view override returns (uint256) {
+        if (size == 0 || positionFeeRate == 0) {
+            return 0;
+        }
+
+        uint256 indexPrice = IAdapter(adapter).getWrapPrice(index, isLong);
+        uint8 indexDecimals = IERC20(index).decimals();
+        uint256 feeUsd = (size * indexPrice * positionFeeRate) /
+            BASIS_POINTS /
+            (10 ** indexDecimals);
+
+        uint256 collateralPrice = IAdapter(adapter).getWrapPrice(
+            collateral,
+            isLong
+        );
+        uint8 collateralDecimals = IERC20(collateral).decimals();
+        return (feeUsd * (10 ** collateralDecimals)) / collateralPrice;
+    }
+
+    function getDepositFee(
+        uint256 collateralAmount
+    ) public view override returns (uint256) {
+        if (collateralAmount == 0 || depositFeeRate == 0) {
+            return 0;
+        }
+
+        return (collateralAmount * depositFeeRate) / BASIS_POINTS;
+    }
+
+    function getSwapFee(
+        uint256 tokenAmount
+    ) public view override returns (uint256) {
+        if (swapFeeRate == 0) {
+            return 0;
+        }
+        return (tokenAmount * swapFeeRate) / BASIS_POINTS;
+    }
+
+    function getPnLToken(
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong
+    ) public view override returns (address) {
+        return IAdapter(adapter).getPnLToken(collateral, index, isLong);
+    }
+
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyOwner {}
 }

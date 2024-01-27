@@ -3,14 +3,9 @@ pragma solidity 0.8.7;
 
 import {IWarehouse} from "./IWarehouse.sol";
 
-interface IExchange {
-    enum OrderType {
-        IncreasePosition,
-        DecreasePosition,
-        IncreaseCollateral,
-        DecreaseCollateral
-    }
+// prettier-ignore
 
+interface IExchange {
     struct MarketOrder {
         address collateral;
         address index;
@@ -20,78 +15,65 @@ interface IExchange {
     }
 
     event AccountFactorySet(address indexed accountFactory);
-
     event WarehouseSet(address indexed warehouse);
-
     event LoggerSet(address indexed logger);
 
+    event AdapterRegistered(address indexed adapter);
+    event AdapterUnregistered(address indexed adapter);
     event StableTokenSet(address indexed token, bool isStable);
-
-    event MinExecutionFeeSet(uint256 indexed fee);
-
     event DefaultStableTokenSet(address indexed token);
 
+    event FeeCollectorSet(address indexed feeCollector);
     event OrderKeeperSet(address indexed orderKeeper, bool isActive);
 
-    event AdapterRegistered(address indexed adapter);
-
-    event AdapterUnregistered(address indexed adapter);
-
-    event TierSet(uint8 indexed tierId, uint256 discount);
-
-    event ReferralTierSet(address indexed referral, uint8 indexed tierId);
-
-    event FeeCollectorSet(address indexed feeCollector);
-
+    event MinExecutionFeeSet(uint256 indexed fee);
     event PositionFeeRateSet(uint256 indexed fee);
-
     event DepositFeeRateSet(uint256 indexed fee);
-
     event SwapFeeRateSet(uint256 indexed fee);
 
-    event Withdrawn(
-        address indexed account,
-        address indexed token,
-        uint256 amount
-    );
-
-    function defaultStableToken() external view returns (address);
+    event TierSet(uint8 indexed tierId, uint256 discount);
+    event ReferralTierSet(address indexed referral, uint8 indexed tierId);
 
     function accountFactory() external returns (address);
-
     function warehouse() external returns (address);
-
     function logger() external returns (address);
 
-    function feeCollector() external returns (address);
-
-    function isStableToken(address token) external view returns (bool);
-
     function isRegisteredAdapter(address adapter) external view returns (bool);
+    function isStableToken(address token) external view returns (bool);
+    function defaultStableToken() external view returns (address);
 
+    function feeCollector() external returns (address);
     function isOrderKeeper(address account) external view returns (bool);
 
-    function getPositionFee(
-        address adapter,
-        address collateral,
-        address index,
-        uint256 size,
-        bool isLong
-    ) external view returns (uint256);
+    function minExecutionFee() external view returns (uint256);
+    function positionFeeRate() external view returns (uint256);
+    function depositFeeRate() external view returns (uint256);
+    function swapFeeRate() external view returns (uint256);
 
-    function getPnLToken(
-        address adapter,
-        address collateral,
-        address index,
-        bool isLong
-    ) external view returns (address);
+    function tiers(uint8) external view returns (uint256);
+    function referralTiers(address) external view returns (uint8);
 
-    function getSwapFee(uint256 amount) external view returns (uint256);
+    function setAccountFactory(address _accountFactory) external;
+    function setWarehouse(address _warehouse) external;
+    function setLogger(address _logger) external;
 
-    function getDepositFee(uint256 amount) external view returns (uint256);
+    function registerAdapter(address adapter) external;
+    function unregisterAdapter(address adapter) external;
+    function setStableToken(address token, bool isStable) external;
+    function setDefaultStableToken(address token) external;
+
+    function setFeeCollector(address _feeCollector) external;
+    function setOrderKeeper(address account, bool isActive) external;
+
+    function setMinExecutionFee(uint256 fee) external;
+    function setPositionFeeRate(uint256 fee) external;
+    function setDepositFeeRate(uint256 fee) external;
+    function setSwapFeeRate(uint256 fee) external;
+
+    function setTier(uint8 tierId, uint256 discountRate) external;
+    function setReferralTier(address account, uint8 tierId) external;
 
     function createAccount() external returns (address account);
-
     function createAccountAndDeposit(
         address token,
         uint256 amount
@@ -112,18 +94,15 @@ interface IExchange {
         uint256 triggerPrice,
         uint256 acceptablePrice
     ) external;
-
     function cancelLimitOrder(
         address account,
         uint256 limitOrderId
     ) external returns (IWarehouse.LimitOrder memory limitOrder);
-
     function executeLimitOrder(
         address account,
         address adapter,
         uint256 limitOrderId
     ) external payable returns (IWarehouse.LimitOrder memory limitOrder);
-
     function executeLimitOrderMulti(
         address account,
         address[] calldata adapters,
@@ -142,15 +121,30 @@ interface IExchange {
         uint256 acceptablePrice,
         uint256 executionFee
     ) external;
-
     function cancelTriggerOrder(
         address account,
         bytes32 positionKey,
         uint256 triggerOrderId
     ) external;
-
     function executeTriggerOrder(
         bytes32 positionKey,
         uint256 triggerOrderId
     ) external returns (IWarehouse.TriggerOrder memory triggerOrder);
+
+    function getAllRegisteredAdapters() external view returns (address[] memory);
+    function getPositionFee(
+        address adapter,
+        address collateral,
+        address index,
+        uint256 size,
+        bool isLong
+    ) external view returns (uint256);
+    function getDepositFee(uint256 amount) external view returns (uint256);
+    function getSwapFee(uint256 amount) external view returns (uint256);
+    function getPnLToken(
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong
+    ) external view returns (address);
 }

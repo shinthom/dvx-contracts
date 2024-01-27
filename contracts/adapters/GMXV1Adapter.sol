@@ -178,7 +178,7 @@ interface IVaultPriceFeed {
 }
 
 contract GmxV1Adapter is BaseAdapter {
-    uint256 public constant BASIS_POINTS_DIVISOR = 10000;
+    uint256 public constant BASIS_POINTS_DIVISOR = 10_000;
 
     uint256 public constant PRICE_DECIMALS = 30;
     uint256 public constant USD = 1 * (10 ** PRICE_DECIMALS);
@@ -212,122 +212,149 @@ contract GmxV1Adapter is BaseAdapter {
         _this = address(this);
     }
 
-    function getMinExecutionFee() external view override returns (uint256) {
-        return IPositionRouter(_positionRouter).minExecutionFee();
-    }
-
-    function getPriceDecimals() external pure override returns (uint256) {
-        return PRICE_DECIMALS;
-    }
-
-    function getPrice(
-        address token,
-        bool isLong
-    ) public view override returns (uint256) {
-        if (IExchange(_exchange).isStableToken(token)) {
-            return USD;
-        }
-        return
-            isLong
-                ? IVault(_vault).getMaxPrice(token)
-                : IVault(_vault).getMinPrice(token);
-    }
-
-    function getWrapPrice(
-        address token,
-        bool isLong
-    ) external view override returns (uint256) {
-        uint256 price = getPrice(token, isLong);
-        return price / (10 ** 12); // 1e18
-    }
-
-    // function getDepositFee(
-    //     address account,
-    //     IExchange.MarketOrder memory marketOrder
-    // ) external view override returns (uint256) {
-    //     if (!marketOrder.isLong) {
-    //         return 0;
-    //     }
-    //     address collateral = marketOrder.path[marketOrder.path.length - 1];
-    //     IAdapter.Position memory position = getPosition(
-    //         account,
-    //         collateral,
-    //         marketOrder.index,
-    //         marketOrder.isLong
-    //     );
-    //     if (position.size == 0) {
-    //         return 0;
-    //     }
-
-    //     uint256 increasePositionBufferBps
-    //         = IPositionRouter(_positionRouter).increasePositionBufferBps(); // prettier-ignore
-    //     uint256 collateralAmountUsd = IVault(_vault).tokenToUsdMin(
-    //         collateral,
-    //         marketOrder.collateralAmount
-    //     );
-
-    //     uint256 nextSize = position.size + marketOrder.size;
-    //     uint256 nextCollateralAmount = position.collateralAmount +
-    //         collateralAmountUsd;
-
-    //     uint256 prevLeverage = (position.size * BASIS_POINTS_DIVISOR) /
-    //         position.collateralAmount;
-    //     uint256 nextLeverage = (nextSize *
-    //         (BASIS_POINTS_DIVISOR + increasePositionBufferBps)) /
-    //         nextCollateralAmount;
-
-    //     if (nextLeverage > prevLeverage) {
-    //         return 0;
-    //     }
-
-    //     uint256 collateralDecimals = IERC20(collateral).decimals();
-    //     uint256 minPrice = IVault(_vault).getMinPrice(collateral);
-
-    //     uint256 depositFeeBasisPoints
-    //         = IPositionRouter(_positionRouter).depositFee(); // prettier-ignore
-    //     uint256 collateralAmountAfterDepositFee = (marketOrder
-    //         .collateralAmount * depositFeeBasisPoints) / BASIS_POINTS_DIVISOR;
-
-    //     return
-    //         (collateralAmountAfterDepositFee * minPrice) /
-    //         (10 ** collateralDecimals);
-    // }
-
-    function getPositionFee(
-        address /* index */,
-        uint256 size
-    ) external pure override returns (uint256) {
-        return (size * 10) / BASIS_POINTS_DIVISOR;
-    }
-
-    function getFundingFee(
+    function increasePosition(
+        uint256 marketOrderId,
         address collateral,
-        address /* index */,
+        address index,
+        uint256 collateralAmount,
         uint256 size,
-        uint256 fundingRate,
-        bool /* isLong */
-    ) external view override returns (uint256) {
-        if (size == 0) {
-            return 0;
+        bool isLong,
+        uint256 fee
+    ) public payable override {
+        if (!IRouter(_router).approvedPlugins(address(this), _positionRouter)) {
+            IRouter(_router).approvePlugin(_positionRouter);
         }
+        require(collateral != address(0), "collateral: zero address");
+        require(index != address(0), "index: zero address");
 
-        return IVault(_vault).getFundingFee(collateral, size, fundingRate);
+        uint8 indexDecimal = IERC20(index).decimals();
+        uint256 indexPrice = getPrice(index, isLong);
+
+        uint256 sizeUsd = (size * indexPrice) / (10 ** indexDecimal);
+
+        _increase(collateral, index, collateralAmount, sizeUsd, isLong);
+
+        uint256 entryPrice = indexPrice / 1e12; // 1e18
+        logIncreasePosition(
+            marketOrderId,
+            address(this),
+            _this,
+            collateral,
+            index,
+            collateralAmount,
+            size,
+            isLong,
+            entryPrice,
+            fee
+        );
     }
 
-    function getAvailableLiquidity(
+    function decreasePosition(
+        address collateral,
         address index,
+        uint256 size,
         bool isLong
-    ) external view override returns (uint256) {
-        uint256 availableLiquidityUsd = isLong
-            ? IPositionRouter(_positionRouter).maxGlobalLongSizes(index) -
-                IVault(_vault).guaranteedUsd(index)
-            : IPositionRouter(_positionRouter).maxGlobalShortSizes(index) -
-                IVault(_vault).globalShortSizes(index);
+    ) public payable override {
+        Position memory position = getPosition(
+            address(this),
+            collateral,
+            index,
+            isLong
+        );
+        uint256 sizeUsd = (position.price * size) /
+            (10 ** IERC20(index).decimals());
 
-        uint8 indexDecimals = IERC20(index).decimals();
-        return
-            (availableLiquidityUsd * (10 ** indexDecimals)) /
-            getPrice(index, isLong);
+        if (position.collateralAmount > position.size - sizeUsd) {
+            sizeUsd = position.size;
+        }
+
+        _decrease(collateral, index, 0, sizeUsd, isLong);
+
+        logDecreasePosition(
+            address(this),
+            _this,
+            collateral,
+            index,
+            size,
+            isLong
+        );
+    }
+
+    function increaseCollateral(
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        bool isLong
+    ) public payable override {
+        require(collateral != address(0), "collateral: zero address");
+        require(index != address(0), "index: zero address");
+
+        _increase(collateral, index, collateralAmount, 0, isLong);
+
+        logIncreaseCollateral(
+            address(this),
+            _this,
+            collateral,
+            index,
+            collateralAmount
+        );
+    }
+
+    function decreaseCollateral(
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        bool isLong
+    ) public payable override {
+        uint256 collateralAmountUsd;
+
+        if (isLong) {
+            collateralAmountUsd = IVault(_vault).tokenToUsdMin(
+                collateral,
+                collateralAmount
+            );
+        } else {
+            require(
+                IExchange(_exchange).isStableToken(collateral),
+                "INVALID_COLLATERAL"
+            );
+            collateralAmountUsd = collateralAmount * (10 ** 24);
+        }
+
+        _decrease(collateral, index, collateralAmountUsd, 0, isLong);
+
+        logDecreaseCollateral(
+            address(this),
+            _this,
+            collateral,
+            index,
+            collateralAmount
+        );
+    }
+
+    function makeMarketOrder(
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        uint256 size,
+        bool isLong
+    )
+        external
+        view
+        override
+        returns (IExchange.MarketOrder memory marketOrder)
+    {
+        uint8 indexDecimal = IERC20(index).decimals();
+        uint256 indexPrice = getPrice(index, isLong);
+
+        uint256 sizeUsd = (size * indexPrice) / (10 ** indexDecimal);
+        marketOrder = IExchange.MarketOrder({
+            collateral: collateral,
+            index: index,
+            collateralAmount: collateralAmount,
+            size: sizeUsd,
+            isLong: isLong
+        });
     }
 
     function getPosition(
@@ -418,31 +445,6 @@ contract GmxV1Adapter is BaseAdapter {
         }
     }
 
-    function makeMarketOrder(
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 size,
-        bool isLong
-    )
-        external
-        view
-        override
-        returns (IExchange.MarketOrder memory marketOrder)
-    {
-        uint8 indexDecimal = IERC20(index).decimals();
-        uint256 indexPrice = getPrice(index, isLong);
-
-        uint256 sizeUsd = (size * indexPrice) / (10 ** indexDecimal);
-        marketOrder = IExchange.MarketOrder({
-            collateral: collateral,
-            index: index,
-            collateralAmount: collateralAmount,
-            size: sizeUsd,
-            isLong: isLong
-        });
-    }
-
     function getPnLToken(
         address collateral,
         address index,
@@ -458,123 +460,122 @@ contract GmxV1Adapter is BaseAdapter {
         }
     }
 
-    function increasePosition(
-        uint256 nonce,
+    function getMinExecutionFee() external view override returns (uint256) {
+        return IPositionRouter(_positionRouter).minExecutionFee();
+    }
+
+    function getPositionFee(
+        address /* index */,
+        uint256 size
+    ) external pure override returns (uint256) {
+        return (size * 10) / BASIS_POINTS_DIVISOR;
+    }
+
+    function getDepositFee(
+        address account,
+        IExchange.MarketOrder memory marketOrder
+    ) external view override returns (uint256) {
+        if (!marketOrder.isLong) {
+            return 0;
+        }
+        address collateral = marketOrder.collateral;
+        IAdapter.Position memory position = getPosition(
+            account,
+            collateral,
+            marketOrder.index,
+            marketOrder.isLong
+        );
+        if (position.size == 0) {
+            return 0;
+        }
+
+        uint256 increasePositionBufferBps
+            = IPositionRouter(_positionRouter).increasePositionBufferBps(); // prettier-ignore
+        uint256 collateralAmountUsd = IVault(_vault).tokenToUsdMin(
+            collateral,
+            marketOrder.collateralAmount
+        );
+
+        uint256 nextSize = position.size + marketOrder.size;
+        uint256 nextCollateralAmount = position.collateralAmount +
+            collateralAmountUsd;
+
+        uint256 prevLeverage = (position.size * BASIS_POINTS_DIVISOR) /
+            position.collateralAmount;
+        uint256 nextLeverage = (nextSize *
+            (BASIS_POINTS_DIVISOR + increasePositionBufferBps)) /
+            nextCollateralAmount;
+
+        if (nextLeverage > prevLeverage) {
+            return 0;
+        }
+
+        uint256 collateralDecimals = IERC20(collateral).decimals();
+        uint256 minPrice = IVault(_vault).getMinPrice(collateral);
+
+        uint256 depositFeeBasisPoints
+            = IPositionRouter(_positionRouter).depositFee(); // prettier-ignore
+        uint256 collateralAmountAfterDepositFee = (marketOrder
+            .collateralAmount * depositFeeBasisPoints) / BASIS_POINTS_DIVISOR;
+
+        return
+            (collateralAmountAfterDepositFee * minPrice) /
+            (10 ** collateralDecimals);
+    }
+
+    function getFundingFee(
         address collateral,
-        address index,
-        uint256 collateralAmount,
+        address /* index */,
         uint256 size,
-        bool isLong
-    ) public payable {
-        if (!IRouter(_router).approvedPlugins(address(this), _positionRouter)) {
-            IRouter(_router).approvePlugin(_positionRouter);
+        uint256 fundingRate,
+        bool /* isLong */
+    ) external view override returns (uint256) {
+        if (size == 0) {
+            return 0;
         }
-        require(collateral != address(0), "collateral: zero address");
-        require(index != address(0), "index: zero address");
 
-        uint8 indexDecimal = IERC20(index).decimals();
-        uint256 indexPrice = getPrice(index, isLong);
-
-        // 1e30
-        uint256 sizeUsd = (size * indexPrice) / (10 ** indexDecimal);
-
-        _increase(collateral, index, collateralAmount, sizeUsd, isLong);
-
-        uint256 entryPrice = indexPrice / 1e12; // 1e18
-        logIncreasePosition(
-            nonce,
-            address(this),
-            _this,
-            collateral,
-            index,
-            collateralAmount,
-            size,
-            isLong,
-            entryPrice
-        );
+        return IVault(_vault).getFundingFee(collateral, size, fundingRate);
     }
 
-    function decreasePosition(
-        address collateral,
-        address index,
-        uint256 size,
+    function getPriceDecimals() external pure override returns (uint256) {
+        return PRICE_DECIMALS;
+    }
+
+    function getPrice(
+        address token,
         bool isLong
-    ) public payable {
-        Position memory position = getPosition(
-            address(this),
-            collateral,
-            index,
+    ) public view override returns (uint256) {
+        if (IExchange(_exchange).isStableToken(token)) {
+            return USD;
+        }
+        return
             isLong
-        );
-        uint256 sizeUsd = (position.price * size) /
-            (10 ** IERC20(index).decimals());
-
-        if (position.collateralAmount > position.size - sizeUsd) {
-            sizeUsd = position.size;
-        }
-
-        _decrease(collateral, index, 0, sizeUsd, isLong);
-
-        logDecreasePosition(
-            address(this),
-            _this,
-            collateral,
-            index,
-            size,
-            isLong
-        );
+                ? IVault(_vault).getMaxPrice(token)
+                : IVault(_vault).getMinPrice(token);
     }
 
-    function increaseCollateral(
-        address collateral,
-        address index,
-        uint256 collateralAmount,
+    function getWrapPrice(
+        address token,
         bool isLong
-    ) public payable {
-        require(collateral != address(0), "collateral: zero address");
-        require(index != address(0), "index: zero address");
-
-        _increase(collateral, index, collateralAmount, 0, isLong);
-
-        logIncreaseCollateral(
-            address(this),
-            _this,
-            collateral,
-            index,
-            collateralAmount
-        );
+    ) external view override returns (uint256) {
+        uint256 price = getPrice(token, isLong);
+        return price / (10 ** 12); // 1e18
     }
 
-    function decreaseCollateral(
-        address collateral,
+    function getAvailableLiquidity(
         address index,
-        uint256 collateralAmount,
         bool isLong
-    ) public payable {
-        uint256 collateralAmountUsd;
+    ) external view override returns (uint256) {
+        uint256 availableLiquidityUsd = isLong
+            ? IPositionRouter(_positionRouter).maxGlobalLongSizes(index) -
+                IVault(_vault).guaranteedUsd(index)
+            : IPositionRouter(_positionRouter).maxGlobalShortSizes(index) -
+                IVault(_vault).globalShortSizes(index);
 
-        if (isLong) {
-            collateralAmountUsd = IVault(_vault).tokenToUsdMin(
-                collateral,
-                collateralAmount
-            );
-        } else {
-            require(
-                IExchange(_exchange).isStableToken(collateral),
-                "INVALID_COLLATERAL"
-            );
-            collateralAmountUsd = collateralAmount * (10 ** 24);
-        }
-
-        _decrease(collateral, index, collateralAmountUsd, 0, isLong);
-
-        logDecreaseCollateral(
-            address(this),
-            _this,
-            collateral,
-            index,
-            collateralAmount
-        );
+        uint8 indexDecimals = IERC20(index).decimals();
+        return
+            (availableLiquidityUsd * (10 ** indexDecimals)) /
+            getPrice(index, isLong);
     }
 
     function _increase(

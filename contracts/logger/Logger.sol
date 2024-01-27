@@ -2,6 +2,7 @@
 pragma solidity 0.8.7;
 
 import {ILogger} from "../interfaces/ILogger.sol";
+import "hardhat/console.sol";
 
 contract Logger is ILogger {
     function logDeposit(
@@ -31,7 +32,7 @@ contract Logger is ILogger {
     }
 
     function logIncreasePosition(
-        uint256 nonce,
+        uint256 marketOrderId,
         address account,
         address adapter,
         address collateral,
@@ -39,10 +40,11 @@ contract Logger is ILogger {
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
-        uint256 entryPrice
+        uint256 entryPrice,
+        uint256 fee
     ) external override {
         emit PositionIncreased(
-            nonce,
+            marketOrderId,
             account,
             adapter,
             collateral,
@@ -50,7 +52,8 @@ contract Logger is ILogger {
             collateralAmount,
             size,
             isLong,
-            entryPrice
+            entryPrice,
+            fee
         );
     }
 

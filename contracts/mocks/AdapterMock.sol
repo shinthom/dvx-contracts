@@ -45,21 +45,4 @@ contract AdapterMock {
     ) external view returns (IAdapter.Position memory) {
         return IAdapter.Position(10, _size, 10, 10, 10, true);
     }
-
-    function makeMarketOrder(
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 size,
-        bool isLong
-    ) external payable returns (IExchange.MarketOrder memory) {
-        return
-            IExchange.MarketOrder(
-                collateral,
-                index,
-                collateralAmount,
-                size,
-                isLong
-            );
-    }
 }

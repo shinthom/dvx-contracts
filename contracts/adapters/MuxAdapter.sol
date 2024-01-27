@@ -148,196 +148,238 @@ interface IOrderBook {
 
 interface IChainlink {
     function latestAnswer() external view returns (int256);
-
-    // function latestTimestamp() external view returns (uint256);
-
-    // function latestRound() external view returns (uint256);
-
-    // function getAnswer(uint256 roundId) external view returns (int256);
-
-    // function getTimestamp(uint256 roundId) external view returns (uint256);
-
-    // event AnswerUpdated(
-    //     int256 indexed current,
-    //     uint256 indexed roundId,
-    //     uint256 updatedAt
-    // );
-    // event NewRound(
-    //     uint256 indexed roundId,
-    //     address indexed startedBy,
-    //     uint256 startedAt
-    // );
 }
 
 contract MuxAdapter is BaseAdapter {
     uint256 public constant TOKEN_DEFAULT_DECIMALS = 18;
+
     uint256 public constant PRICE_DECIMALS = 18;
     uint256 public constant USD = 1 * (10 ** PRICE_DECIMALS);
 
-    uint8 private constant _wethId = 3;
-    uint8 private immutable _defaultProfitTokenId;
+    uint8 private constant _wethTokenId = 3;
 
     address private immutable _liquidityPool;
     address private immutable _orderBook;
-
     address private immutable _exchange;
+
     address private immutable _this;
 
     constructor(
         address orderBook,
         address liquidityPool,
         address exchange,
-        address logger,
-        uint8 defaultProfitTokenId
+        address logger
     ) BaseAdapter(logger) {
         require(orderBook != address(0), "orderBook: zero address");
         require(liquidityPool != address(0), "liquidityPool: zero address");
 
         _orderBook = orderBook;
         _liquidityPool = liquidityPool;
-        _defaultProfitTokenId = defaultProfitTokenId;
-
         _exchange = exchange;
+
         _this = address(this);
     }
 
-    function _assembleSubAccountId(
-        address account,
-        uint8 collateralId,
-        uint8 assetId,
-        bool isLong
-    ) private pure returns (bytes32 subAccountId) {
-        subAccountId = bytes32(uint256(uint160(account)) << 96);
-        subAccountId |= bytes32(uint256(collateralId) << 88);
-        subAccountId |= bytes32(uint256(assetId) << 80);
-        subAccountId |= bytes32(uint256(isLong ? 1 : 0) << 72);
-    }
-
-    function _getSubAccountId(
-        address account,
+    function increasePosition(
+        uint256 marketOrderId,
         address collateral,
         address index,
+        uint256 collateralAmount,
+        uint256 size,
+        bool isLong,
+        uint256 fee
+    ) external payable override {
+        uint8 collateralId = _getIdFromTokenAddress(collateral);
+        uint8 indexId = _getIdFromTokenAddress(index);
+        bytes32 subAccountId = _assembleSubAccountId(
+            address(this),
+            collateralId,
+            indexId,
+            isLong
+        );
+
+        uint256 adjustedSize = _adjustSizeDecimal(index, size);
+
+        if (collateralId == _wethTokenId) {
+            IERC20(collateral).withdraw(collateralAmount);
+
+            IOrderBook(_orderBook).placePositionOrder3{value: collateralAmount}(
+                subAccountId,
+                uint96(collateralAmount),
+                uint96(adjustedSize),
+                0,
+                0,
+                192,
+                0,
+                0x0,
+                IOrderBook.PositionOrderExtra(0, 0, 0, 0)
+            );
+        } else {
+            // slither-disable-next-line unused-return
+            IERC20(collateral).approve(_orderBook, collateralAmount);
+            IOrderBook(_orderBook).placePositionOrder3(
+                subAccountId,
+                uint96(collateralAmount),
+                uint96(adjustedSize),
+                0,
+                0,
+                192,
+                0,
+                0x0,
+                IOrderBook.PositionOrderExtra(0, 0, 0, 0)
+            );
+        }
+
+        uint256 entryPrice = getWrapPrice(index, isLong);
+        logIncreasePosition(
+            marketOrderId,
+            address(this),
+            _this,
+            collateral,
+            index,
+            collateralAmount,
+            size,
+            isLong,
+            entryPrice,
+            fee
+        );
+    }
+
+    function decreasePosition(
+        address collateral,
+        address index,
+        uint256 size,
         bool isLong
-    ) private view returns (bytes32) {
+    ) external payable override {
         uint8 collateralId = _getIdFromTokenAddress(collateral);
         uint8 indexId = _getIdFromTokenAddress(index);
 
-        return _assembleSubAccountId(account, collateralId, indexId, isLong);
+        bytes32 subAccountId = _assembleSubAccountId(
+            address(this),
+            collateralId,
+            indexId,
+            isLong
+        );
+
+        // https://github.com/mux-world/mux-protocol/blob/e93946a555a59fcd9532517c88fff980d382a279/contracts/orderbook/OrderBook.sol#L137
+        uint256 adjustedSize = _adjustSizeDecimal(index, size);
+
+        address defaultStableToken = IExchange(_exchange).defaultStableToken();
+        uint8 profitTokenId = _getIdFromTokenAddress(defaultStableToken);
+
+        IOrderBook(_orderBook).placePositionOrder3(
+            subAccountId,
+            0,
+            uint96(adjustedSize),
+            0,
+            profitTokenId,
+            96,
+            0,
+            0x0,
+            IOrderBook.PositionOrderExtra(0, 0, 0, 0)
+        );
+
+        logDecreasePosition(
+            address(this),
+            _this,
+            collateral,
+            index,
+            size,
+            isLong
+        );
     }
 
-    function _getIdFromTokenAddress(
-        address tokenAddress
-    ) private view returns (uint8) {
-        ILiquidityPool.Asset[] memory assets = ILiquidityPool(_liquidityPool)
-            .getAllAssetInfo();
-        for (uint256 i = 0; i < assets.length; i++) {
-            if (assets[i].tokenAddress == tokenAddress) {
-                return assets[i].id;
-            }
-        }
-        revert("id: not found");
-    }
-
-    function _getPrice(address referenceOracle) private view returns (uint256) {
-        int256 price = IChainlink(referenceOracle).latestAnswer();
-        price *= 1e10; // decimals 8 => 18
-        return uint256(price);
-    }
-
-    function getMinExecutionFee() external pure override returns (uint256) {
-        return 0;
-    }
-
-    function getPriceDecimals() external pure override returns (uint256) {
-        return PRICE_DECIMALS;
-    }
-
-    function getPrice(
-        address token,
-        bool /* isLong */
-    ) public view override returns (uint256) {
-        uint8 tokenId = _getIdFromTokenAddress(token);
-        ILiquidityPool.Asset memory asset
-            = ILiquidityPool(_liquidityPool).getAssetInfo(tokenId); // prettier-ignore
-        return _getPrice(asset.referenceOracle);
-    }
-
-    function getWrapPrice(
-        address token,
+    function increaseCollateral(
+        address collateral,
+        address index,
+        uint256 collateralAmount,
         bool isLong
-    ) public view override returns (uint256) {
-        return getPrice(token, isLong);
-    }
-
-    // function getDepositFee(
-    //     address /* account */,
-    //     IExchange.MarketOrder memory /* positionOrder */
-    // ) external pure override returns (uint256) {
-    //     return 0;
-    // }
-
-    function getPositionFee(
-        address index,
-        uint256 size
-    ) external view override returns (uint256) {
+    ) external payable override {
+        uint8 collateralId = _getIdFromTokenAddress(collateral);
         uint8 indexId = _getIdFromTokenAddress(index);
-        ILiquidityPool.Asset memory asset = ILiquidityPool(_liquidityPool)
-            .getAssetInfo(indexId);
 
-        uint256 price = _getPrice(asset.referenceOracle);
-        uint256 decimals = IERC20(index).decimals();
-        return
-            ((price * asset.positionFeeRate) * size) / 1e5 / (10 ** decimals);
+        bytes32 subAccountId = _assembleSubAccountId(
+            address(this),
+            collateralId,
+            indexId,
+            isLong
+        );
+
+        if (collateralId == _wethTokenId) {
+            IERC20(collateral).withdraw(collateralAmount);
+
+            IOrderBook(_orderBook).depositCollateral{value: collateralAmount}(
+                subAccountId,
+                collateralAmount
+            );
+        } else {
+            // slither-disable-next-line unused-return
+            IERC20(collateral).approve(_orderBook, collateralAmount);
+            IOrderBook(_orderBook).depositCollateral(
+                subAccountId,
+                collateralAmount
+            );
+        }
+
+        logIncreaseCollateral(
+            address(this),
+            _this,
+            collateral,
+            index,
+            collateralAmount
+        );
     }
 
-    function getFundingFee(
-        address /* collateral */,
+    function decreaseCollateral(
+        address collateral,
         address index,
+        uint256 collateralAmount,
+        bool isLong
+    ) external payable override {
+        uint8 collateralId = _getIdFromTokenAddress(collateral);
+        uint8 indexId = _getIdFromTokenAddress(index);
+
+        bytes32 subAccountId = _assembleSubAccountId(
+            address(this),
+            collateralId,
+            indexId,
+            isLong
+        );
+
+        address defaultStableToken = IExchange(_exchange).defaultStableToken();
+        uint8 profitTokenId = _getIdFromTokenAddress(defaultStableToken);
+
+        IOrderBook(_orderBook).placeWithdrawalOrder(
+            subAccountId,
+            uint96(collateralAmount),
+            profitTokenId,
+            false // isProfit
+        );
+
+        logDecreaseCollateral(
+            address(this),
+            _this,
+            collateral,
+            index,
+            collateralAmount
+        );
+    }
+
+    function makeMarketOrder(
+        address collateral,
+        address index,
+        uint256 collateralAmount,
         uint256 size,
-        uint256 fundingRate,
         bool isLong
-    ) external view override returns (uint256) {
-        if (size == 0) {
-            return 0;
-        }
-
-        uint8 indexId = _getIdFromTokenAddress(index);
-        ILiquidityPool.Asset memory asset
-            = ILiquidityPool(_liquidityPool).getAssetInfo(indexId); // prettier-ignore
-
-        int256 price = IChainlink(asset.referenceOracle).latestAnswer();
-        price *= 1e10; // decimals 8 => 18
-
-        uint256 cumulativeFunding;
-        if (isLong) {
-            cumulativeFunding = asset.longCumulativeFundingRate - fundingRate;
-            cumulativeFunding = (cumulativeFunding * uint256(price)) / 1e18;
-        } else {
-            cumulativeFunding = asset.shortCumulativeFunding - fundingRate;
-        }
-        return (cumulativeFunding * size) / 1e18;
-    }
-
-    function getAvailableLiquidity(
-        address index,
-        bool isLong
-    ) external view override returns (uint256) {
-        uint8 indexId = _getIdFromTokenAddress(index);
-        ILiquidityPool.Asset memory asset = ILiquidityPool(_liquidityPool)
-            .getAssetInfo(indexId);
-
-        uint256 availableLiquidity;
-        if (isLong) {
-            // note: asset.maxLongPositionSize?
-            availableLiquidity = asset.spotLiquidity - asset.totalLongPosition;
-        } else {
-            availableLiquidity =
-                asset.maxShortPositionSize -
-                asset.totalShortPosition;
-        }
-
-        uint8 indexDecimals = IERC20(index).decimals();
-        return availableLiquidity / (10 ** (PRICE_DECIMALS - indexDecimals));
+    ) public pure override returns (IExchange.MarketOrder memory) {
+        return
+            IExchange.MarketOrder({
+                collateral: collateral,
+                index: index,
+                collateralAmount: collateralAmount,
+                size: size,
+                isLong: isLong
+            });
     }
 
     function getPosition(
@@ -410,23 +452,6 @@ contract MuxAdapter is BaseAdapter {
             );
     }
 
-    function makeMarketOrder(
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 size,
-        bool isLong
-    ) public pure override returns (IExchange.MarketOrder memory) {
-        return
-            IExchange.MarketOrder({
-                collateral: collateral,
-                index: index,
-                collateralAmount: collateralAmount,
-                size: size,
-                isLong: isLong
-            });
-    }
-
     function getPnLToken(
         address collateral,
         address index,
@@ -437,6 +462,102 @@ contract MuxAdapter is BaseAdapter {
         } else {
             return IExchange(_exchange).defaultStableToken();
         }
+    }
+
+    function getMinExecutionFee() external pure override returns (uint256) {
+        return 0;
+    }
+
+    function getPositionFee(
+        address index,
+        uint256 size
+    ) external view override returns (uint256) {
+        uint8 indexId = _getIdFromTokenAddress(index);
+        ILiquidityPool.Asset memory asset = ILiquidityPool(_liquidityPool)
+            .getAssetInfo(indexId);
+
+        uint256 price = _getPrice(asset.referenceOracle);
+        uint256 decimals = IERC20(index).decimals();
+        return
+            ((price * asset.positionFeeRate) * size) / 1e5 / (10 ** decimals);
+    }
+
+    function getDepositFee(
+        address /* account */,
+        IExchange.MarketOrder memory /* positionOrder */
+    ) external pure override returns (uint256) {
+        return 0;
+    }
+
+    function getFundingFee(
+        address /* collateral */,
+        address index,
+        uint256 size,
+        uint256 fundingRate,
+        bool isLong
+    ) external view override returns (uint256) {
+        if (size == 0) {
+            return 0;
+        }
+
+        uint8 indexId = _getIdFromTokenAddress(index);
+        ILiquidityPool.Asset memory asset
+            = ILiquidityPool(_liquidityPool).getAssetInfo(indexId); // prettier-ignore
+
+        int256 price = IChainlink(asset.referenceOracle).latestAnswer();
+        price *= 1e10; // decimals 8 => 18
+
+        uint256 cumulativeFunding;
+        if (isLong) {
+            cumulativeFunding = asset.longCumulativeFundingRate - fundingRate;
+            cumulativeFunding = (cumulativeFunding * uint256(price)) / 1e18;
+        } else {
+            cumulativeFunding = asset.shortCumulativeFunding - fundingRate;
+        }
+        return (cumulativeFunding * size) / 1e18;
+    }
+
+    function getPriceDecimals() external pure override returns (uint256) {
+        return PRICE_DECIMALS;
+    }
+
+    function getPrice(
+        address token,
+        bool /* isLong */
+    ) public view override returns (uint256) {
+        uint8 tokenId = _getIdFromTokenAddress(token);
+        ILiquidityPool.Asset memory asset
+            = ILiquidityPool(_liquidityPool).getAssetInfo(tokenId); // prettier-ignore
+        return _getPrice(asset.referenceOracle);
+    }
+
+    function getWrapPrice(
+        address token,
+        bool isLong
+    ) public view override returns (uint256) {
+        return getPrice(token, isLong);
+    }
+
+    function getAvailableLiquidity(
+        address index,
+        bool isLong
+    ) external view override returns (uint256) {
+        uint8 indexId = _getIdFromTokenAddress(index);
+        ILiquidityPool.Asset memory asset = ILiquidityPool(_liquidityPool)
+            .getAssetInfo(indexId);
+
+        uint256 availableLiquidity;
+        if (isLong) {
+            // note: asset.maxLongPositionSize?
+            availableLiquidity = asset.spotLiquidity - asset.totalLongPosition;
+        } else {
+            availableLiquidity =
+                asset.maxShortPositionSize -
+                asset.totalShortPosition;
+        }
+
+        uint8 indexDecimals = IERC20(index).decimals();
+        return availableLiquidity / (10 ** (PRICE_DECIMALS - indexDecimals));
     }
 
     // https://github.com/mux-world/mux-protocol/blob/e93946a555a59fcd9532517c88fff980d382a279/contracts/orderbook/OrderBook.sol#L137
@@ -453,180 +574,46 @@ contract MuxAdapter is BaseAdapter {
         }
     }
 
-    function increasePosition(
-        uint256 nonce,
+    function _assembleSubAccountId(
+        address account,
+        uint8 collateralId,
+        uint8 assetId,
+        bool isLong
+    ) private pure returns (bytes32 subAccountId) {
+        subAccountId = bytes32(uint256(uint160(account)) << 96);
+        subAccountId |= bytes32(uint256(collateralId) << 88);
+        subAccountId |= bytes32(uint256(assetId) << 80);
+        subAccountId |= bytes32(uint256(isLong ? 1 : 0) << 72);
+    }
+
+    function _getSubAccountId(
+        address account,
         address collateral,
         address index,
-        uint256 collateralAmount,
-        uint256 size,
         bool isLong
-    ) external payable {
+    ) private view returns (bytes32) {
         uint8 collateralId = _getIdFromTokenAddress(collateral);
         uint8 indexId = _getIdFromTokenAddress(index);
-        bytes32 subAccountId = _assembleSubAccountId(
-            address(this),
-            collateralId,
-            indexId,
-            isLong
-        );
 
-        uint256 adjustedSize = _adjustSizeDecimal(index, size);
+        return _assembleSubAccountId(account, collateralId, indexId, isLong);
+    }
 
-        if (collateralId == _wethId) {
-            IERC20(collateral).withdraw(collateralAmount);
-
-            IOrderBook(_orderBook).placePositionOrder3{value: collateralAmount}(
-                subAccountId,
-                uint96(collateralAmount),
-                uint96(adjustedSize),
-                0,
-                0,
-                192,
-                0,
-                0x0,
-                IOrderBook.PositionOrderExtra(0, 0, 0, 0)
-            );
-        } else {
-            // slither-disable-next-line unused-return
-            IERC20(collateral).approve(_orderBook, collateralAmount);
-            IOrderBook(_orderBook).placePositionOrder3(
-                subAccountId,
-                uint96(collateralAmount),
-                uint96(adjustedSize),
-                0,
-                0,
-                192,
-                0,
-                0x0,
-                IOrderBook.PositionOrderExtra(0, 0, 0, 0)
-            );
+    function _getIdFromTokenAddress(
+        address tokenAddress
+    ) private view returns (uint8) {
+        ILiquidityPool.Asset[] memory assets = ILiquidityPool(_liquidityPool)
+            .getAllAssetInfo();
+        for (uint256 i = 0; i < assets.length; i++) {
+            if (assets[i].tokenAddress == tokenAddress) {
+                return assets[i].id;
+            }
         }
-
-        uint256 entryPrice = getWrapPrice(index, isLong);
-        logIncreasePosition(
-            nonce,
-            address(this),
-            _this,
-            collateral,
-            index,
-            collateralAmount,
-            size,
-            isLong,
-            entryPrice
-        );
+        revert("id: not found");
     }
 
-    function decreasePosition(
-        address collateral,
-        address index,
-        uint256 size,
-        bool isLong
-    ) external payable {
-        uint8 collateralId = _getIdFromTokenAddress(collateral);
-        uint8 indexId = _getIdFromTokenAddress(index);
-
-        bytes32 subAccountId = _assembleSubAccountId(
-            address(this),
-            collateralId,
-            indexId,
-            isLong
-        );
-
-        // https://github.com/mux-world/mux-protocol/blob/e93946a555a59fcd9532517c88fff980d382a279/contracts/orderbook/OrderBook.sol#L137
-        uint256 adjustedSize = _adjustSizeDecimal(index, size);
-
-        IOrderBook(_orderBook).placePositionOrder3(
-            subAccountId,
-            0,
-            uint96(adjustedSize),
-            0,
-            _defaultProfitTokenId,
-            96,
-            0,
-            0x0,
-            IOrderBook.PositionOrderExtra(0, 0, 0, 0)
-        );
-
-        logDecreasePosition(
-            address(this),
-            _this,
-            collateral,
-            index,
-            size,
-            isLong
-        );
-    }
-
-    function increaseCollateral(
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        bool isLong
-    ) external payable {
-        uint8 collateralId = _getIdFromTokenAddress(collateral);
-        uint8 indexId = _getIdFromTokenAddress(index);
-
-        bytes32 subAccountId = _assembleSubAccountId(
-            address(this),
-            collateralId,
-            indexId,
-            isLong
-        );
-
-        if (collateralId == _wethId) {
-            IERC20(collateral).withdraw(collateralAmount);
-
-            IOrderBook(_orderBook).depositCollateral{value: collateralAmount}(
-                subAccountId,
-                collateralAmount
-            );
-        } else {
-            // slither-disable-next-line unused-return
-            IERC20(collateral).approve(_orderBook, collateralAmount);
-            IOrderBook(_orderBook).depositCollateral(
-                subAccountId,
-                collateralAmount
-            );
-        }
-
-        logIncreaseCollateral(
-            address(this),
-            _this,
-            collateral,
-            index,
-            collateralAmount
-        );
-    }
-
-    function decreaseCollateral(
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        bool isLong
-    ) external payable {
-        uint8 collateralId = _getIdFromTokenAddress(collateral);
-        uint8 indexId = _getIdFromTokenAddress(index);
-
-        bytes32 subAccountId = _assembleSubAccountId(
-            address(this),
-            collateralId,
-            indexId,
-            isLong
-        );
-
-        IOrderBook(_orderBook).placeWithdrawalOrder(
-            subAccountId,
-            uint96(collateralAmount),
-            _defaultProfitTokenId,
-            false // isProfit
-        );
-
-        logDecreaseCollateral(
-            address(this),
-            _this,
-            collateral,
-            index,
-            collateralAmount
-        );
+    function _getPrice(address referenceOracle) private view returns (uint256) {
+        int256 price = IChainlink(referenceOracle).latestAnswer();
+        price *= 1e10; // decimals 8 => 18
+        return uint256(price);
     }
 }

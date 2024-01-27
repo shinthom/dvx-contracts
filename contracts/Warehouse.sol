@@ -7,8 +7,6 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
-    uint256 private constant BASIS_POINTS_DIVISOR = 10000;
-
     address private constant _weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
 
     mapping(bytes32 => TriggerOrder[]) private _triggerOrders;
@@ -26,54 +24,11 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         __UUPSUpgradeable_init();
     }
 
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal override onlyOwner {}
-
-    function setExchange(address _exchange) external onlyOwner {
+    function setExchange(address _exchange) external override onlyOwner {
         require(_exchange != address(0), "exchange: zero address");
 
         exchange = _exchange;
         emit ExchangeSet(_exchange);
-    }
-
-    function getPositionKey(
-        address account,
-        address adapter,
-        address collateral,
-        address index,
-        bool isLong
-    ) public pure override returns (bytes32) {
-        return
-            keccak256(
-                abi.encodePacked(account, adapter, collateral, index, isLong)
-            );
-    }
-
-    function getTriggerOrders(
-        bytes32 positionKey
-    ) public view override returns (TriggerOrder[] memory) {
-        return _triggerOrders[positionKey];
-    }
-
-    function getTriggerOrder(
-        bytes32 positionKey,
-        uint256 triggerOrderId
-    ) public view override returns (TriggerOrder memory) {
-        return _triggerOrders[positionKey][triggerOrderId];
-    }
-
-    function getLimitOrders(
-        address account
-    ) public view override returns (LimitOrder[] memory) {
-        return _limitOrders[account];
-    }
-
-    function getLimitOrder(
-        address account,
-        uint256 limitOrderId
-    ) public view override returns (LimitOrder memory) {
-        return _limitOrders[account][limitOrderId];
     }
 
     function createLimitOrder(
@@ -311,4 +266,47 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
             triggerOrderId
         );
     }
+
+    function getPositionKey(
+        address account,
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong
+    ) public pure override returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(account, adapter, collateral, index, isLong)
+            );
+    }
+
+    function getTriggerOrders(
+        bytes32 positionKey
+    ) public view override returns (TriggerOrder[] memory) {
+        return _triggerOrders[positionKey];
+    }
+
+    function getTriggerOrder(
+        bytes32 positionKey,
+        uint256 triggerOrderId
+    ) public view override returns (TriggerOrder memory) {
+        return _triggerOrders[positionKey][triggerOrderId];
+    }
+
+    function getLimitOrders(
+        address account
+    ) public view override returns (LimitOrder[] memory) {
+        return _limitOrders[account];
+    }
+
+    function getLimitOrder(
+        address account,
+        uint256 limitOrderId
+    ) public view override returns (LimitOrder memory) {
+        return _limitOrders[account][limitOrderId];
+    }
+
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyOwner {}
 }

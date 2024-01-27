@@ -12,18 +12,13 @@ contract AccountFactory is
     OwnableUpgradeable,
     UUPSUpgradeable
 {
-    mapping(address => address) public accounts;
-
-    address public exchange;
+    mapping(address => address) public override accounts;
+    address public override exchange;
 
     modifier onlyExchange() {
         require(msg.sender == exchange, "msg.sender: not exchange");
         _;
     }
-
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal override onlyOwner {}
 
     function initialize(address _exchange) external virtual initializer {
         require(_exchange != address(0), "exchange: zero address");
@@ -54,4 +49,8 @@ contract AccountFactory is
         exchange = _exchange;
         emit ExchangeSet(_exchange);
     }
+
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyOwner {}
 }
