@@ -459,6 +459,7 @@ contract GmxV1Adapter is BaseAdapter {
     }
 
     function increasePosition(
+        uint256 nonce,
         address collateral,
         address index,
         uint256 collateralAmount,
@@ -481,6 +482,7 @@ contract GmxV1Adapter is BaseAdapter {
 
         uint256 entryPrice = indexPrice / 1e12; // 1e18
         logIncreasePosition(
+            nonce,
             address(this),
             _this,
             collateral,

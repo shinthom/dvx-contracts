@@ -454,6 +454,7 @@ contract MuxAdapter is BaseAdapter {
     }
 
     function increasePosition(
+        uint256 nonce,
         address collateral,
         address index,
         uint256 collateralAmount,
@@ -503,6 +504,7 @@ contract MuxAdapter is BaseAdapter {
 
         uint256 entryPrice = getWrapPrice(index, isLong);
         logIncreasePosition(
+            nonce,
             address(this),
             _this,
             collateral,

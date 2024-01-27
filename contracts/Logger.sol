@@ -31,6 +31,7 @@ contract Logger is ILogger {
     }
 
     function logIncreasePosition(
+        uint256 nonce,
         address account,
         address adapter,
         address collateral,
@@ -41,6 +42,7 @@ contract Logger is ILogger {
         uint256 entryPrice
     ) external override {
         emit PositionIncreased(
+            nonce,
             account,
             adapter,
             collateral,

@@ -117,13 +117,19 @@ interface IExchange {
 
     function cancelLimitOrder(
         address account,
-        uint256 id
+        uint256 orderId
     ) external returns (IWarehouse.LimitOrder memory limitOrder);
 
     function executeLimitOrder(
         address account,
         address adapter,
-        uint256 id
+        uint256 orderId
+    ) external payable returns (IWarehouse.LimitOrder memory limitOrder);
+
+    function executeLimitOrderMulti(
+        address account,
+        address[] calldata adapters,
+        uint256 orderId
     ) external payable returns (IWarehouse.LimitOrder memory limitOrder);
 
     function createTriggerOrder(
@@ -142,11 +148,11 @@ interface IExchange {
     function cancelTriggerOrder(
         address account,
         bytes32 positionKey,
-        uint256 id
+        uint256 orderId
     ) external;
 
     function executeTriggerOrder(
         bytes32 positionKey,
-        uint256 id
+        uint256 orderId
     ) external returns (IWarehouse.TriggerOrder memory triggerOrder);
 }

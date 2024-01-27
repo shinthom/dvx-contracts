@@ -171,6 +171,41 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         emit LimitOrderExecuted(account, orderId);
     }
 
+    function executeLimitOrderMulti(
+        address account,
+        address[] calldata adapters,
+        uint256 orderId
+    )
+        external
+        payable
+        override
+        onlyExchange
+        returns (IWarehouse.LimitOrder memory limitOrder)
+    {
+        limitOrder = _limitOrders[account][orderId];
+        require(
+            limitOrder.state == LimitOrderState.Pending,
+            "state: not pending"
+        );
+
+        for (uint256 i = 0; i < adapters.length; i++) {
+            uint256 markPrice = IAdapter(adapters[i]).getWrapPrice(
+                limitOrder.index,
+                limitOrder.isLong
+            );
+            require(
+                (limitOrder.isLong &&
+                    markPrice <= limitOrder.acceptablePrice) ||
+                    (!limitOrder.isLong &&
+                        markPrice >= limitOrder.acceptablePrice),
+                "price: not acceptable"
+            );
+        }
+
+        _limitOrders[account][orderId].state = LimitOrderState.Executed;
+        emit LimitOrderExecuted(account, orderId);
+    }
+
     function createTriggerOrder(
         address account,
         address adapter,

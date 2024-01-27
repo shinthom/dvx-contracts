@@ -55,28 +55,28 @@ interface IWarehouse {
 
     event PriceMinDeviationSet(uint256 indexed deviation);
 
-    event LimitOrderCreated(address indexed account, uint256 indexed id);
+    event LimitOrderCreated(address indexed account, uint256 indexed orderId);
 
-    event LimitOrderCanceled(address indexed account, uint256 indexed id);
+    event LimitOrderCanceled(address indexed account, uint256 indexed orderId);
 
-    event LimitOrderExecuted(address indexed account, uint256 indexed id);
+    event LimitOrderExecuted(address indexed account, uint256 indexed orderId);
 
     event TriggerOrderCreated(
         address indexed account,
         bytes32 indexed positionKey,
-        uint256 indexed id
+        uint256 indexed orderId
     );
 
     event TriggerOrderCanceled(
         address indexed account,
         bytes32 indexed positionKey,
-        uint256 indexed id
+        uint256 indexed orderId
     );
 
     event TriggerOrderExecuted(
         address indexed account,
         bytes32 indexed positionKey,
-        uint256 indexed id
+        uint256 indexed orderId
     );
 
     event Withdrawn(
@@ -124,13 +124,19 @@ interface IWarehouse {
 
     function cancelLimitOrder(
         address account,
-        uint256 id
+        uint256 orderId
     ) external returns (IWarehouse.LimitOrder memory limitOrder);
 
     function executeLimitOrder(
         address account,
         address adapter,
-        uint256 id
+        uint256 orderId
+    ) external payable returns (IWarehouse.LimitOrder memory limitOrder);
+
+    function executeLimitOrderMulti(
+        address account,
+        address[] calldata adapters,
+        uint256 orderId
     ) external payable returns (IWarehouse.LimitOrder memory limitOrder);
 
     function createTriggerOrder(
@@ -149,11 +155,11 @@ interface IWarehouse {
     function cancelTriggerOrder(
         address account,
         bytes32 positionKey,
-        uint256 id
+        uint256 orderId
     ) external;
 
     function executeTriggerOrder(
         bytes32 positionKey,
-        uint256 id
+        uint256 orderId
     ) external returns (IWarehouse.TriggerOrder memory triggerOrder);
 }

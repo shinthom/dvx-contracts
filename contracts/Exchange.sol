@@ -300,6 +300,19 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         return IWarehouse(warehouse).executeLimitOrder(account, adapter, id);
     }
 
+    function executeLimitOrderMulti(
+        address account,
+        address[] calldata adapters,
+        uint256 orderId
+    ) external payable override returns (IWarehouse.LimitOrder memory) {
+        return
+            IWarehouse(warehouse).executeLimitOrderMulti(
+                account,
+                adapters,
+                orderId
+            );
+    }
+
     function createTriggerOrder(
         address account,
         address adapter,

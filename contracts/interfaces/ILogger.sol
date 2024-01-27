@@ -23,6 +23,7 @@ interface ILogger {
     );
 
     event PositionIncreased(
+        uint256 indexed nonce,
         address indexed account,
         address adapter,
         address collateral,
@@ -79,6 +80,7 @@ interface ILogger {
     ) external;
 
     function logIncreasePosition(
+        uint256 nonce,
         address account,
         address adapter,
         address collateral,

@@ -100,4 +100,75 @@ describe("limitOrder", () => {
       await muxAdapter.getPosition(account.target, collateral, index, isLong)
     );
   });
+
+  it("multi", async () => {
+    const {
+      user,
+      orderKeeper,
+      account,
+      warehouse,
+      gmxV1Adapter,
+      muxAdapter,
+      WETH,
+      deposit,
+      executeIncreasePosition,
+      fillPositionOrder,
+      setDummyPrice,
+    } = await loadFixture(deploy);
+
+    const collateral = WETH;
+    const index = WETH;
+    const collateralAmount = ethers.parseEther("1");
+    const size = ethers.parseEther("10");
+    const isLong = true;
+
+    await setDummyPrice();
+
+    var triggerPrice = ethers.parseUnits("2000", 18);
+    var acceptablePrice = ethers.parseUnits("2000", 18); // calculated by slippage tolerance
+
+    await deposit(collateral, collateralAmount);
+    await account.connect(user).createLimitOrder(
+      collateral,
+      index,
+      collateralAmount,
+      size,
+      isLong,
+      0, // execution fee
+      triggerPrice,
+      acceptablePrice
+    );
+    console.log(await warehouse.getLimitOrders(account.target));
+
+    var adapterFee = await gmxV1Adapter.getMinExecutionFee();
+    await account
+      .connect(orderKeeper)
+      .executeLimitOrderMulti(
+        0,
+        [gmxV1Adapter.target, muxAdapter.target],
+        [collateralAmount / 2n, collateralAmount / 2n],
+        [size / 2n, size / 2n],
+        0,
+        { value: adapterFee }
+      );
+    await executeIncreasePosition(account.target);
+    await fillPositionOrder();
+
+    console.log(
+      await gmxV1Adapter.getWrapPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      )
+    );
+    console.log(
+      await muxAdapter.getWrapPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      )
+    );
+  });
 });

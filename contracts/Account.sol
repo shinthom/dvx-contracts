@@ -13,6 +13,8 @@ contract Account is IAccount {
     address public immutable override owner;
     address public immutable override exchange;
 
+    uint256 private _orderId;
+
     mapping(address => uint256) public _lockedBalances;
 
     receive() external payable {
@@ -125,7 +127,9 @@ contract Account is IAccount {
         bool isLong,
         uint256 executionFee // network fee + adapter fee (collateral token amount)
     ) external payable onlyOwner {
+        _orderId++;
         _increasePosition(
+            _orderId,
             adapter,
             collateral,
             index,
@@ -151,8 +155,10 @@ contract Account is IAccount {
             "length: not match"
         );
 
+        _orderId++;
         for (uint256 i = 0; i < adapters.length; i++) {
             _increasePosition(
+                _orderId,
                 adapters[i],
                 collateral,
                 index,
@@ -165,6 +171,7 @@ contract Account is IAccount {
     }
 
     function _increasePosition(
+        uint256 nonce,
         address adapter,
         address collateral,
         address index,
@@ -190,6 +197,7 @@ contract Account is IAccount {
             isLong
         );
 
+        // todo: remove logic that collects execution fee twice.
         uint256 fees = positionFee + executionFee;
         require(collateralAmount >= fees, "amount: less than fees");
 
@@ -198,7 +206,8 @@ contract Account is IAccount {
         collateralAmount -= fees;
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
-                "increasePosition(address,address,uint256,uint256,bool)",
+                "increasePosition(uint256,address,address,uint256,uint256,bool)",
+                nonce,
                 collateral,
                 index,
                 collateralAmount,
@@ -370,7 +379,9 @@ contract Account is IAccount {
 
         _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
 
+        _orderId++;
         _increasePosition(
+            _orderId,
             adapter,
             limitOrder.collateral,
             limitOrder.index,
@@ -379,6 +390,54 @@ contract Account is IAccount {
             limitOrder.isLong,
             executionFee
         );
+    }
+
+    function executeLimitOrderMulti(
+        uint256 orderId,
+        address[] calldata adapters,
+        uint256[] calldata collateralAmounts,
+        uint256[] calldata sizes,
+        uint256 executionFee
+    ) external payable onlyOrderKeeper {
+        require(
+            adapters.length == collateralAmounts.length &&
+                adapters.length == sizes.length,
+            "length: not match"
+        );
+
+        IWarehouse.LimitOrder memory limitOrder
+            = IExchange(exchange).executeLimitOrderMulti(address(this), adapters, orderId); // prettier-ignore
+
+        uint256 totalCollateralAmount;
+        for (uint256 i = 0; i < adapters.length; i++) {
+            totalCollateralAmount += collateralAmounts[i];
+        }
+        require(
+            totalCollateralAmount == limitOrder.collateralAmount,
+            "collateralAmount: not match"
+        );
+
+        uint256 totalSize;
+        for (uint256 i = 0; i < adapters.length; i++) {
+            totalSize += sizes[i];
+        }
+        require(totalSize == limitOrder.size, "size: not match");
+
+        _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
+
+        _orderId++;
+        for (uint256 i = 0; i < adapters.length; i++) {
+            _increasePosition(
+                _orderId,
+                adapters[i],
+                limitOrder.collateral,
+                limitOrder.index,
+                collateralAmounts[i],
+                sizes[i],
+                limitOrder.isLong,
+                executionFee
+            );
+        }
     }
 
     function createTriggerOrder(
