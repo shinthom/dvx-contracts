@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.7;
 
-import {IAdapter} from "./interfaces/IAdapter.sol";
-import {IWarehouse} from "./interfaces/IWarehouse.sol";
+import {IAdapter} from "../interfaces/IAdapter.sol";
+import {IWarehouse} from "../interfaces/IWarehouse.sol";
 
 contract Reader {
     address private immutable _warehouse;

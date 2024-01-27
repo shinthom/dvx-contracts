@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.7;
 
-import {Account, IAccount} from "./Account.sol";
+import {IAccount} from "./interfaces/IAccount.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
 import {IAdapter} from "./interfaces/IAdapter.sol";
 import {IAccountFactory} from "./interfaces/IAccountFactory.sol";
@@ -349,13 +349,21 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         bytes32 positionKey,
         uint256 triggerOrderId
     ) external override {
-        IWarehouse(warehouse).cancelTriggerOrder(account, positionKey, triggerOrderId);
+        IWarehouse(warehouse).cancelTriggerOrder(
+            account,
+            positionKey,
+            triggerOrderId
+        );
     }
 
     function executeTriggerOrder(
         bytes32 positionKey,
         uint256 triggerOrderId
     ) external override returns (IWarehouse.TriggerOrder memory) {
-        return IWarehouse(warehouse).executeTriggerOrder(positionKey, triggerOrderId);
+        return
+            IWarehouse(warehouse).executeTriggerOrder(
+                positionKey,
+                triggerOrderId
+            );
     }
 }

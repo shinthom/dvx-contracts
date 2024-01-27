@@ -2,7 +2,7 @@
 pragma solidity 0.8.7;
 
 import {Account} from "./Account.sol";
-import {IAccountFactory} from "./interfaces/IAccountFactory.sol";
+import {IAccountFactory} from "../interfaces/IAccountFactory.sol";
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -24,10 +24,6 @@ contract AccountFactory is
     function _authorizeUpgrade(
         address newImplementation
     ) internal override onlyOwner {}
-
-    function getAccount(address accountOwner) external view returns (address) {
-        return accounts[accountOwner];
-    }
 
     function initialize(address _exchange) external virtual initializer {
         require(_exchange != address(0), "exchange: zero address");

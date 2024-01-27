@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.7;
 
-import {IAdapter} from "./interfaces/IAdapter.sol";
-import {IExchange} from "./interfaces/IExchange.sol";
+import {IAdapter} from "../interfaces/IAdapter.sol";
+import {IExchange} from "../interfaces/IExchange.sol";
 import {IQuoterV2} from "@uniswap/v3-periphery/contracts/interfaces/IQuoterV2.sol";
 
 contract Quoter {

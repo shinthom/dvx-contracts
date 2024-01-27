@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.7;
 
-import {ILogger} from "./interfaces/ILogger.sol";
+import {ILogger} from "../interfaces/ILogger.sol";
 
 contract Logger is ILogger {
     function logDeposit(

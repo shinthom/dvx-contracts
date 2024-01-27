@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.7;
 
-import {IAccount} from "./interfaces/IAccount.sol";
-import {IExchange} from "./interfaces/IExchange.sol";
-import {IWarehouse} from "./interfaces/IWarehouse.sol";
-import {IERC20} from "./interfaces/IERC20.sol";
-import {ILogger} from "./interfaces/ILogger.sol";
+import {IAccount} from "../interfaces/IAccount.sol";
+import {IExchange} from "../interfaces/IExchange.sol";
+import {IWarehouse} from "../interfaces/IWarehouse.sol";
+import {IERC20} from "../interfaces/IERC20.sol";
+import {ILogger} from "../interfaces/ILogger.sol";
 
 contract Account is IAccount {
     address private constant _weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
