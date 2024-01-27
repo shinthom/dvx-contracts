@@ -15,7 +15,7 @@ contract Account is IAccount {
 
     uint256 private _marketOrderId;
 
-    mapping(address => uint256) public _lockedBalances;
+    mapping(address => uint256) private _lockedBalances;
 
     receive() external payable {
         if (msg.sender != _weth) {
@@ -52,13 +52,13 @@ contract Account is IAccount {
 
     function getLockedBalance(
         address token
-    ) public view virtual returns (uint256) {
+    ) public view virtual override returns (uint256) {
         return _lockedBalances[token];
     }
 
     function getWithdrawableBalance(
         address token
-    ) public view virtual returns (uint256) {
+    ) public view virtual override returns (uint256) {
         return getBalance(token) - getLockedBalance(token);
     }
 
@@ -66,10 +66,9 @@ contract Account is IAccount {
         address token,
         uint256 amount
     ) external override onlyOwner {
-        require(amount > 0, "amount: zero");
+        require(amount != 0, "amount: zero");
 
         IERC20(token).transferFrom(msg.sender, address(this), amount);
-        emit Deposited(msg.sender, token, amount);
 
         address logger = IExchange(exchange).logger();
         if (logger != address(0)) {
@@ -84,14 +83,16 @@ contract Account is IAccount {
         require(amount != 0, "amount: zero");
 
         uint256 withdrawableBalance = getWithdrawableBalance(token);
-        require(amount <= withdrawableBalance, "amount: exceed balance");
+        require(
+            amount <= withdrawableBalance,
+            "amount: greater than withdrawable balance"
+        );
 
         IERC20(token).transfer(msg.sender, amount);
-        emit Withdrawn(token, amount);
 
         address logger = IExchange(exchange).logger();
         if (logger != address(0)) {
-            ILogger(logger).logDeposit(address(this), token, amount);
+            ILogger(logger).logWithdraw(address(this), token, amount);
         }
     }
 
@@ -100,8 +101,11 @@ contract Account is IAccount {
         address tokenOut,
         uint256 amountIn
     ) external virtual onlyOwner returns (uint256 amountOut) {
-        uint256 balance = getBalance(tokenIn);
-        require(amountIn <= balance, "amountIn: exceed balance");
+        uint256 withdrawableBalance = getWithdrawableBalance(tokenIn);
+        require(
+            amountIn <= withdrawableBalance,
+            "amountIn: greater than withdrawable balance"
+        );
 
         IERC20(tokenIn).approve(exchange, amountIn);
         amountOut = IExchange(exchange).swap(tokenIn, tokenOut, amountIn);
@@ -171,7 +175,7 @@ contract Account is IAccount {
     }
 
     function _increasePosition(
-        uint256 nonce,
+        uint256 marketOrderId,
         address adapter,
         address collateral,
         address index,
@@ -207,7 +211,7 @@ contract Account is IAccount {
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
                 "increasePosition(uint256,address,address,uint256,uint256,bool)",
-                nonce,
+                marketOrderId,
                 collateral,
                 index,
                 collateralAmount,

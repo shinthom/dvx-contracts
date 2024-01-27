@@ -1,182 +1,133 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
-const { faucet } = require("./helper");
+const { faucet, WETH, WBTC } = require("./helper");
 
 describe("Account", () => {
-  const ETH = ethers.ZeroAddress;
-  const WBTC = "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f";
-
-  let user;
+  let owner;
   let other;
 
+  let weth;
+
+  let logger;
   let exchangeMock;
   let account;
-  let wbtc;
 
   beforeEach(async () => {
-    [user, other] = await ethers.getSigners();
+    [owner, other] = await ethers.getSigners();
 
-    exchangeMock = await ethers.deployContract("ExchangeMock", [], user);
+    weth = await ethers.getContractAt("IERC20", WETH);
+
+    logger = await ethers.deployContract("Logger", []);
+    exchangeMock = await ethers.deployContract(
+      "ExchangeMock",
+      [logger.target],
+      owner
+    );
     account = await ethers.deployContract("Account", [
-      user.address,
+      owner.address,
       exchangeMock.target,
     ]);
-    wbtc = await ethers.getContractAt("IERC20", WBTC);
   });
 
   describe("deposit", () => {
-    const depositAmount = ethers.parseUnits("1", 18);
+    const token = WETH;
+    const tokenAmount = ethers.parseUnits("1", 18);
 
-    it("reverts when zero amount", async () => {
-      await expect(account.connect(user).deposit(ETH, 0)).to.be.revertedWith(
-        "amount: zero"
-      );
+    beforeEach(async () => {
+      await faucet(owner, token, tokenAmount);
     });
 
-    it("reverts when amount is not exact", async () => {
+    it("reverts when msg.sender is not owner", async () => {
       await expect(
-        account.connect(user).deposit(ETH, depositAmount)
-      ).to.be.revertedWith("amount: not exact");
-    });
-
-    it("deposits ETH", async () => {
-      await expect(
-        account
-          .connect(user)
-          .deposit(ETH, depositAmount, { value: depositAmount })
-      )
-        .to.emit(account, "Deposited")
-        .withArgs(user.address, ETH, depositAmount);
-      expect(await account.getBalance(ETH)).to.be.equal(depositAmount);
-    });
-
-    it("deposits token", async () => {
-      await faucet(user.address, WBTC, depositAmount);
-      await wbtc.connect(user).approve(account.target, depositAmount);
-      await expect(account.connect(user).deposit(WBTC, depositAmount))
-        .to.emit(account, "Deposited")
-        .withArgs(user.address, WBTC, depositAmount);
-      expect(await account.getBalance(WBTC)).to.be.equal(depositAmount);
-    });
-  });
-
-  describe("withdraw", () => {
-    const withdrawAmount = ethers.parseUnits("1", 18);
-
-    it("reverts when zero amount", async () => {
-      await expect(account.connect(user).withdraw(ETH, 0)).to.be.revertedWith(
-        "amount: zero"
-      );
-    });
-
-    it("reverts when not owner", async () => {
-      await expect(
-        account.connect(other).withdraw(ETH, withdrawAmount)
+        account.connect(other).deposit(token, tokenAmount)
       ).to.be.revertedWith("msg.sender: not owner");
     });
 
-    it("reverts when exceed balance", async () => {
-      await account.deposit(ETH, withdrawAmount - 1n, {
-        value: withdrawAmount - 1n,
-      });
-      await expect(
-        account.connect(user).withdraw(ETH, withdrawAmount)
-      ).to.be.revertedWith("amount: exceed balance");
-
-      await faucet(user.address, WBTC, withdrawAmount);
-      await wbtc.connect(user).approve(account.target, withdrawAmount);
-
-      await account.connect(user).deposit(WBTC, withdrawAmount - 1n);
-      await expect(
-        account.connect(user).withdraw(WBTC, withdrawAmount)
-      ).to.be.revertedWith("amount: exceed balance");
+    it("reverts when amount is zero", async () => {
+      await weth.approve(account.target, tokenAmount);
+      await expect(account.connect(owner).deposit(WETH, 0)).to.be.revertedWith(
+        "amount: zero"
+      );
     });
 
-    it("reverts when exceed balance w/ lockedBalance", async () => {
-      await account.deposit(ETH, withdrawAmount, {
-        value: withdrawAmount,
-      });
-      await exchangeMock.increaseLockedBalance(1n);
-      await expect(
-        account.connect(user).withdraw(ETH, withdrawAmount)
-      ).to.be.revertedWith("amount: exceed balance");
+    it("successfully deposits", async () => {
+      await weth.approve(account.target, tokenAmount);
+      await expect(account.connect(owner).deposit(token, tokenAmount))
+        .to.emit(logger, "Deposited")
+        .withArgs(account.target, token, tokenAmount);
+      await expect(await account.getBalance(token)).to.be.equal(tokenAmount);
+    });
+  });
 
-      await faucet(user.address, WBTC, withdrawAmount);
-      await wbtc.connect(user).approve(account.target, withdrawAmount);
+  describe("withdraw", async () => {
+    const token = WETH;
+    const tokenAmount = ethers.parseUnits("1", 18);
 
-      await account.connect(user).deposit(WBTC, withdrawAmount);
-      await exchangeMock.increaseLockedBalance(1n);
-      await expect(
-        account.connect(user).withdraw(WBTC, withdrawAmount)
-      ).to.be.revertedWith("amount: exceed balance");
+    beforeEach(async () => {
+      await faucet(owner, token, tokenAmount);
+      await weth.approve(account.target, tokenAmount);
+      await account.connect(owner).deposit(token, tokenAmount);
     });
 
-    it("withdraws ETH", async () => {
-      await account
-        .connect(user)
-        .deposit(ETH, withdrawAmount, { value: withdrawAmount });
-      expect(await account.getBalance(ETH)).to.be.equal(withdrawAmount);
-
-      await expect(account.connect(user).withdraw(ETH, withdrawAmount))
-        .to.emit(account, "Withdrawn")
-        .withArgs(ETH, withdrawAmount);
-      expect(await account.getBalance(ETH)).to.be.equal(0);
+    it("reverts when msg.sender is not owner", async () => {
+      await expect(
+        account.connect(other).withdraw(token, tokenAmount)
+      ).to.be.revertedWith("msg.sender: not owner");
     });
 
-    it("withdraws token", async () => {
-      await faucet(user.address, WBTC, withdrawAmount);
-      await wbtc.connect(user).approve(account.target, withdrawAmount);
-      await account.connect(user).deposit(WBTC, withdrawAmount);
-      expect(await account.getBalance(WBTC)).to.be.equal(withdrawAmount);
+    it("reverts when amount is zero", async () => {
+      await expect(
+        account.connect(owner).withdraw(token, 0)
+      ).to.be.revertedWith("amount: zero");
+    });
 
-      await expect(account.connect(user).withdraw(WBTC, withdrawAmount))
-        .to.emit(account, "Withdrawn")
-        .withArgs(WBTC, withdrawAmount);
-      expect(await account.getBalance(WBTC)).to.be.equal(0);
+    it("reverts when amount is greater than withdrawable balance", async () => {
+      await expect(
+        account.connect(owner).withdraw(token, tokenAmount + 1n)
+      ).to.be.revertedWith("amount: greater than withdrawable balance");
+    });
+
+    it("successfully withdraws", async () => {
+      await expect(await account.getBalance(token)).to.be.equal(tokenAmount);
+      await expect(account.connect(owner).withdraw(token, tokenAmount))
+        .to.emit(logger, "Withdrawn")
+        .withArgs(account.target, token, tokenAmount);
+      await expect(await account.getBalance(token)).to.be.equal(0);
     });
   });
 
   describe("swap", () => {
-    const swapAmount = ethers.parseUnits("1", 18);
-    const expectedAmountOut = 10n;
+    const token = WETH;
+    const tokenAmount = ethers.parseUnits("1", 18);
 
-    it("reverts when not owner", async () => {
+    const expectedAmountOut = 100n;
+
+    beforeEach(async () => {
+      await faucet(owner, token, tokenAmount);
+      await weth.approve(account.target, tokenAmount);
+      await account.connect(owner).deposit(token, tokenAmount);
+    });
+
+    it("reverts when msg.sender is not owner", async () => {
       await expect(
-        account.connect(other).swap(ETH, WBTC, 1n)
+        account.connect(other).swap(WETH, WBTC, tokenAmount)
       ).to.be.revertedWith("msg.sender: not owner");
     });
 
-    it("reverts when same tokens are used", async () => {
+    it("reverts when amountIn is greater than withdrawable balance", async () => {
       await expect(
-        account.connect(user).swap(WBTC, WBTC, 1n)
-      ).to.be.revertedWith("same tokens");
+        account.connect(owner).swap(WETH, WBTC, tokenAmount + 1n)
+      ).to.be.revertedWith("amountIn: greater than withdrawable balance");
     });
 
-    it("reverts when amountIn exceed balance", async () => {
-      await expect(
-        account.connect(user).swap(WBTC, ETH, 1n)
-      ).to.be.revertedWith("amountIn: exceed balance");
-      await expect(
-        account.connect(user).swap(ETH, WBTC, 1n)
-      ).to.be.revertedWith("amountIn: exceed balance");
-    });
-
-    it("swaps eth -> token", async () => {
-      await account
-        .connect(user)
-        .deposit(ETH, swapAmount, { value: swapAmount });
-      await expect(account.connect(user).swap(ETH, WBTC, swapAmount))
-        .to.emit(account, "Swapped")
-        .withArgs(account.target, ETH, WBTC, swapAmount, expectedAmountOut);
-    });
-
-    it("swaps token -> eth", async () => {
-      await faucet(user.address, WBTC, swapAmount);
-      await wbtc.connect(user).approve(account.target, swapAmount);
-      await account.connect(user).deposit(WBTC, swapAmount);
-      await expect(account.connect(user).swap(WBTC, ETH, swapAmount))
-        .to.emit(account, "Swapped")
-        .withArgs(account.target, WBTC, ETH, swapAmount, expectedAmountOut);
+    it("successfully swaps", async () => {
+      await expect(await account.getBalance(token)).to.be.equal(tokenAmount);
+      await expect(account.connect(owner).swap(WETH, WBTC, tokenAmount))
+        .to.emit(logger, "Swapped")
+        .withArgs(account.target, WETH, WBTC, tokenAmount, expectedAmountOut);
+      await expect(await account.getBalance(token)).to.be.equal(0);
     });
   });
+
+  // The tests for orders are located in the 'test/e2e' directory.
 });

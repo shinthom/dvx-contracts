@@ -227,7 +227,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     function createAccountAndDeposit(
         address token,
         uint256 amount
-    ) external payable override returns (address account) {
+    ) external override returns (address account) {
         account = createAccount();
 
         IERC20(token).transferFrom(msg.sender, address(this), amount);
@@ -239,7 +239,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address tokenIn,
         address tokenOut,
         uint256 amountIn
-    ) public payable virtual override returns (uint256 amountOut) {
+    ) public virtual override returns (uint256 amountOut) {
         IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
 
         uint256 swapFee = getSwapFee(amountIn);

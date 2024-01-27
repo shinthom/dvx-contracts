@@ -95,13 +95,13 @@ interface IExchange {
     function createAccountAndDeposit(
         address token,
         uint256 amount
-    ) external payable returns (address account);
+    ) external returns (address account);
 
     function swap(
         address tokenIn,
         address tokenOut,
         uint256 amountIn
-    ) external payable returns (uint256);
+    ) external returns (uint256);
 
     function createLimitOrder(
         address collateral,
