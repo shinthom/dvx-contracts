@@ -4,7 +4,7 @@ const { deploy } = require("../test/fixture");
 async function main() {
   const noAccount = false;
   const {
-    user,
+    owner,
     gmxV1Adapter,
     muxAdapter,
     exchange,
@@ -12,27 +12,29 @@ async function main() {
     reader,
     quoter,
     logger,
+    accountFactory,
     account,
-    WETH,
-    WBTC,
-    USDT,
-    USDC,
-    USDCe,
     weth,
     wbtc,
     usdc,
+    WETH,
+    WBTC,
+    USDC,
+    USDCe,
+    USDT,
     faucet,
   } = await deploy(noAccount);
   console.log(`
-- user        : ${user.address}
-- gmxV1Adapter: ${gmxV1Adapter.target}
-- muxAdapter  : ${muxAdapter.target}
-- exchange    : ${exchange.target}
-- warehouse   : ${warehouse.target}
-- reader      : ${reader.target}
-- quoter      : ${quoter.target}
-- logger      : ${logger.target}
-- account     : ${noAccount ? "null" : account.target}
+- owner         : ${owner.address}
+- gmxV1Adapter  : ${gmxV1Adapter.target}
+- muxAdapter    : ${muxAdapter.target}
+- exchange      : ${exchange.target}
+- warehouse     : ${warehouse.target}
+- reader        : ${reader.target}
+- quoter        : ${quoter.target}
+- logger        : ${logger.target}
+- accountFactory: ${accountFactory.target}
+- account       : ${noAccount ? "null" : account.target}
   `);
 
   const wethAmount = ethers.parseEther("100");
@@ -49,31 +51,31 @@ async function main() {
   const wbtcDepositAmount = ethers.parseUnits("0.1", 8);
   const usdcDepositAmount = ethers.parseUnits("1000", 6);
 
-  await weth.connect(user).approve(account.target, wethDepositAmount);
-  await account.connect(user).deposit(WETH, wethDepositAmount);
+  await weth.connect(owner).approve(account.target, wethDepositAmount);
+  await account.connect(owner).deposit(WETH, wethDepositAmount);
 
-  await wbtc.connect(user).approve(account.target, wbtcDepositAmount);
-  await account.connect(user).deposit(WBTC, wbtcDepositAmount);
+  await wbtc.connect(owner).approve(account.target, wbtcDepositAmount);
+  await account.connect(owner).deposit(WBTC, wbtcDepositAmount);
 
-  await usdc.connect(user).approve(account.target, usdcDepositAmount);
-  await account.connect(user).deposit(USDC, usdcDepositAmount);
+  await usdc.connect(owner).approve(account.target, usdcDepositAmount);
+  await account.connect(owner).deposit(USDC, usdcDepositAmount);
 
   console.log("`deposit`");
   console.log("-  eth: " + (await account.getBalance(WETH)));
   console.log("- wbtc: " + (await account.getBalance(WBTC)));
   console.log("- usdc: " + (await account.getBalance(USDC)));
 
-  await account.connect(user).withdraw(WETH, wethDepositAmount / 2n);
-  await account.connect(user).withdraw(WBTC, wbtcDepositAmount / 2n);
-  await account.connect(user).withdraw(USDC, usdcDepositAmount / 2n);
+  await account.connect(owner).withdraw(WETH, wethDepositAmount / 2n);
+  await account.connect(owner).withdraw(WBTC, wbtcDepositAmount / 2n);
+  await account.connect(owner).withdraw(USDC, usdcDepositAmount / 2n);
 
   console.log("\n`withdraw`");
   console.log("-  eth: " + (await account.getBalance(WETH)));
   console.log("- wbtc: " + (await account.getBalance(WBTC)));
   console.log("- usdc: " + (await account.getBalance(USDC)));
 
-  await account.connect(user).swap(WETH, USDC, wethDepositAmount / 2n);
-  await account.connect(user).swap(WBTC, USDC, wbtcDepositAmount / 2n);
+  await account.connect(owner).swap(WETH, USDC, wethDepositAmount / 2n);
+  await account.connect(owner).swap(WBTC, USDC, wbtcDepositAmount / 2n);
   console.log("\n`swap`");
   console.log("-  eth: " + (await account.getBalance(WETH)));
   console.log("- wbtc: " + (await account.getBalance(WBTC)));
