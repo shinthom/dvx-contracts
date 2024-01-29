@@ -262,8 +262,8 @@ contract Account is IAccount {
         uint256 acceptablePrice
     ) external payable virtual override onlyOwner {
         require(
-            collateralAmount >= getWithdrawableBalance(collateral),
-            "collateralAmount: less than withdrawable balance"
+            collateralAmount <= getWithdrawableBalance(collateral),
+            "collateralAmount: greater than withdrawable balance"
         );
 
         // todo: check (collateralAmount -= executionFee) or (collateralAmount)
