@@ -20,27 +20,27 @@ const collateralList = [
   {
     name: "WETH",
     address: WETH,
-    collateralAmount: ethers.parseEther("1"),
+    amount: ethers.parseEther("1"),
   },
   {
     name: "WBTC",
     address: WBTC,
-    collateralAmount: ethers.parseUnits("0.1", 8),
+    amount: ethers.parseUnits("0.1", 8),
   },
   {
     name: "USDC",
     address: USDC,
-    collateralAmount: ethers.parseUnits("1000", 6),
+    amount: ethers.parseUnits("1000", 6),
   },
   {
     name: "USDCe",
     address: USDCe,
-    collateralAmount: ethers.parseUnits("1000", 6),
+    amount: ethers.parseUnits("1000", 6),
   },
   {
     name: "USDT",
     address: USDT,
-    collateralAmount: ethers.parseUnits("1000", 6),
+    amount: ethers.parseUnits("1000", 6),
   },
 ];
 
@@ -66,7 +66,7 @@ const indexList = [
 ];
 
 let deployer;
-let user;
+let owner;
 let other;
 let feeCollector;
 // gmx accounts
@@ -105,7 +105,7 @@ let logger;
 let account;
 
 const deploy = async (noAccount) => {
-  [deployer, user, other, orderKeeper, feeCollector] =
+  [deployer, owner, other, orderKeeper, feeCollector] =
     await ethers.getSigners();
   // gmx accounts
   impersonatedAdmin = await ethers.getImpersonatedSigner(
@@ -193,7 +193,6 @@ const deploy = async (noAccount) => {
     LiquidityPool,
     exchange.target,
     logger.target,
-    0, // usdc.e
   ]);
   quoter = await ethers.deployContract("Quoter");
   reader = await ethers.deployContract("Reader", [warehouse.target]);
@@ -213,11 +212,11 @@ const deploy = async (noAccount) => {
   await warehouse.setExchange(exchange.target);
 
   if (!noAccount) {
-    await exchange.connect(user).createAccount();
+    await exchange.connect(owner).createAccount();
 
     account = await ethers.getContractAt(
       "Account",
-      await accountFactory.accounts(user.address)
+      await accountFactory.accounts(owner.address)
     );
   }
 
@@ -242,12 +241,12 @@ stable:
     const abiCoder = new ethers.AbiCoder();
     if (token == WETH) {
       const weth = await ethers.getContractAt("IERC20", WETH);
-      await weth.connect(user).deposit({ value: tokenAmount });
+      await weth.connect(owner).deposit({ value: tokenAmount });
     } else if (token == USDC) {
       const storageSlot = 9n;
       const encoded = abiCoder.encode(
         ["address", "uint256"],
-        [user.address, storageSlot]
+        [owner.address, storageSlot]
       );
       const balanceStorageSlot = ethers.keccak256(encoded);
       await ethers.provider.send("hardhat_setStorageAt", [
@@ -259,7 +258,7 @@ stable:
       const storageSlot = 51n;
       const encoded = abiCoder.encode(
         ["address", "uint256"],
-        [user.address, storageSlot]
+        [owner.address, storageSlot]
       );
       const balanceStorageSlot = ethers.keccak256(encoded);
       await ethers.provider.send("hardhat_setStorageAt", [
@@ -271,10 +270,11 @@ stable:
   };
 
   const deposit = async (token, tokenAmount) => {
+    console.log(token, tokenAmount);
     await faucet(token, tokenAmount);
     const erc20 = await ethers.getContractAt("IERC20", token);
-    await erc20.connect(user).approve(account.target, tokenAmount);
-    await account.connect(user).deposit(token, tokenAmount);
+    await erc20.connect(owner).approve(account.target, tokenAmount);
+    await account.connect(owner).deposit(token, tokenAmount);
   };
 
   const increasePosition = async (
@@ -287,7 +287,7 @@ stable:
   ) => {
     const adapterFee = await adapter.getMinExecutionFee();
     await account
-      .connect(user)
+      .connect(owner)
       .increasePosition(
         adapter.target,
         collateral,
@@ -316,7 +316,7 @@ stable:
   ) => {
     const adapterFee = await adapter.getMinExecutionFee();
     await account
-      .connect(user)
+      .connect(owner)
       .decreasePosition(
         adapter.target,
         collateral,
@@ -345,7 +345,7 @@ stable:
     executionFee
   ) => {
     await account
-      .connect(user)
+      .connect(owner)
       .createLimitOrder(
         collateral,
         index,
@@ -385,7 +385,7 @@ stable:
     acceptablePrice
   ) => {
     await account
-      .connect(user)
+      .connect(owner)
       .createTriggerOrder(
         adapter.target,
         collateral,
@@ -431,7 +431,7 @@ stable:
     );
     await positionRouter
       .connect(impersonatedPositionKeeper)
-      .executeIncreasePosition(requestKey, user.address);
+      .executeIncreasePosition(requestKey, owner.address);
   };
 
   const executeDecreasePosition = async (account) => {
@@ -444,7 +444,7 @@ stable:
     );
     await positionRouter
       .connect(impersonatedPositionKeeper)
-      .executeDecreasePosition(requestKey, user.address);
+      .executeDecreasePosition(requestKey, owner.address);
   };
 
   const fillPositionOrder = async () => {
@@ -605,7 +605,7 @@ stable:
 
   return {
     deployer,
-    user,
+    owner,
     other,
     orderKeeper,
     impersonatedBroker,
@@ -624,6 +624,7 @@ stable:
     quoter,
     reader,
     logger,
+    accountFactory,
     account,
     ETH,
     WETH,

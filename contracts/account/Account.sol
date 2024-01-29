@@ -250,30 +250,25 @@ contract Account is IAccount {
         require(success, string(data));
     }
 
+    // todo: reentrancy guard
     function createLimitOrder(
         address collateral,
         address index,
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
-        uint256 executionFee,
+        uint256 executionFee, // collateral token amount
         uint256 triggerPrice,
         uint256 acceptablePrice
     ) external payable virtual override onlyOwner {
-        require(collateralAmount >= executionFee, "amount: less than fees");
         require(
-            collateralAmount <= getWithdrawableBalance(collateral),
-            "amount: exceed balance"
+            collateralAmount >= getWithdrawableBalance(collateral),
+            "collateralAmount: less than withdrawable balance"
         );
 
+        // todo: check (collateralAmount -= executionFee) or (collateralAmount)
         _lockedBalances[collateral] += collateralAmount;
-
-        if (executionFee > 0) {
-            address feeCollector = IExchange(exchange).feeCollector();
-            IERC20(collateral).transfer(feeCollector, executionFee);
-
-            collateralAmount -= executionFee;
-        }
+        // _collectFee(collateral, executionFee);
 
         IExchange(exchange).createLimitOrder(
             collateral,
@@ -281,6 +276,7 @@ contract Account is IAccount {
             collateralAmount,
             size,
             isLong,
+            // executionFee,
             triggerPrice,
             acceptablePrice
         );
@@ -295,10 +291,7 @@ contract Account is IAccount {
 
         _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
 
-        if (executionFee > 0) {
-            address feeCollector = IExchange(exchange).feeCollector();
-            IERC20(limitOrder.collateral).transfer(feeCollector, executionFee);
-        }
+        _collectFee(limitOrder.collateral, executionFee);
     }
 
     function executeLimitOrder(

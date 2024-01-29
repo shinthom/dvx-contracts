@@ -3,7 +3,7 @@ const { deploy } = require("../test/fixture");
 async function main() {
   const noAccount = true;
   const {
-    user,
+    owner,
     gmxV1Adapter,
     muxAdapter,
     exchange,
@@ -11,6 +11,7 @@ async function main() {
     reader,
     quoter,
     logger,
+    accountFactory,
     account,
     WETH,
     WBTC,
@@ -20,15 +21,16 @@ async function main() {
     faucet,
   } = await deploy(noAccount);
   console.log(`
-- user        : ${user.address}
-- gmxV1Adapter: ${gmxV1Adapter.target}
-- muxAdapter  : ${muxAdapter.target}
-- exchange    : ${exchange.target}
-- warehouse   : ${warehouse.target}
-- reader      : ${reader.target}
-- quoter      : ${quoter.target}
-- logger      : ${logger.target}
-- account     : ${noAccount ? "null" : account.target}
+- owner         : ${owner.address}
+- gmxV1Adapter  : ${gmxV1Adapter.target}
+- muxAdapter    : ${muxAdapter.target}
+- exchange      : ${exchange.target}
+- warehouse     : ${warehouse.target}
+- reader        : ${reader.target}
+- quoter        : ${quoter.target}
+- logger        : ${logger.target}
+- accountFactory: ${accountFactory.target}
+- account       : ${noAccount ? "null" : account.target}
   `);
 
   const wethAmount = ethers.parseEther("100");

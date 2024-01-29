@@ -83,7 +83,7 @@ describe("realizeProfit", () => {
 
         var collateral = collateralList[j].address;
         var index = indexList[i].address;
-        var collateralAmount = collateralList[j].collateralAmount;
+        var collateralAmount = collateralList[j].amount;
         var size = indexList[i].size;
         var isLong = true;
 
@@ -150,7 +150,7 @@ describe("realizeProfit", () => {
 
         var collateral = collateralList[j].address;
         var index = indexList[i].address;
-        var collateralAmount = collateralList[j].collateralAmount;
+        var collateralAmount = collateralList[j].amount;
         var size = indexList[i].size;
         var isLong = false;
 
@@ -217,7 +217,7 @@ describe("realizeProfit", () => {
 
         var collateral = collateralList[j].address;
         var index = indexList[i].address;
-        var collateralAmount = collateralList[j].collateralAmount;
+        var collateralAmount = collateralList[j].amount;
         var size = indexList[i].size;
         var isLong = true;
 
@@ -285,7 +285,7 @@ describe("realizeProfit", () => {
 
         var collateral = collateralList[j].address;
         var index = indexList[i].address;
-        var collateralAmount = collateralList[j].collateralAmount;
+        var collateralAmount = collateralList[j].amount;
         var size = indexList[i].size;
         var isLong = false;
 
