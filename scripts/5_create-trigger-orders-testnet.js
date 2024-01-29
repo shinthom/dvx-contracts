@@ -4,7 +4,7 @@ const { deploy } = require("../test/fixture");
 async function main() {
   const noAccount = false;
   const {
-    user,
+    owner,
     account,
     gmxV1Adapter,
     muxAdapter,
@@ -12,6 +12,7 @@ async function main() {
     warehouse,
     reader,
     quoter,
+    accountFactory,
     logger,
     ETH,
     WETH,
@@ -25,16 +26,17 @@ async function main() {
     setDummyPrice,
   } = await deploy(noAccount);
   console.log(`
-- user        : ${user.address}
-- gmxV1Adapter: ${gmxV1Adapter.target}
-- muxAdapter  : ${muxAdapter.target}
-- exchange    : ${exchange.target}
-- warehouse   : ${warehouse.target}
-- reader      : ${reader.target}
-- quoter      : ${quoter.target}
-- logger      : ${logger.target}
-- account     : ${noAccount ? "null" : account.target}
-  `);
+- owner         : ${owner.address}
+- gmxV1Adapter  : ${gmxV1Adapter.target}
+- muxAdapter    : ${muxAdapter.target}
+- exchange      : ${exchange.target}
+- warehouse     : ${warehouse.target}
+- reader        : ${reader.target}
+- quoter        : ${quoter.target}
+- logger        : ${logger.target}
+- accountFactory: ${accountFactory.target}
+- account       : ${noAccount ? "null" : account.target}
+    `);
 
   const ethAmount = ethers.parseEther("100");
   const wbtcAmount = ethers.parseUnits("100", 8);
@@ -64,16 +66,16 @@ async function main() {
   console.log(await muxAdapter.getPosition(account.target, WETH, WETH, true)); // prettier-ignore
   await createTriggerOrder(muxAdapter, WETH, WETH, true, ethSize, 0, triggerPrice, acceptablePrice); // prettier-ignore
   var positionKey = await warehouse.getPositionKey(account.target, muxAdapter.target, WETH, WETH, true); // prettier-ignore
-  await executeTriggerOrder(positionKey, orderId++);
-  console.log(await muxAdapter.getPosition(account.target, WETH, WETH, true)); // prettier-ignore
+  // await executeTriggerOrder(positionKey, orderId++);
+  // console.log(await muxAdapter.getPosition(account.target, WETH, WETH, true)); // prettier-ignore
 
   var orderId = 0;
   await increasePosition(gmxV1Adapter, WETH, WETH, ethCollateralAmount, ethSize, true); // prettier-ignore
   console.log(await gmxV1Adapter.getPosition(account.target, WETH, WETH, true)); // prettier-ignore
-  await createTriggerOrder(gmxV1Adapter, WETH, WETH, true, ethSize, 0, triggerPrice, acceptablePrice); // prettier-ignore
+  await createTriggerOrder(gmxV1Adapter, WETH, WETH, true, ethSize, 1, triggerPrice, acceptablePrice); // prettier-ignore
   var positionKey = await warehouse.getPositionKey(account.target, gmxV1Adapter.target, WETH, WETH, true); // prettier-ignore
-  await executeTriggerOrder(positionKey, orderId++);
-  console.log(await gmxV1Adapter.getPosition(account.target, WETH, WETH, true)); // prettier-ignore
+  // await executeTriggerOrder(positionKey, orderId++);
+  // console.log(await gmxV1Adapter.getPosition(account.target, WETH, WETH, true)); // prettier-ignore
 }
 
 main().catch((error) => {
