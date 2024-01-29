@@ -36,6 +36,7 @@ interface IExchange {
 
     function accountFactory() external returns (address);
     function warehouse() external returns (address);
+    function swapper() external returns (address);
     function logger() external returns (address);
 
     function isRegisteredAdapter(address adapter) external view returns (bool);
@@ -55,6 +56,7 @@ interface IExchange {
 
     function setAccountFactory(address _accountFactory) external;
     function setWarehouse(address _warehouse) external;
+    function setSwapper(address _swapper) external;
     function setLogger(address _logger) external;
 
     function registerAdapter(address adapter) external;

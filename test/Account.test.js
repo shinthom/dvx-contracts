@@ -106,6 +106,9 @@ describe("Account", () => {
       await faucet(owner, token, tokenAmount);
       await weth.approve(account.target, tokenAmount);
       await account.connect(owner).deposit(token, tokenAmount);
+
+      const swapper = await ethers.deployContract("Swapper", []);
+      await exchangeMock.setSwapper(swapper.target);
     });
 
     it("reverts when msg.sender is not owner", async () => {

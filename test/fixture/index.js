@@ -101,6 +101,7 @@ let muxAdapter;
 let quoter;
 let reader;
 let logger;
+let swapper;
 
 let account;
 
@@ -196,10 +197,12 @@ const deploy = async (noAccount) => {
   ]);
   quoter = await ethers.deployContract("Quoter");
   reader = await ethers.deployContract("Reader", [warehouse.target]);
+  swapper = await ethers.deployContract("Swapper");
 
   await exchange.setAccountFactory(accountFactory.target);
   await exchange.setWarehouse(warehouse.target);
   await exchange.setLogger(logger.target);
+  await exchange.setSwapper(swapper.target);
   await exchange.setFeeCollector(feeCollector.address);
   await exchange.setOrderKeeper(orderKeeper.address, true);
   await exchange.registerAdapter(gmxV1Adapter.target);
@@ -219,6 +222,8 @@ const deploy = async (noAccount) => {
       await accountFactory.accounts(owner.address)
     );
   }
+
+  console.log(await accountFactory.accounts(owner.address));
 
   const checkBalance = async (account) => {
     console.log(`

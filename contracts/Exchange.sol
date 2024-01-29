@@ -7,7 +7,7 @@ import {IAdapter} from "./interfaces/IAdapter.sol";
 import {IAccountFactory} from "./interfaces/IAccountFactory.sol";
 import {IExchange} from "./interfaces/IExchange.sol";
 import {IWarehouse} from "./interfaces/IWarehouse.sol";
-import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
+import {ISwapper} from "./interfaces/ISwapper.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
@@ -20,6 +20,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
     address public override accountFactory;
     address public override warehouse;
+    address public override swapper;
     address public override logger;
 
     address[] private _registeredAdapters;
@@ -46,6 +47,11 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         __UUPSUpgradeable_init();
     }
 
+    modifier onlyAccount(address account) {
+        require(msg.sender == account, "msg.sender: not account");
+        _;
+    }
+
     function setAccountFactory(
         address _accountFactory
     ) external override onlyOwner {
@@ -60,6 +66,14 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
         warehouse = _warehouse;
         emit WarehouseSet(_warehouse);
+    }
+
+    // todo: make external function
+    function setSwapper(address _swapper) public virtual override onlyOwner {
+        require(_swapper != address(0), "warehouse: zero address");
+
+        swapper = _swapper;
+        emit WarehouseSet(_swapper);
     }
 
     function setLogger(address _logger) external override onlyOwner {
@@ -197,28 +211,14 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address tokenOut,
         uint256 amountIn
     ) public virtual override returns (uint256 amountOut) {
-        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
-
         uint256 swapFee = getSwapFee(amountIn);
         if (swapFee > 0) {
-            IERC20(tokenIn).transfer(feeCollector, swapFee);
+            IERC20(tokenIn).transferFrom(msg.sender, feeCollector, swapFee);
+            amountIn -= swapFee;
         }
 
-        amountIn -= swapFee;
-
-        IERC20(tokenIn).approve(_swapRouter, amountIn);
-        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
-            .ExactInputSingleParams({
-                tokenIn: tokenIn,
-                tokenOut: tokenOut,
-                fee: 3000,
-                recipient: msg.sender,
-                deadline: block.timestamp,
-                amountIn: amountIn,
-                amountOutMinimum: 0,
-                sqrtPriceLimitX96: 0
-            });
-        amountOut = ISwapRouter(_swapRouter).exactInputSingle(params);
+        IERC20(tokenIn).transferFrom(msg.sender, swapper, amountIn);
+        amountOut = ISwapper(swapper).swap(tokenIn, tokenOut, amountIn);
     }
 
     function createLimitOrder(
@@ -227,7 +227,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
-        // uint256 executionFee,
+        uint256 executionFee,
         uint256 triggerPrice,
         uint256 acceptablePrice
     ) external override {
@@ -238,6 +238,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             collateralAmount,
             size,
             isLong,
+            executionFee,
             triggerPrice,
             acceptablePrice
         );
@@ -246,7 +247,12 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     function cancelLimitOrder(
         address account,
         uint256 limitOrderId
-    ) external override returns (IWarehouse.LimitOrder memory) {
+    )
+        external
+        override
+        onlyAccount(account)
+        returns (IWarehouse.LimitOrder memory)
+    {
         return IWarehouse(warehouse).cancelLimitOrder(account, limitOrderId);
     }
 
@@ -254,7 +260,13 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address account,
         address adapter,
         uint256 limitOrderId
-    ) external payable override returns (IWarehouse.LimitOrder memory) {
+    )
+        external
+        payable
+        override
+        onlyAccount(account)
+        returns (IWarehouse.LimitOrder memory)
+    {
         return
             IWarehouse(warehouse).executeLimitOrder(
                 account,
@@ -267,7 +279,13 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address account,
         address[] calldata adapters,
         uint256 limitOrderId
-    ) external payable override returns (IWarehouse.LimitOrder memory) {
+    )
+        external
+        payable
+        override
+        onlyAccount(account)
+        returns (IWarehouse.LimitOrder memory)
+    {
         return
             IWarehouse(warehouse).executeLimitOrderMulti(
                 account,
@@ -287,7 +305,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         uint256 triggerPrice,
         uint256 acceptablePrice,
         uint256 executionFee
-    ) external override {
+    ) external override onlyAccount(account) {
         IWarehouse(warehouse).createTriggerOrder(
             account,
             adapter,
@@ -306,7 +324,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address account,
         bytes32 positionKey,
         uint256 triggerOrderId
-    ) external override {
+    ) external override onlyAccount(account) {
         IWarehouse(warehouse).cancelTriggerOrder(
             account,
             positionKey,
