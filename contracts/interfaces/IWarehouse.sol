@@ -54,7 +54,8 @@ interface IWarehouse {
 
     event LimitOrderCreated(
         address indexed account,
-        uint256 indexed limitOrderId
+        uint256 indexed limitOrderId,
+        uint256 fee
     );
     event LimitOrderCanceled(
         address indexed account,
@@ -90,6 +91,7 @@ interface IWarehouse {
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
+        uint256 executionFee,
         uint256 triggerPrice,
         uint256 acceptablePrice
     ) external payable;

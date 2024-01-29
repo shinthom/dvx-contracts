@@ -91,6 +91,7 @@ interface IExchange {
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
+        uint256 executionFee,
         uint256 triggerPrice,
         uint256 acceptablePrice
     ) external;

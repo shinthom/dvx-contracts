@@ -32,7 +32,7 @@ interface IAccount {
         uint256[] calldata collateralAmounts,
         uint256[] calldata sizes,
         bool isLong,
-        uint256 executionFee
+        uint256[] calldata executionFees
     ) external payable;
     function decreasePosition(
         address adapter,
@@ -76,15 +76,13 @@ interface IAccount {
     ) external payable;
     function executeLimitOrder(
         uint256 limitOrderId,
-        address adapter,
-        uint256 executionFee
+        address adapter
     ) external payable;
     function executeLimitOrderMulti(
         uint256 limitOrderId,
         address[] calldata adapters,
         uint256[] calldata collateralAmounts,
-        uint256[] calldata sizes,
-        uint256 executionFee
+        uint256[] calldata sizes
     ) external payable;
 
     function createTriggerOrder(

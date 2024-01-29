@@ -38,6 +38,7 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
+        uint256 fee,
         uint256 triggerPrice,
         uint256 acceptablePrice
     ) external payable override onlyExchange {
@@ -61,7 +62,7 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
             createdAt: block.timestamp
         });
         _limitOrders[account].push(limitOrder);
-        emit LimitOrderCreated(account, limitOrder.limitOrderId);
+        emit LimitOrderCreated(account, limitOrder.limitOrderId, fee);
     }
 
     function cancelLimitOrder(
