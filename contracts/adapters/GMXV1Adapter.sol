@@ -388,13 +388,14 @@ contract GmxV1Adapter is BaseAdapter {
         address index,
         bool isLong
     ) external view override returns (IAdapter.Position memory) {
-        if (isLong) {
-            collateral = index;
-        } else {
-            if (!IExchange(_exchange).isStableToken(collateral)) {
-                collateral = IExchange(_exchange).defaultStableToken();
-            }
-        }
+        // note: The position of GMX in the Reader contract should appear to be one.
+        // if (isLong) {
+        //     collateral = index;
+        // } else {
+        //     if (!IExchange(_exchange).isStableToken(collateral)) {
+        //         collateral = IExchange(_exchange).defaultStableToken();
+        //     }
+        // }
 
         IAdapter.Position memory position = getPosition(
             account,
