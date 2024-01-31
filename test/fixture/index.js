@@ -240,6 +240,16 @@ stable:
 `);
   };
 
+  const checkPosition = async (adapter, account, collateral, index, isLong) => {
+    const position = await adapter.getPosition(
+      account.target,
+      collateral,
+      index,
+      isLong
+    );
+    console.log(position);
+  };
+
   const faucet = async (token, tokenAmount) => {
     const abiCoder = new ethers.AbiCoder();
     if (token == WETH) {
@@ -273,7 +283,6 @@ stable:
   };
 
   const deposit = async (token, tokenAmount) => {
-    console.log(token, tokenAmount);
     await faucet(token, tokenAmount);
     const erc20 = await ethers.getContractAt("IERC20", token);
     await erc20.connect(owner).approve(account.target, tokenAmount);
@@ -667,6 +676,7 @@ stable:
     indexList,
     vault,
     checkBalance,
+    checkPosition,
     faucet,
     deposit,
     executeIncreasePosition,

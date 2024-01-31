@@ -222,17 +222,14 @@ contract Account is IAccount {
 
         collateralAmount -= depositFee;
 
-        // slither-disable-next-line controlled-delegatecall,low-level-calls
-        (bool success, bytes memory data) = adapter.delegatecall(
-            abi.encodeWithSignature(
-                "increaseCollateral(address,address,uint256,bool)",
-                collateral,
-                index,
-                collateralAmount,
-                isLong
-            )
+        _increaseCollateral(
+            adapter,
+            collateral,
+            index,
+            isLong,
+            collateralAmount,
+            executionFee
         );
-        require(success, string(data));
     }
 
     function decreaseCollateral(
@@ -250,6 +247,64 @@ contract Account is IAccount {
                 collateral,
                 index,
                 collateralAmount,
+                isLong
+            )
+        );
+        require(success, string(data));
+    }
+
+    // todo: exeuctionFee
+    function addMargin(
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong,
+        address[] calldata marginTokens,
+        uint256[] calldata marginAmounts
+    ) external payable virtual override onlyOrderKeeper {
+        require(
+            marginTokens.length == marginAmounts.length,
+            "length: not match"
+        );
+
+        uint256 marginAmount;
+        for (uint256 i = 0; i < marginTokens.length; i++) {
+            require(
+                marginAmounts[i] <= getBalance(marginTokens[i]),
+                "marginAmount: greater than balance"
+            );
+
+            if (collateral != marginTokens[i]) {
+                IERC20(marginTokens[i]).approve(exchange, marginAmounts[i]);
+                uint256 amountOut = IExchange(exchange).swap(
+                    marginTokens[i],
+                    collateral,
+                    marginAmounts[i]
+                );
+                marginAmount += amountOut;
+            } else {
+                marginAmount += marginAmounts[i];
+            }
+        }
+
+        _addMargin(adapter, collateral, index, isLong, marginAmount);
+    }
+
+    // todo: exeuctionFee
+    function realizeProfit(
+        address adapter,
+        address collateral,
+        address index,
+        uint256 profitAmount,
+        bool isLong
+    ) external payable virtual override onlyOrderKeeper {
+        // slither-disable-next-line controlled-delegatecall,low-level-calls
+        (bool success, bytes memory data) = adapter.delegatecall(
+            abi.encodeWithSignature(
+                "realizeProfit(address,address,uint256,bool)",
+                collateral,
+                index,
+                profitAmount,
                 isLong
             )
         );
@@ -505,6 +560,58 @@ contract Account is IAccount {
                 collateral,
                 index,
                 size,
+                isLong
+            )
+        );
+        require(success, string(data));
+    }
+
+    function _increaseCollateral(
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong,
+        uint256 collateralAmount,
+        uint256 executionFee
+    ) private {
+        require(
+            IExchange(exchange).isRegisteredAdapter(adapter),
+            "adapter: not registered"
+        );
+
+        // slither-disable-next-line controlled-delegatecall,low-level-calls
+        (bool success, bytes memory data) = adapter.delegatecall(
+            abi.encodeWithSignature(
+                "increaseCollateral(address,address,uint256,bool)",
+                collateral,
+                index,
+                collateralAmount,
+                isLong
+            )
+        );
+        require(success, string(data));
+    }
+
+    // todo: exeutionFee?
+    function _addMargin(
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong,
+        uint256 marginAmount
+    ) private {
+        require(
+            IExchange(exchange).isRegisteredAdapter(adapter),
+            "adapter: not registered"
+        );
+
+        // slither-disable-next-line controlled-delegatecall,low-level-calls
+        (bool success, bytes memory data) = adapter.delegatecall(
+            abi.encodeWithSignature(
+                "addMargin(address,address,uint256,bool)",
+                collateral,
+                index,
+                marginAmount,
                 isLong
             )
         );

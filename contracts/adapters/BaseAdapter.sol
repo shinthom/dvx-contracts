@@ -86,4 +86,36 @@ abstract contract BaseAdapter is IAdapter {
             collateralAmount
         );
     }
+
+    function logAddMargin(
+        address account,
+        address adapter,
+        address collateral,
+        address index,
+        uint256 marginAmount
+    ) internal {
+        ILogger(_logger).logAddMargin(
+            account,
+            adapter,
+            collateral,
+            index,
+            marginAmount
+        );
+    }
+
+    function logRealizeProfit(
+        address account,
+        address adapter,
+        address collateral,
+        address index,
+        uint256 profitAmount
+    ) internal {
+        ILogger(_logger).logRealizeProfit(
+            account,
+            adapter,
+            collateral,
+            index,
+            profitAmount
+        );
+    }
 }

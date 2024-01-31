@@ -42,7 +42,6 @@ interface ILogger {
         uint256 size,
         bool isLong
     );
-
     event CollateralIncreased(
         address indexed account,
         address adapter,
@@ -56,6 +55,21 @@ interface ILogger {
         address collateral,
         address index,
         uint256 collateralAmount
+    );
+
+    event MarginAdded(
+        address indexed account,
+        address adapter,
+        address collateral,
+        address index,
+        uint256 marginAmount
+    );
+    event ProfitRealized(
+        address indexed account,
+        address adapter,
+        address collateral,
+        address index,
+        uint256 profit
     );
 
     function logDeposit(
@@ -109,5 +123,20 @@ interface ILogger {
         address collateral,
         address index,
         uint256 collateralAmount
+    ) external;
+
+    function logAddMargin(
+        address account,
+        address adapter,
+        address collateral,
+        address index,
+        uint256 marginAmount
+    ) external;
+    function logRealizeProfit(
+        address account,
+        address adapter,
+        address collateral,
+        address index,
+        uint256 profitAmount
     ) external;
 }

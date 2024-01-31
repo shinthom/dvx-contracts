@@ -43,6 +43,19 @@ interface IAdapter {
         bool isLong
     ) external payable;
 
+    function addMargin(
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        bool isLong
+    ) external payable;
+    function realizeProfit(
+        address collateral,
+        address index,
+        uint256 profitAmount,
+        bool isLong
+    ) external payable;
+
     function makeMarketOrder(
         address collateral,
         address index,
@@ -69,6 +82,18 @@ interface IAdapter {
         address index,
         bool isLong
     ) external view returns (address);
+    function getPositionPnlUsd(
+        address account,
+        address collateral,
+        address index,
+        bool isLong
+    ) external view returns (bool, uint256);
+    function getWrapPositionPnlUsd(
+        address account,
+        address collateral,
+        address index,
+        bool isLong
+    ) external view returns (bool, uint256);
 
     function getMinExecutionFee() external view returns (uint256);
     function getPositionFee(

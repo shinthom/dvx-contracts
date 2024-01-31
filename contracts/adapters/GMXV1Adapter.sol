@@ -59,6 +59,13 @@ interface IVault {
             uint256
         );
 
+    function getPositionDelta(
+        address _account,
+        address _collateralToken,
+        address _indexToken,
+        bool _isLong
+    ) external view returns (bool, uint256);
+
     function getPositionKey(
         address _account,
         address _collateralToken,
@@ -332,6 +339,45 @@ contract GmxV1Adapter is BaseAdapter {
         );
     }
 
+    function addMargin(
+        address collateral,
+        address index,
+        uint256 marginAmount,
+        bool isLong
+    ) public payable override {
+        require(collateral != address(0), "collateral: zero address");
+        require(index != address(0), "index: zero address");
+
+        _increase(collateral, index, marginAmount, 0, isLong);
+
+        logAddMargin(address(this), _this, collateral, index, marginAmount);
+    }
+
+    function realizeProfit(
+        address collateral,
+        address index,
+        uint256 profitAmount,
+        bool isLong
+    ) external payable override {
+        uint256 profitAmountUsd;
+        if (isLong) {
+            profitAmountUsd = IVault(_vault).tokenToUsdMin(
+                collateral,
+                profitAmount
+            );
+        } else {
+            require(
+                IExchange(_exchange).isStableToken(collateral),
+                "INVALID_COLLATERAL"
+            );
+            profitAmountUsd = profitAmount * (10 ** 24);
+        }
+
+        _decrease(collateral, index, profitAmountUsd, 0, isLong);
+
+        logRealizeProfit(address(this), _this, collateral, index, profitAmount);
+    }
+
     function makeMarketOrder(
         address collateral,
         address index,
@@ -459,6 +505,36 @@ contract GmxV1Adapter is BaseAdapter {
             }
             return IExchange(_exchange).defaultStableToken();
         }
+    }
+
+    function getPositionPnlUsd(
+        address account,
+        address collateral,
+        address index,
+        bool isLong
+    ) public view override returns (bool hasProfit, uint256 pnlUsd) {
+        (hasProfit, pnlUsd) = IVault(_vault).getPositionDelta(
+            account,
+            collateral,
+            index,
+            isLong
+        );
+    }
+
+    function getWrapPositionPnlUsd(
+        address account,
+        address collateral,
+        address index,
+        bool isLong
+    ) external view override returns (bool, uint256) {
+        (bool hasProfit, uint256 pnlUsd) = getPositionPnlUsd(
+            account,
+            collateral,
+            index,
+            isLong
+        );
+
+        return (hasProfit, pnlUsd / (10 ** 12));
     }
 
     function getMinExecutionFee() external view override returns (uint256) {

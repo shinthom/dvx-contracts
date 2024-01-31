@@ -60,6 +60,22 @@ interface IAccount {
         uint256 executionFee
     ) external payable;
 
+    function addMargin(
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong,
+        address[] calldata marginTokens,
+        uint256[] calldata marginAmounts
+    ) external payable;
+    function realizeProfit(
+        address adapter,
+        address collateral,
+        address index,
+        uint256 profitAmount,
+        bool isLong
+    ) external payable;
+
     function createLimitOrder(
         address collateral,
         address index,

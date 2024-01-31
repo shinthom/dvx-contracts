@@ -365,6 +365,69 @@ contract MuxAdapter is BaseAdapter {
         );
     }
 
+    function addMargin(
+        address collateral,
+        address index,
+        uint256 marginAmount,
+        bool isLong
+    ) external payable override {
+        uint8 collateralId = _getIdFromTokenAddress(collateral);
+        uint8 indexId = _getIdFromTokenAddress(index);
+
+        bytes32 subAccountId = _assembleSubAccountId(
+            address(this),
+            collateralId,
+            indexId,
+            isLong
+        );
+
+        if (collateralId == _wethTokenId) {
+            IERC20(collateral).withdraw(marginAmount);
+            IOrderBook(_orderBook).depositCollateral{value: marginAmount}(
+                subAccountId,
+                marginAmount
+            );
+        } else {
+            // slither-disable-next-line unused-return
+            IERC20(collateral).approve(_orderBook, marginAmount);
+            IOrderBook(_orderBook).depositCollateral(
+                subAccountId,
+                marginAmount
+            );
+        }
+
+        logAddMargin(address(this), _this, collateral, index, marginAmount);
+    }
+
+    function realizeProfit(
+        address collateral,
+        address index,
+        uint256 profitAmount,
+        bool isLong
+    ) external payable override {
+        uint8 collateralId = _getIdFromTokenAddress(collateral);
+        uint8 indexId = _getIdFromTokenAddress(index);
+
+        bytes32 subAccountId = _assembleSubAccountId(
+            address(this),
+            collateralId,
+            indexId,
+            isLong
+        );
+
+        address defaultStableToken = IExchange(_exchange).defaultStableToken();
+        uint8 profitTokenId = _getIdFromTokenAddress(defaultStableToken);
+
+        IOrderBook(_orderBook).placeWithdrawalOrder(
+            subAccountId,
+            uint96(profitAmount),
+            profitTokenId,
+            true // isProfit
+        );
+
+        logRealizeProfit(address(this), _this, collateral, index, profitAmount);
+    }
+
     function makeMarketOrder(
         address collateral,
         address index,
@@ -387,7 +450,7 @@ contract MuxAdapter is BaseAdapter {
         address collateral,
         address index,
         bool isLong
-    ) external view override returns (Position memory) {
+    ) public view override returns (Position memory) {
         bytes32 subAccountId = _getSubAccountId(
             account,
             collateral,
@@ -462,6 +525,42 @@ contract MuxAdapter is BaseAdapter {
         } else {
             return IExchange(_exchange).defaultStableToken();
         }
+    }
+
+    function getPositionPnlUsd(
+        address account,
+        address collateral,
+        address index,
+        bool isLong
+    ) public view override returns (bool hasProfit, uint256 pnlUsd) {
+        Position memory position = getPosition(
+            account,
+            collateral,
+            index,
+            isLong
+        );
+        if (position.size == 0) {
+            return (false, 0);
+        }
+
+        uint256 markPrice = getPrice(index, isLong);
+        hasProfit = isLong
+            ? markPrice > position.price
+            : markPrice < position.price;
+        uint256 priceDelta = markPrice >= position.price
+            ? markPrice - position.price
+            : position.price - markPrice;
+
+        pnlUsd = (priceDelta * position.size) / (10 ** TOKEN_DEFAULT_DECIMALS);
+    }
+
+    function getWrapPositionPnlUsd(
+        address account,
+        address collateral,
+        address index,
+        bool isLong
+    ) external view override returns (bool hasProfit, uint256 pnlUsd) {
+        return getPositionPnlUsd(account, collateral, index, isLong);
     }
 
     function getMinExecutionFee() external pure override returns (uint256) {

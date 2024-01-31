@@ -11,6 +11,7 @@
     "open-positions": "hardhat run scripts/3_open-positions-testnet.js --network local",
     "create-limit-orders": "hardhat run scripts/4_create-limit-orders-testnet.js --network local",
     "create-trigger-orders": "hardhat run scripts/5_create-trigger-orders-testnet.js --network local",
+    "e2e-margin-management": "hardhat test test/e2e/marginManagement.js --network local",
     "e2e-realize-profit": "hardhat test test/e2e/realizeProfit.js --network local",
     "e2e-market-order": "hardhat test test/e2e/marketOrder.js --network local",
     "e2e-limit-order": "hardhat test test/e2e/limitOrder.js --network local",
