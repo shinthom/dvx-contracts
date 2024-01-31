@@ -219,6 +219,8 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
         IERC20(tokenIn).transferFrom(msg.sender, swapper, amountIn);
         amountOut = ISwapper(swapper).swap(tokenIn, tokenOut, amountIn);
+
+        IERC20(tokenOut).transfer(msg.sender, amountOut);
     }
 
     function createLimitOrder(
