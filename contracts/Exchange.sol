@@ -396,13 +396,13 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         return (tokenAmount * swapFeeRate) / BASIS_POINTS;
     }
 
-    function getPnLToken(
+    function getProfitToken(
         address adapter,
         address collateral,
         address index,
         bool isLong
     ) public view override returns (address) {
-        return IAdapter(adapter).getPnLToken(collateral, index, isLong);
+        return IAdapter(adapter).getProfitToken(collateral, index, isLong);
     }
 
     function _authorizeUpgrade(

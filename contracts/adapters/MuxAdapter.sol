@@ -452,7 +452,7 @@ contract MuxAdapter is BaseAdapter {
             );
     }
 
-    function getPnLToken(
+    function getProfitToken(
         address collateral,
         address index,
         bool isLong

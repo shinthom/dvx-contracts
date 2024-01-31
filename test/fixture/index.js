@@ -223,8 +223,6 @@ const deploy = async (noAccount) => {
     );
   }
 
-  console.log(await accountFactory.accounts(owner.address));
-
   const checkBalance = async (account) => {
     console.log(`
 non-stable:

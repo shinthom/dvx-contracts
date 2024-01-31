@@ -64,7 +64,7 @@ interface IAdapter {
         bool isLong
     ) external view returns (Position memory);
 
-    function getPnLToken(
+    function getProfitToken(
         address collateral,
         address index,
         bool isLong

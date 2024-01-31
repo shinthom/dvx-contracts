@@ -144,7 +144,7 @@ interface IExchange {
     ) external view returns (uint256);
     function getDepositFee(uint256 amount) external view returns (uint256);
     function getSwapFee(uint256 amount) external view returns (uint256);
-    function getPnLToken(
+    function getProfitToken(
         address adapter,
         address collateral,
         address index,

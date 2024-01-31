@@ -446,7 +446,7 @@ contract GmxV1Adapter is BaseAdapter {
         }
     }
 
-    function getPnLToken(
+    function getProfitToken(
         address collateral,
         address index,
         bool isLong
