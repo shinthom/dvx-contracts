@@ -337,6 +337,34 @@ stable:
     }
   };
 
+  const decreaseCollateral = async (
+    adapter,
+    collateral,
+    index,
+    isLong,
+    collateralAmount,
+    executionFee
+  ) => {
+    const adapterFee = await adapter.getMinExecutionFee();
+    await account
+      .connect(owner)
+      .decreaseCollateral(
+        adapter.target,
+        collateral,
+        index,
+        isLong,
+        collateralAmount,
+        executionFee,
+        { value: adapterFee }
+      );
+
+    if (adapter.target == gmxV1Adapter.target) {
+      await executeDecreasePosition(account.target);
+    } else if (adapter.target == muxAdapter.target) {
+      await fillWithdrawalOrder();
+    }
+  };
+
   const createLimitOrder = async (
     collateral,
     index,
@@ -637,6 +665,7 @@ stable:
     USDT,
     collateralList,
     indexList,
+    vault,
     checkBalance,
     faucet,
     deposit,
@@ -648,6 +677,7 @@ stable:
     setDummyPrice,
     increasePosition,
     decreasePosition,
+    decreaseCollateral,
     createLimitOrder,
     executeLimitOrder,
     createTriggerOrder,
