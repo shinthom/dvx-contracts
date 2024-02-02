@@ -16,7 +16,6 @@ interface IExchange {
 
     event AccountFactorySet(address indexed accountFactory);
     event WarehouseSet(address indexed warehouse);
-    event ValidatorSet(address indexed validator);
     event LoggerSet(address indexed logger);
 
     event AdapterRegistered(address indexed adapter);
@@ -29,7 +28,6 @@ interface IExchange {
 
     event MinExecutionFeeSet(uint256 indexed fee);
     event PositionFeeRateSet(uint256 indexed fee);
-    event DepositFeeRateSet(uint256 indexed fee);
     event SwapFeeRateSet(uint256 indexed fee);
 
     event TierSet(uint8 indexed tierId, uint256 discount);
@@ -42,7 +40,6 @@ interface IExchange {
     function accountFactory() external returns (address);
     function warehouse() external returns (address);
     function swapper() external returns (address);
-    function validator() external returns (address);
     function logger() external returns (address);
 
     function isRegisteredAdapter(address adapter) external view returns (bool);
@@ -52,9 +49,7 @@ interface IExchange {
     function feeCollector() external returns (address);
     function isOrderKeeper(address account) external view returns (bool);
 
-    function minExecutionFee() external view returns (uint256);
     function positionFeeRate() external view returns (uint256);
-    function depositFeeRate() external view returns (uint256);
     function swapFeeRate() external view returns (uint256);
 
     function tiers(uint8) external view returns (uint256);
@@ -63,7 +58,6 @@ interface IExchange {
     function setAccountFactory(address _accountFactory) external;
     function setWarehouse(address _warehouse) external;
     function setSwapper(address _swapper) external;
-    function setValidator(address _validator) external;
     function setLogger(address _logger) external;
 
     function registerAdapter(address adapter) external;
@@ -74,9 +68,7 @@ interface IExchange {
     function setFeeCollector(address _feeCollector) external;
     function setOrderKeeper(address account, bool isActive) external;
 
-    function setMinExecutionFee(uint256 fee) external;
     function setPositionFeeRate(uint256 fee) external;
-    function setDepositFeeRate(uint256 fee) external;
     function setSwapFeeRate(uint256 fee) external;
 
     function setTier(uint8 tierId, uint256 discountRate) external;
@@ -181,7 +173,6 @@ interface IExchange {
         uint256 size,
         bool isLong
     ) external view returns (uint256);
-    function getDepositFee(uint256 amount) external view returns (uint256);
     function getSwapFee(uint256 amount) external view returns (uint256);
     function getProfitToken(
         address adapter,

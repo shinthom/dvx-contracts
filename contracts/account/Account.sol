@@ -400,7 +400,6 @@ contract Account is IAccount {
         _debt -= amount;
     }
 
-    // todo: reentrancy guard
     function createLimitOrder(
         address collateral,
         address index,
@@ -476,7 +475,13 @@ contract Account is IAccount {
         address[] calldata adapters,
         uint256[] calldata collateralAmounts,
         uint256[] calldata sizes
-    ) external payable virtual override onlyOrderKeeper {
+    )
+        external
+        payable
+        virtual
+        override
+        onlyOrderKeeper
+    {
         require(
             adapters.length == collateralAmounts.length &&
                 adapters.length == sizes.length,
@@ -677,14 +682,6 @@ contract Account is IAccount {
             IExchange(exchange).isRegisteredAdapter(adapter),
             "adapter: not registered"
         );
-
-        uint256 depositFee = IExchange(exchange).getDepositFee(
-            collateralAmount
-        );
-        if (depositFee > 0) {
-            _collectProtocolFee(collateral, depositFee);
-            collateralAmount -= depositFee;
-        }
 
         // slither-disable-next-line controlled-delegatecall,low-level-calls
         (bool success, bytes memory data) = adapter.delegatecall(

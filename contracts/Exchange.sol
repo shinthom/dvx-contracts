@@ -8,7 +8,6 @@ import {IAccountFactory} from "./interfaces/IAccountFactory.sol";
 import {IExchange} from "./interfaces/IExchange.sol";
 import {IWarehouse} from "./interfaces/IWarehouse.sol";
 import {ISwapper} from "./interfaces/ISwapper.sol";
-import {IValidator} from "./interfaces/IValidator.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
@@ -22,7 +21,6 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     address public override accountFactory;
     address public override warehouse;
     address public override swapper;
-    address public override validator;
     address public override logger;
 
     address[] private _registeredAdapters;
@@ -34,9 +32,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     address public override feeCollector;
     mapping(address => bool) public override isOrderKeeper;
 
-    uint256 public override minExecutionFee; // todo: limit/trigger
-    uint256 public override positionFeeRate; // open position fee rate
-    uint256 public override depositFeeRate; // increase collateral fee rate
+    uint256 public override positionFeeRate;
     uint256 public override swapFeeRate;
 
     mapping(uint8 => uint256) public override tiers;
@@ -76,13 +72,6 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
         swapper = _swapper;
         emit WarehouseSet(_swapper);
-    }
-
-    function setValidator(address _validator) external override onlyOwner {
-        require(_validator != address(0), "validator: zero address");
-
-        validator = _validator;
-        emit ValidatorSet(_validator);
     }
 
     function setLogger(address _logger) external override onlyOwner {
@@ -155,23 +144,11 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         emit OrderKeeperSet(orderKeeper, isActive);
     }
 
-    function setMinExecutionFee(uint256 fee) external override onlyOwner {
-        minExecutionFee = fee;
-        emit MinExecutionFeeSet(fee);
-    }
-
     function setPositionFeeRate(uint256 _feeRate) external override onlyOwner {
         require(_feeRate <= BASIS_POINTS, "feeRate: invalid");
 
         positionFeeRate = _feeRate;
         emit PositionFeeRateSet(_feeRate);
-    }
-
-    function setDepositFeeRate(uint256 _feeRate) external override onlyOwner {
-        require(_feeRate <= BASIS_POINTS, "feeRate: invalid");
-
-        depositFeeRate = _feeRate;
-        emit DepositFeeRateSet(_feeRate);
     }
 
     function setSwapFeeRate(uint256 _feeRate) external override onlyOwner {
@@ -404,16 +381,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address index,
         bool isLong,
         uint256 marginAmount
-    ) external view override returns (bool) {
-        return
-            IValidator(validator).validateAddMargin(
-                adapter,
-                collateral,
-                index,
-                isLong,
-                marginAmount
-            );
-    }
+    ) external view override returns (bool) {}
 
     function validateRealizeProfit(
         address adapter,
@@ -421,16 +389,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address index,
         bool isLong,
         uint256 profitAmount
-    ) external view override returns (bool) {
-        return
-            IValidator(validator).validateRealizeProfit(
-                adapter,
-                collateral,
-                index,
-                isLong,
-                profitAmount
-            );
-    }
+    ) external view override returns (bool) {}
 
     function getAllRegisteredAdapters()
         external
@@ -464,16 +423,6 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         );
         uint8 collateralDecimals = IERC20(collateral).decimals();
         return (feeUsd * (10 ** collateralDecimals)) / collateralPrice;
-    }
-
-    function getDepositFee(
-        uint256 collateralAmount
-    ) public view override returns (uint256) {
-        if (collateralAmount == 0 || depositFeeRate == 0) {
-            return 0;
-        }
-
-        return (collateralAmount * depositFeeRate) / BASIS_POINTS;
     }
 
     function getSwapFee(

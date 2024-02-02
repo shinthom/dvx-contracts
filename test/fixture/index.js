@@ -102,7 +102,6 @@ let quoter;
 let reader;
 let logger;
 let swapper;
-let validator;
 
 let account;
 
@@ -182,7 +181,6 @@ const deploy = async (noAccount) => {
   await warehouse.initialize();
 
   logger = await ethers.deployContract("Logger", []);
-  validator = await ethers.deployContract("Validator", [exchange.target]);
 
   gmxV1Adapter = await ethers.deployContract("GmxV1Adapter", [
     PositionRouter,
@@ -681,7 +679,6 @@ stable:
     muxAdapter,
     quoter,
     reader,
-    validator,
     logger,
     accountFactory,
     account,

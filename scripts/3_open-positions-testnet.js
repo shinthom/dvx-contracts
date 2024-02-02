@@ -12,7 +12,6 @@ async function main() {
     reader,
     quoter,
     logger,
-    validator,
     accountFactory,
     account,
     weth,
@@ -34,7 +33,6 @@ async function main() {
 - warehouse     : ${warehouse.target}
 - reader        : ${reader.target}
 - quoter        : ${quoter.target}
-- validator     : ${validator.target}
 - logger        : ${logger.target}
 - accountFactory: ${accountFactory.target}
 - account       : ${noAccount ? "null" : account.target}
