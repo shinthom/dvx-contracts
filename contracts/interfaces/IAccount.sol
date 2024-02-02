@@ -61,7 +61,7 @@ interface IAccount {
         uint256 executionFee
     ) external payable;
 
-    function addMargin(
+    function addAcmmMargin(
         address adapter,
         address collateral,
         address index,
@@ -69,7 +69,7 @@ interface IAccount {
         address[] calldata marginTokens,
         uint256[] calldata marginAmounts
     ) external payable;
-    function realizeProfit(
+    function subAcmmMargin(
         address adapter,
         address collateral,
         address index,

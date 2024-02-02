@@ -43,13 +43,13 @@ interface IAdapter {
         bool isLong
     ) external payable;
 
-    function addMargin(
+    function addAcmmMargin(
         address collateral,
         address index,
         bool isLong,
         uint256 collateralAmount
     ) external payable;
-    function realizeProfit(
+    function subAcmmMargin(
         address collateral,
         address index,
         bool isLong,

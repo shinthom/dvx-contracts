@@ -107,23 +107,29 @@ contract Logger is ILogger {
         );
     }
 
-    function logAddMargin(
+    function logAddAcmmMargin(
         address account,
         address adapter,
         address collateral,
         address index,
         uint256 marginAmount
     ) external override {
-        emit MarginAdded(account, adapter, collateral, index, marginAmount);
+        emit AcmmMarginAdded(account, adapter, collateral, index, marginAmount);
     }
 
-    function logRealizeProfit(
+    function logSubAcmmMargin(
         address account,
         address adapter,
         address collateral,
         address index,
-        uint256 profitAmount
+        uint256 marginAmount
     ) external override {
-        emit ProfitRealized(account, adapter, collateral, index, profitAmount);
+        emit AcmmMarginSubtracted(
+            account,
+            adapter,
+            collateral,
+            index,
+            marginAmount
+        );
     }
 }

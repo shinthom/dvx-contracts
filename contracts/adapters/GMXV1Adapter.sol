@@ -339,7 +339,7 @@ contract GmxV1Adapter is BaseAdapter {
         );
     }
 
-    function addMargin(
+    function addAcmmMargin(
         address collateral,
         address index,
         bool isLong,
@@ -350,32 +350,32 @@ contract GmxV1Adapter is BaseAdapter {
 
         _increase(collateral, index, marginAmount, 0, isLong);
 
-        logAddMargin(address(this), _this, collateral, index, marginAmount);
+        logAddAcmmMargin(address(this), _this, collateral, index, marginAmount);
     }
 
-    function realizeProfit(
+    function subAcmmMargin(
         address collateral,
         address index,
         bool isLong,
-        uint256 profitAmount
+        uint256 marginAmount
     ) external payable override {
-        uint256 profitAmountUsd;
+        uint256 marginAmountUsd;
         if (isLong) {
-            profitAmountUsd = IVault(_vault).tokenToUsdMin(
+            marginAmountUsd = IVault(_vault).tokenToUsdMin(
                 collateral,
-                profitAmount
+                marginAmount
             );
         } else {
             require(
                 IExchange(_exchange).isStableToken(collateral),
                 "INVALID_COLLATERAL"
             );
-            profitAmountUsd = profitAmount * (10 ** 24);
+            marginAmountUsd = marginAmount * (10 ** 24);
         }
 
-        _decrease(collateral, index, profitAmountUsd, 0, isLong);
+        _decrease(collateral, index, marginAmountUsd, 0, isLong);
 
-        logRealizeProfit(address(this), _this, collateral, index, profitAmount);
+        logSubAcmmMargin(address(this), _this, collateral, index, marginAmount);
     }
 
     function makeMarketOrder(

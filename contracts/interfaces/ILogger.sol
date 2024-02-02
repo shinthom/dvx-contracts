@@ -57,19 +57,19 @@ interface ILogger {
         uint256 collateralAmount
     );
 
-    event MarginAdded(
+    event AcmmMarginAdded(
         address indexed account,
         address adapter,
         address collateral,
         address index,
         uint256 marginAmount
     );
-    event ProfitRealized(
+    event AcmmMarginSubtracted(
         address indexed account,
         address adapter,
         address collateral,
         address index,
-        uint256 profit
+        uint256 marginAmount
     );
 
     function logDeposit(
@@ -125,18 +125,18 @@ interface ILogger {
         uint256 collateralAmount
     ) external;
 
-    function logAddMargin(
+    function logAddAcmmMargin(
         address account,
         address adapter,
         address collateral,
         address index,
         uint256 marginAmount
     ) external;
-    function logRealizeProfit(
+    function logSubAcmmMargin(
         address account,
         address adapter,
         address collateral,
         address index,
-        uint256 profitAmount
+        uint256 marginAmount
     ) external;
 }

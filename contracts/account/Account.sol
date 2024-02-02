@@ -282,7 +282,7 @@ contract Account is IAccount {
         address index,
         bool isLong,
         uint256 collateralAmount,
-        uint256 executionFee // stable token (1e6)
+        uint256 executionFee
     ) external payable virtual override onlyOwner {
         if (executionFee > 0) {
             _feeDebts[collateral] += executionFee;
@@ -301,42 +301,38 @@ contract Account is IAccount {
         require(success, string(data));
     }
 
-    // todo: exeuctionFee
-    function addMargin(
+    function addAcmmMargin(
         address adapter,
         address collateral,
         address index,
         bool isLong,
-        address[] calldata marginTokens,
-        uint256[] calldata marginAmounts
+        address[] calldata tokens,
+        uint256[] calldata amounts
     ) external payable virtual override onlyOrderKeeper {
-        require(
-            marginTokens.length == marginAmounts.length,
-            "length: not match"
-        );
+        require(tokens.length == amounts.length, "length: not match");
 
         uint256 marginAmount;
-        for (uint256 i = 0; i < marginTokens.length; i++) {
+        for (uint256 i = 0; i < tokens.length; i++) {
             require(
-                marginAmounts[i] <= getBalance(marginTokens[i]),
+                amounts[i] <= getWithdrawableBalance(tokens[i]),
                 "marginAmount: greater than balance"
             );
 
-            if (collateral != marginTokens[i]) {
-                IERC20(marginTokens[i]).approve(exchange, marginAmounts[i]);
+            if (collateral != tokens[i]) {
+                IERC20(tokens[i]).approve(exchange, amounts[i]);
                 uint256 amountOut = IExchange(exchange).swap(
-                    marginTokens[i],
+                    tokens[i],
                     collateral,
-                    marginAmounts[i]
+                    amounts[i]
                 );
                 marginAmount += amountOut;
             } else {
-                marginAmount += marginAmounts[i];
+                marginAmount += amounts[i];
             }
         }
 
         require(
-            IExchange(exchange).validateAddMargin(
+            IExchange(exchange).validateAddAcmmMargin(
                 adapter,
                 collateral,
                 index,
@@ -345,24 +341,31 @@ contract Account is IAccount {
             ),
             "validation failed"
         );
-        _addMargin(adapter, collateral, index, isLong, marginAmount);
+
+        uint256 addAcmmMarginFee
+            = IExchange(exchange).getAddAcmmMarginFee(marginAmount); // prettier-ignore
+        if (addAcmmMarginFee > 0) {
+            _collectProtocolFee(collateral, addAcmmMarginFee);
+            marginAmount -= addAcmmMarginFee;
+        }
+
+        _addAcmmMargin(adapter, collateral, index, isLong, marginAmount);
     }
 
-    // todo: exeuctionFee
-    function realizeProfit(
+    function subAcmmMargin(
         address adapter,
         address collateral,
         address index,
         bool isLong,
-        uint256 profitAmount
+        uint256 marginAmount
     ) external payable virtual override onlyOrderKeeper {
         require(
-            IExchange(exchange).validateRealizeProfit(
+            IExchange(exchange).validateSubAcmmMargin(
                 adapter,
                 collateral,
                 index,
                 isLong,
-                profitAmount
+                marginAmount
             ),
             "validation failed"
         );
@@ -370,17 +373,27 @@ contract Account is IAccount {
         // slither-disable-next-line controlled-delegatecall,low-level-calls
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
-                "realizeProfit(address,address,uint256,bool)",
+                "subAcmmMargin(address,address,uint256,bool)",
                 collateral,
                 index,
                 isLong,
-                profitAmount
+                marginAmount
             )
         );
-
-        // todo: getProfitToken
-        // adapter.getProfitToken
         require(success, string(data));
+
+        address marginToken = IExchange(exchange).getProfitToken(
+            adapter,
+            collateral,
+            index,
+            isLong
+        );
+
+        uint256 subAcmmMarginFee
+            = IExchange(exchange).getSubAcmmMarginFee(marginAmount); // prettier-ignore
+        if (subAcmmMarginFee > 0) {
+            _collectProtocolFee(marginToken, subAcmmMarginFee);
+        }
     }
 
     function collectFeeDebt(
@@ -679,7 +692,7 @@ contract Account is IAccount {
         require(success, string(data));
     }
 
-    function _addMargin(
+    function _addAcmmMargin(
         address adapter,
         address collateral,
         address index,
@@ -694,7 +707,7 @@ contract Account is IAccount {
         // slither-disable-next-line controlled-delegatecall,low-level-calls
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
-                "addMargin(address,address,uint256,bool)",
+                "addAcmmMargin(address,address,uint256,bool)",
                 collateral,
                 index,
                 marginAmount,

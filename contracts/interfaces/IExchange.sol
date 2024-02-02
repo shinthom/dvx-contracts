@@ -26,9 +26,10 @@ interface IExchange {
     event FeeCollectorSet(address indexed feeCollector);
     event OrderKeeperSet(address indexed orderKeeper, bool isActive);
 
-    event MinExecutionFeeSet(uint256 indexed fee);
-    event PositionFeeRateSet(uint256 indexed fee);
-    event SwapFeeRateSet(uint256 indexed fee);
+    event PositionFeeRateSet(uint256 indexed feeRate);
+    event SwapFeeRateSet(uint256 indexed feeRate);
+    event AccmAddMarginFeeRateSet(uint256 indexed feeRate);
+    event AccmSubMarginFeeRateSet(uint256 indexed feeRate);
 
     event TierSet(uint8 indexed tierId, uint256 discount);
     event ReferralTierSet(address indexed referral, uint8 indexed tierId);
@@ -51,6 +52,8 @@ interface IExchange {
 
     function positionFeeRate() external view returns (uint256);
     function swapFeeRate() external view returns (uint256);
+    function addAcmmMarginFeeRate() external view returns (uint256);
+    function subAcmmMarginFeeRate() external view returns (uint256);
 
     function tiers(uint8) external view returns (uint256);
     function referralTiers(address) external view returns (uint8);
@@ -68,8 +71,10 @@ interface IExchange {
     function setFeeCollector(address _feeCollector) external;
     function setOrderKeeper(address account, bool isActive) external;
 
-    function setPositionFeeRate(uint256 fee) external;
-    function setSwapFeeRate(uint256 fee) external;
+    function setPositionFeeRate(uint256 feeRate) external;
+    function setSwapFeeRate(uint256 feeRate) external;
+    function setAcmmAddMarginFeeRate(uint256 feeRate) external;
+    function setAcmmSubMarginFeeRate(uint256 feeRate) external;
 
     function setTier(uint8 tierId, uint256 discountRate) external;
     function setReferralTier(address account, uint8 tierId) external;
@@ -150,14 +155,14 @@ interface IExchange {
         uint256 debt
     ) external returns (uint256);
 
-    function validateAddMargin(
+    function validateAddAcmmMargin(
         address adapter,
         address collateral,
         address index,
         bool isLong,
         uint256 marginAmount
     ) external view returns (bool);
-    function validateRealizeProfit(
+    function validateSubAcmmMargin(
         address adapter,
         address collateral,
         address index,
@@ -174,6 +179,8 @@ interface IExchange {
         bool isLong
     ) external view returns (uint256);
     function getSwapFee(uint256 amount) external view returns (uint256);
+    function getAddAcmmMarginFee(uint256 marginAmount) external view returns (uint256);
+    function getSubAcmmMarginFee(uint256 marginAmount) external view returns (uint256);
     function getProfitToken(
         address adapter,
         address collateral,

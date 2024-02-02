@@ -34,6 +34,8 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
     uint256 public override positionFeeRate;
     uint256 public override swapFeeRate;
+    uint256 public override addAcmmMarginFeeRate;
+    uint256 public override subAcmmMarginFeeRate;
 
     mapping(uint8 => uint256) public override tiers;
     mapping(address => uint8) public override referralTiers;
@@ -156,6 +158,24 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
         swapFeeRate = _feeRate;
         emit SwapFeeRateSet(_feeRate);
+    }
+
+    function setAcmmAddMarginFeeRate(
+        uint256 _feeRate
+    ) external override onlyOwner {
+        require(_feeRate <= BASIS_POINTS, "feeRate: invalid");
+
+        addAcmmMarginFeeRate = _feeRate;
+        emit AccmAddMarginFeeRateSet(_feeRate);
+    }
+
+    function setAcmmSubMarginFeeRate(
+        uint256 _feeRate
+    ) external override onlyOwner {
+        require(_feeRate <= BASIS_POINTS, "feeRate: invalid");
+
+        subAcmmMarginFeeRate = _feeRate;
+        emit AccmSubMarginFeeRateSet(_feeRate);
     }
 
     function setTier(
@@ -381,7 +401,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         return amount - tokenIn;
     }
 
-    function validateAddMargin(
+    function validateAddAcmmMargin(
         address adapter,
         address collateral,
         address index,
@@ -389,7 +409,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         uint256 marginAmount
     ) external view override returns (bool) {}
 
-    function validateRealizeProfit(
+    function validateSubAcmmMargin(
         address adapter,
         address collateral,
         address index,
@@ -438,6 +458,24 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             return 0;
         }
         return (tokenAmount * swapFeeRate) / BASIS_POINTS;
+    }
+
+    function getAddAcmmMarginFee(
+        uint256 marginAmount
+    ) public view override returns (uint256) {
+        if (addAcmmMarginFeeRate == 0) {
+            return 0;
+        }
+        return (marginAmount * addAcmmMarginFeeRate) / BASIS_POINTS;
+    }
+
+    function getSubAcmmMarginFee(
+        uint256 marginAmount
+    ) public view override returns (uint256) {
+        if (subAcmmMarginFeeRate == 0) {
+            return 0;
+        }
+        return (marginAmount * subAcmmMarginFeeRate) / BASIS_POINTS;
     }
 
     function getProfitToken(

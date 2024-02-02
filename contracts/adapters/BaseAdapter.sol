@@ -87,14 +87,14 @@ abstract contract BaseAdapter is IAdapter {
         );
     }
 
-    function logAddMargin(
+    function logAddAcmmMargin(
         address account,
         address adapter,
         address collateral,
         address index,
         uint256 marginAmount
     ) internal {
-        ILogger(_logger).logAddMargin(
+        ILogger(_logger).logAddAcmmMargin(
             account,
             adapter,
             collateral,
@@ -103,19 +103,19 @@ abstract contract BaseAdapter is IAdapter {
         );
     }
 
-    function logRealizeProfit(
+    function logSubAcmmMargin(
         address account,
         address adapter,
         address collateral,
         address index,
-        uint256 profitAmount
+        uint256 marginAmount
     ) internal {
-        ILogger(_logger).logRealizeProfit(
+        ILogger(_logger).logSubAcmmMargin(
             account,
             adapter,
             collateral,
             index,
-            profitAmount
+            marginAmount
         );
     }
 }
