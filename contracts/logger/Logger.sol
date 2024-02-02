@@ -2,7 +2,6 @@
 pragma solidity 0.8.7;
 
 import {ILogger} from "../interfaces/ILogger.sol";
-import "hardhat/console.sol";
 
 contract Logger is ILogger {
     function logDeposit(

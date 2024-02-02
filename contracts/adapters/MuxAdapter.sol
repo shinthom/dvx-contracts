@@ -809,7 +809,6 @@ contract MuxAdapter is BaseAdapter {
         revert("id: not found");
     }
 
-    // todo: external -> privat
     function _getMaintenanceMarginRate(
         address tokenAddress
     ) private view returns (uint256) {
