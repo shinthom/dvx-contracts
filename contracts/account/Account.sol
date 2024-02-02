@@ -287,6 +287,16 @@ contract Account is IAccount {
             }
         }
 
+        require(
+            IExchange(exchange).validateAddMargin(
+                adapter,
+                collateral,
+                index,
+                isLong,
+                marginAmount
+            ),
+            "validation failed"
+        );
         _addMargin(adapter, collateral, index, isLong, marginAmount);
     }
 
@@ -295,19 +305,33 @@ contract Account is IAccount {
         address adapter,
         address collateral,
         address index,
-        uint256 profitAmount,
-        bool isLong
+        bool isLong,
+        uint256 profitAmount
     ) external payable virtual override onlyOrderKeeper {
+        require(
+            IExchange(exchange).validateRealizeProfit(
+                adapter,
+                collateral,
+                index,
+                isLong,
+                profitAmount
+            ),
+            "validation failed"
+        );
+
         // slither-disable-next-line controlled-delegatecall,low-level-calls
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
                 "realizeProfit(address,address,uint256,bool)",
                 collateral,
                 index,
-                profitAmount,
-                isLong
+                isLong,
+                profitAmount
             )
         );
+
+        // todo: getProfitToken
+        // adapter.getProfitToken
         require(success, string(data));
     }
 

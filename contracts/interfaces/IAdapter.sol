@@ -46,14 +46,14 @@ interface IAdapter {
     function addMargin(
         address collateral,
         address index,
-        uint256 collateralAmount,
-        bool isLong
+        bool isLong,
+        uint256 collateralAmount
     ) external payable;
     function realizeProfit(
         address collateral,
         address index,
-        uint256 profitAmount,
-        bool isLong
+        bool isLong,
+        uint256 profitAmount
     ) external payable;
 
     function makeMarketOrder(

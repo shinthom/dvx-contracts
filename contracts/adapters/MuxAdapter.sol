@@ -369,8 +369,8 @@ contract MuxAdapter is BaseAdapter {
     function addMargin(
         address collateral,
         address index,
-        uint256 marginAmount,
-        bool isLong
+        bool isLong,
+        uint256 marginAmount
     ) external payable override {
         uint8 collateralId = _getIdFromTokenAddress(collateral);
         uint8 indexId = _getIdFromTokenAddress(index);
@@ -403,8 +403,8 @@ contract MuxAdapter is BaseAdapter {
     function realizeProfit(
         address collateral,
         address index,
-        uint256 profitAmount,
-        bool isLong
+        bool isLong,
+        uint256 profitAmount
     ) external payable override {
         uint8 collateralId = _getIdFromTokenAddress(collateral);
         uint8 indexId = _getIdFromTokenAddress(index);

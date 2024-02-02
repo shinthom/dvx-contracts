@@ -16,6 +16,7 @@ interface IExchange {
 
     event AccountFactorySet(address indexed accountFactory);
     event WarehouseSet(address indexed warehouse);
+    event ValidatorSet(address indexed validator);
     event LoggerSet(address indexed logger);
 
     event AdapterRegistered(address indexed adapter);
@@ -37,6 +38,7 @@ interface IExchange {
     function accountFactory() external returns (address);
     function warehouse() external returns (address);
     function swapper() external returns (address);
+    function validator() external returns (address);
     function logger() external returns (address);
 
     function isRegisteredAdapter(address adapter) external view returns (bool);
@@ -57,6 +59,7 @@ interface IExchange {
     function setAccountFactory(address _accountFactory) external;
     function setWarehouse(address _warehouse) external;
     function setSwapper(address _swapper) external;
+    function setValidator(address _validator) external;
     function setLogger(address _logger) external;
 
     function registerAdapter(address adapter) external;
@@ -133,6 +136,21 @@ interface IExchange {
         bytes32 positionKey,
         uint256 triggerOrderId
     ) external returns (IWarehouse.TriggerOrder memory triggerOrder);
+
+    function validateAddMargin(
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong,
+        uint256 marginAmount
+    ) external view returns (bool);
+    function validateRealizeProfit(
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong,
+        uint256 profitAmount
+    ) external view returns (bool);
 
     function getAllRegisteredAdapters() external view returns (address[] memory);
     function getPositionFee(

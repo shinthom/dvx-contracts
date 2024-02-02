@@ -342,8 +342,8 @@ contract GmxV1Adapter is BaseAdapter {
     function addMargin(
         address collateral,
         address index,
-        uint256 marginAmount,
-        bool isLong
+        bool isLong,
+        uint256 marginAmount
     ) public payable override {
         require(collateral != address(0), "collateral: zero address");
         require(index != address(0), "index: zero address");
@@ -356,8 +356,8 @@ contract GmxV1Adapter is BaseAdapter {
     function realizeProfit(
         address collateral,
         address index,
-        uint256 profitAmount,
-        bool isLong
+        bool isLong,
+        uint256 profitAmount
     ) external payable override {
         uint256 profitAmountUsd;
         if (isLong) {

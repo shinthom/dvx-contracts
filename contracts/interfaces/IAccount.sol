@@ -72,8 +72,8 @@ interface IAccount {
         address adapter,
         address collateral,
         address index,
-        uint256 profitAmount,
-        bool isLong
+        bool isLong,
+        uint256 profitAmount
     ) external payable;
 
     function createLimitOrder(

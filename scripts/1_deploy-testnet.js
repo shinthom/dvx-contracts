@@ -11,6 +11,7 @@ async function main() {
     reader,
     quoter,
     logger,
+    validator,
     accountFactory,
     account,
     WETH,
@@ -29,6 +30,7 @@ async function main() {
 - reader        : ${reader.target}
 - quoter        : ${quoter.target}
 - logger        : ${logger.target}
+- validator     : ${validator.target}
 - accountFactory: ${accountFactory.target}
 - account       : ${noAccount ? "null" : account.target}
   `);

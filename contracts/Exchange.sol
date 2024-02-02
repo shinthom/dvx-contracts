@@ -8,6 +8,7 @@ import {IAccountFactory} from "./interfaces/IAccountFactory.sol";
 import {IExchange} from "./interfaces/IExchange.sol";
 import {IWarehouse} from "./interfaces/IWarehouse.sol";
 import {ISwapper} from "./interfaces/ISwapper.sol";
+import {IValidator} from "./interfaces/IValidator.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
@@ -21,6 +22,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     address public override accountFactory;
     address public override warehouse;
     address public override swapper;
+    address public override validator;
     address public override logger;
 
     address[] private _registeredAdapters;
@@ -74,6 +76,13 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
         swapper = _swapper;
         emit WarehouseSet(_swapper);
+    }
+
+    function setValidator(address _validator) external override onlyOwner {
+        require(_validator != address(0), "validator: zero address");
+
+        validator = _validator;
+        emit ValidatorSet(_validator);
     }
 
     function setLogger(address _logger) external override onlyOwner {
@@ -342,6 +351,40 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             IWarehouse(warehouse).executeTriggerOrder(
                 positionKey,
                 triggerOrderId
+            );
+    }
+
+    function validateAddMargin(
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong,
+        uint256 marginAmount
+    ) external view override returns (bool) {
+        return
+            IValidator(validator).validateAddMargin(
+                adapter,
+                collateral,
+                index,
+                isLong,
+                marginAmount
+            );
+    }
+
+    function validateRealizeProfit(
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong,
+        uint256 profitAmount
+    ) external view override returns (bool) {
+        return
+            IValidator(validator).validateRealizeProfit(
+                adapter,
+                collateral,
+                index,
+                isLong,
+                profitAmount
             );
     }
 
