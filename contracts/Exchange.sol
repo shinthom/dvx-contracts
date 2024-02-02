@@ -312,12 +312,18 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address account,
         bytes32 positionKey,
         uint256 triggerOrderId
-    ) external override onlyAccount(account) {
-        IWarehouse(warehouse).cancelTriggerOrder(
-            account,
-            positionKey,
-            triggerOrderId
-        );
+    )
+        external
+        override
+        onlyAccount(account)
+        returns (IWarehouse.TriggerOrder memory)
+    {
+        return
+            IWarehouse(warehouse).cancelTriggerOrder(
+                account,
+                positionKey,
+                triggerOrderId
+            );
     }
 
     function executeTriggerOrder(

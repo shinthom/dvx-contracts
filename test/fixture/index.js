@@ -68,7 +68,7 @@ const indexList = [
 let deployer;
 let owner;
 let other;
-let feeCollector;
+let feeCollector; // todo: deploy feeCollector contract
 // gmx accounts
 let impersonatedAdmin;
 let impersonatedGov;

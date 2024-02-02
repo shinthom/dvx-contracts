@@ -126,7 +126,7 @@ interface IWarehouse {
         address account,
         bytes32 positionKey,
         uint256 triggerOrderId
-    ) external;
+    ) external returns (IWarehouse.TriggerOrder memory limitOrder);
     function executeTriggerOrder(
         bytes32 positionKey,
         uint256 triggerOrderId

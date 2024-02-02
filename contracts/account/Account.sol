@@ -16,7 +16,7 @@ contract Account is IAccount {
     uint256 private _marketOrderId;
 
     mapping(address => uint256) private _lockedBalances;
-    uint256 private _debt; // stable token (1e6)
+    mapping(address => uint256) private _feeDebts;
 
     receive() external payable {
         if (msg.sender != _weth) {
@@ -80,8 +80,9 @@ contract Account is IAccount {
             amount -= executionFee;
         }
 
-        if (_debt > 0) {
-            amount = _repayDebt(token, amount);
+        if (_feeDebts[token] > 0) {
+            _collectFeeDebt(token, amount);
+            amount -= _feeDebts[token];
         }
 
         IERC20(token).transfer(msg.sender, amount);
@@ -138,12 +139,14 @@ contract Account is IAccount {
         );
 
         if (executionFee > 0) {
-            _collectExecutionFee(collateral, executionFee);
             collateralAmount -= executionFee;
+            _collectExecutionFee(collateral, executionFee);
         }
 
-        if (_debt > 0) {
-            collateralAmount = _repayDebt(collateral, collateralAmount);
+        uint256 feeDebt = _feeDebts[collateral];
+        if (feeDebt > 0) {
+            collateralAmount -= feeDebt;
+            _collectFeeDebt(collateral, feeDebt);
         }
 
         _marketOrderId++;
@@ -183,15 +186,14 @@ contract Account is IAccount {
             );
 
             if (executionFees[i] > 0) {
-                _collectExecutionFee(collateral, executionFees[i]);
                 collateralAmounts[i] -= executionFees[i];
+                _collectExecutionFee(collateral, executionFees[i]);
             }
 
-            if (_debt > 0) {
-                collateralAmounts[i] = _repayDebt(
-                    collateral,
-                    collateralAmounts[i]
-                );
+            uint256 feeDebt = _feeDebts[collateral];
+            if (feeDebt > 0) {
+                collateralAmounts[i] -= feeDebt;
+                _collectFeeDebt(collateral, feeDebt);
             }
 
             _increasePosition(
@@ -213,10 +215,10 @@ contract Account is IAccount {
         address index,
         bool isLong,
         uint256 size,
-        uint256 executionFee // stable token (1e6)
+        uint256 executionFee
     ) external payable virtual override onlyOwner {
         if (executionFee > 0) {
-            _debt += executionFee;
+            _feeDebts[collateral] += executionFee;
         }
 
         _decreasePosition(
@@ -254,12 +256,14 @@ contract Account is IAccount {
         }
 
         if (executionFee > 0) {
-            _collectExecutionFee(collateral, executionFee);
             collateralAmount -= executionFee;
+            _collectExecutionFee(collateral, executionFee);
         }
 
-        if (_debt > 0) {
-            collateralAmount = _repayDebt(collateral, collateralAmount);
+        uint256 feeDebt = _feeDebts[collateral];
+        if (feeDebt > 0) {
+            collateralAmount -= feeDebt;
+            _collectFeeDebt(collateral, feeDebt);
         }
 
         _increaseCollateral(
@@ -281,7 +285,7 @@ contract Account is IAccount {
         uint256 executionFee // stable token (1e6)
     ) external payable virtual override onlyOwner {
         if (executionFee > 0) {
-            _debt += executionFee;
+            _feeDebts[collateral] += executionFee;
         }
 
         // slither-disable-next-line controlled-delegatecall,low-level-calls
@@ -379,25 +383,11 @@ contract Account is IAccount {
         require(success, string(data));
     }
 
-    function repayDebt(
+    function collectFeeDebt(
         address token,
         uint256 amount
-    ) external virtual override onlyOwner {
-        require(
-            amount <= getWithdrawableBalance(token),
-            "amount: greater than withdrawable balance"
-        );
-
-        if (_debt > 0) {
-            _repayDebt(token, amount);
-        }
-    }
-
-    function deductDebt(
-        uint256 amount
     ) external virtual override onlyOrderKeeper {
-        require(amount <= _debt, "amount: greater than debt");
-        _debt -= amount;
+        _collectFeeDebt(token, amount);
     }
 
     function createLimitOrder(
@@ -475,13 +465,7 @@ contract Account is IAccount {
         address[] calldata adapters,
         uint256[] calldata collateralAmounts,
         uint256[] calldata sizes
-    )
-        external
-        payable
-        virtual
-        override
-        onlyOrderKeeper
-    {
+    ) external payable virtual override onlyOrderKeeper {
         require(
             adapters.length == collateralAmounts.length &&
                 adapters.length == sizes.length,
@@ -535,7 +519,7 @@ contract Account is IAccount {
         uint256 executionFee
     ) external payable virtual override onlyOwner {
         if (executionFee > 0) {
-            _debt += executionFee;
+            _feeDebts[collateral] += executionFee;
         }
 
         IExchange(exchange).createTriggerOrder(
@@ -557,15 +541,12 @@ contract Account is IAccount {
         uint256 triggerOrderId,
         uint256 executionFee
     ) external virtual override onlyOwner {
-        if (executionFee > 0) {
-            _debt += executionFee;
-        }
+        IWarehouse.TriggerOrder memory triggerOrder = IExchange(exchange)
+            .cancelTriggerOrder(address(this), positionKey, triggerOrderId);
 
-        IExchange(exchange).cancelTriggerOrder(
-            address(this),
-            positionKey,
-            triggerOrderId
-        );
+        if (executionFee > 0) {
+            _feeDebts[triggerOrder.collateral] += executionFee;
+        }
     }
 
     function executeTriggerOrder(
@@ -603,8 +584,10 @@ contract Account is IAccount {
         return getBalance(token) - getLockedBalance(token);
     }
 
-    function getDebt() public view virtual override returns (uint256) {
-        return _debt;
+    function getDebt(
+        address token
+    ) public view virtual override returns (uint256) {
+        return _feeDebts[token];
     }
 
     function _increasePosition(
@@ -721,20 +704,11 @@ contract Account is IAccount {
         require(success, string(data));
     }
 
-    function _repayDebt(
-        address token,
-        uint256 amount
-    ) private returns (uint256 amountAfterDebt) {
-        IERC20(token).transfer(token, amount);
+    function _collectFeeDebt(address token, uint256 amount) private {
+        _feeDebts[token] -= amount;
 
-        amountAfterDebt = IExchange(exchange).collectDebt(
-            address(this),
-            token,
-            amount,
-            _debt
-        );
-
-        _debt = 0;
+        IERC20(token).transfer(exchange, amount);
+        IExchange(exchange).collectExecutionFee(address(this), token, amount);
     }
 
     function _collectExecutionFee(address token, uint256 amount) private {

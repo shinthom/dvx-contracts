@@ -76,8 +76,7 @@ interface IAccount {
         bool isLong,
         uint256 profitAmount
     ) external payable;
-    function repayDebt(address token, uint256 amount) external;
-    function deductDebt(uint256 amount) external;
+    function collectFeeDebt(address token, uint256 amount) external;
 
     function createLimitOrder(
         address collateral,
@@ -130,5 +129,5 @@ interface IAccount {
     function getWithdrawableBalance(
         address token
     ) external view returns (uint256);
-    function getDebt() external view returns (uint256);
+    function getDebt(address token) external view returns (uint256);
 }

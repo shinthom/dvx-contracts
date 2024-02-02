@@ -127,7 +127,7 @@ interface IExchange {
         address account,
         bytes32 positionKey,
         uint256 triggerOrderId
-    ) external;
+    ) external returns (IWarehouse.TriggerOrder memory triggerOrder);
     function executeTriggerOrder(
         bytes32 positionKey,
         uint256 triggerOrderId
