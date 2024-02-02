@@ -31,8 +31,7 @@ interface ILogger {
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
-        uint256 entryPrice,
-        uint256 fee
+        uint256 entryPrice
     );
     event PositionDecreased(
         address indexed account,
@@ -99,8 +98,7 @@ interface ILogger {
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
-        uint256 entryPrice,
-        uint256 fee
+        uint256 entryPrice
     ) external;
     function logDecreasePosition(
         address account,

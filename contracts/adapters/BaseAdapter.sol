@@ -20,8 +20,7 @@ abstract contract BaseAdapter is IAdapter {
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
-        uint256 entryPrice,
-        uint256 fee
+        uint256 entryPrice
     ) internal {
         ILogger(_logger).logIncreasePosition(
             marketOrderId,
@@ -32,8 +31,7 @@ abstract contract BaseAdapter is IAdapter {
             collateralAmount,
             size,
             isLong,
-            100, // fixme: entryPrice
-            fee
+            entryPrice
         );
     }
 

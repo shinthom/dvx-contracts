@@ -40,8 +40,7 @@ contract Logger is ILogger {
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
-        uint256 entryPrice,
-        uint256 fee
+        uint256 entryPrice
     ) external override {
         emit PositionIncreased(
             marketOrderId,
@@ -52,8 +51,7 @@ contract Logger is ILogger {
             collateralAmount,
             size,
             isLong,
-            entryPrice,
-            fee
+            entryPrice
         );
     }
 

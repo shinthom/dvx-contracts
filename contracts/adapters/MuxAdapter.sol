@@ -187,8 +187,7 @@ contract MuxAdapter is BaseAdapter {
         address index,
         uint256 collateralAmount,
         uint256 size,
-        bool isLong,
-        uint256 fee
+        bool isLong
     ) external payable override {
         uint8 collateralId = _getIdFromTokenAddress(collateral);
         uint8 indexId = _getIdFromTokenAddress(index);
@@ -241,8 +240,7 @@ contract MuxAdapter is BaseAdapter {
             collateralAmount,
             size,
             isLong,
-            entryPrice,
-            fee
+            entryPrice
         );
     }
 

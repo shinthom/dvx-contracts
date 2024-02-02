@@ -225,8 +225,7 @@ contract GmxV1Adapter is BaseAdapter {
         address index,
         uint256 collateralAmount,
         uint256 size,
-        bool isLong,
-        uint256 fee
+        bool isLong
     ) public payable override {
         if (!IRouter(_router).approvedPlugins(address(this), _positionRouter)) {
             IRouter(_router).approvePlugin(_positionRouter);
@@ -251,8 +250,7 @@ contract GmxV1Adapter is BaseAdapter {
             collateralAmount,
             size,
             isLong,
-            entryPrice,
-            fee
+            entryPrice
         );
     }
 
