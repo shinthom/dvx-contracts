@@ -212,7 +212,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
         IERC20(token).transferFrom(msg.sender, address(this), amount);
         IERC20(token).approve(account, amount);
-        IAccount(account).deposit(token, amount);
+        IAccount(account).deposit(token, amount, 0);
     }
 
     function swap(
@@ -352,6 +352,33 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
                 positionKey,
                 triggerOrderId
             );
+    }
+
+    function collectExecutionFee(
+        address account,
+        address token,
+        uint256 amount
+    ) external override {
+        IERC20(token).transfer(feeCollector, amount);
+        emit ExecutionFeeCollected(account, token, amount);
+    }
+
+    function collectProtocolFee(
+        address account,
+        address token,
+        uint256 amount
+    ) external override {
+        IERC20(token).transfer(feeCollector, amount);
+        emit ProtocolFeeCollected(account, token, amount);
+    }
+
+    function collectDebt(
+        address account,
+        address token,
+        uint256 amount
+    ) external override {
+        IERC20(token).transfer(feeCollector, amount);
+        emit DebtCollected(account, token, amount);
     }
 
     function validateAddMargin(

@@ -8,12 +8,13 @@ interface IAccount {
     function owner() external view returns (address);
     function exchange() external view returns (address);
 
-    function deposit(address token, uint256 amount) external;
-    function withdraw(address token, uint256 amount) external;
+    function deposit(address token, uint256 amount, uint256 executionFee) external;
+    function withdraw(address token, uint256 amount, uint256 executionFee) external;
     function swap(
         address tokenIn,
         address tokenOut,
-        uint256 amountIn
+        uint256 amountIn,
+        uint256 executionFee
     ) external returns (uint256 amountOut);
 
     function increasePosition(
@@ -75,6 +76,7 @@ interface IAccount {
         bool isLong,
         uint256 profitAmount
     ) external payable;
+    function deductDebt(uint256 amount) external;
 
     function createLimitOrder(
         address collateral,
@@ -82,9 +84,9 @@ interface IAccount {
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
-        uint256 executionFee,
         uint256 triggerPrice,
-        uint256 acceptablePrice
+        uint256 acceptablePrice,
+        uint256 executionFee
     ) external payable;
     function cancelLimitOrder(
         uint256 limitOrderId,
@@ -114,7 +116,8 @@ interface IAccount {
     ) external payable;
     function cancelTriggerOrder(
         bytes32 positionKey,
-        uint256 triggerOrderId
+        uint256 triggerOrderId,
+        uint256 executionFee
     ) external;
     function executeTriggerOrder(
         bytes32 positionKey,
@@ -126,4 +129,5 @@ interface IAccount {
     function getWithdrawableBalance(
         address token
     ) external view returns (uint256);
+    function getDebt() external view returns (uint256);
 }

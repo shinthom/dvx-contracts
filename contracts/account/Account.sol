@@ -16,6 +16,7 @@ contract Account is IAccount {
     uint256 private _marketOrderId;
 
     mapping(address => uint256) private _lockedBalances;
+    uint256 private _debt; // stable token (1e6)
 
     receive() external payable {
         if (msg.sender != _weth) {
@@ -46,10 +47,15 @@ contract Account is IAccount {
 
     function deposit(
         address token,
-        uint256 amount
+        uint256 amount,
+        uint256 executionFee
     ) external virtual override onlyOwner {
         require(amount != 0, "amount: zero");
 
+        if (executionFee > 0) {
+            _collectExecutionFee(token, executionFee);
+            amount -= executionFee;
+        }
         IERC20(token).transferFrom(msg.sender, address(this), amount);
 
         address logger = IExchange(exchange).logger();
@@ -60,16 +66,19 @@ contract Account is IAccount {
 
     function withdraw(
         address token,
-        uint256 amount
+        uint256 amount,
+        uint256 executionFee
     ) external virtual override onlyOwner {
         require(amount != 0, "amount: zero");
-
-        uint256 withdrawableBalance = getWithdrawableBalance(token);
         require(
-            amount <= withdrawableBalance,
+            amount <= getWithdrawableBalance(token),
             "amount: greater than withdrawable balance"
         );
 
+        if (executionFee > 0) {
+            _collectExecutionFee(token, executionFee);
+            amount -= executionFee;
+        }
         IERC20(token).transfer(msg.sender, amount);
 
         address logger = IExchange(exchange).logger();
@@ -81,13 +90,18 @@ contract Account is IAccount {
     function swap(
         address tokenIn,
         address tokenOut,
-        uint256 amountIn
+        uint256 amountIn,
+        uint256 executionFee
     ) external virtual override onlyOwner returns (uint256 amountOut) {
-        uint256 withdrawableBalance = getWithdrawableBalance(tokenIn);
         require(
-            amountIn <= withdrawableBalance,
+            amountIn <= getWithdrawableBalance(tokenIn),
             "amountIn: greater than withdrawable balance"
         );
+
+        if (executionFee > 0) {
+            _collectExecutionFee(tokenIn, executionFee);
+            amountIn -= executionFee;
+        }
 
         IERC20(tokenIn).approve(exchange, amountIn);
         amountOut = IExchange(exchange).swap(tokenIn, tokenOut, amountIn);
@@ -113,18 +127,17 @@ contract Account is IAccount {
         bool isLong,
         uint256 executionFee
     ) external payable virtual override onlyOwner {
-        // todo: check delegator
-
-        // todo:
-        // _validateExecutionFee();
-
-        _marketOrderId++;
+        require(
+            collateralAmount <= getWithdrawableBalance(collateral),
+            "collateralAmount: greater than withdrawable balance"
+        );
 
         if (executionFee > 0) {
-            _collectFee(collateral, executionFee);
+            _collectExecutionFee(collateral, executionFee);
             collateralAmount -= executionFee;
         }
 
+        _marketOrderId++;
         _increasePosition(
             _marketOrderId,
             adapter,
@@ -154,10 +167,14 @@ contract Account is IAccount {
         );
 
         _marketOrderId++;
-
         for (uint256 i = 0; i < adapters.length; i++) {
+            require(
+                collateralAmounts[i] <= getWithdrawableBalance(collateral),
+                "collateralAmount: greater than withdrawable balance"
+            );
+
             if (executionFees[i] > 0) {
-                _collectFee(collateral, executionFees[i]);
+                _collectExecutionFee(collateral, executionFees[i]);
                 collateralAmounts[i] -= executionFees[i];
             }
 
@@ -180,9 +197,12 @@ contract Account is IAccount {
         address index,
         bool isLong,
         uint256 size,
-        uint256 executionFee
+        uint256 executionFee // stable token (1e6)
     ) external payable virtual override onlyOwner {
-        // todo: executionFee
+        if (executionFee > 0) {
+            _debt += executionFee;
+        }
+
         _decreasePosition(
             adapter,
             collateral,
@@ -202,6 +222,11 @@ contract Account is IAccount {
         uint256 amountIn,
         uint256 executionFee
     ) external payable virtual override onlyOwner {
+        require(
+            amountIn <= getWithdrawableBalance(tokenIn),
+            "tokenIn: greater than withdrawable balance"
+        );
+
         uint256 collateralAmount = amountIn;
         if (tokenIn != collateral) {
             IERC20(tokenIn).approve(exchange, amountIn);
@@ -212,15 +237,10 @@ contract Account is IAccount {
             );
         }
 
-        uint256 depositFee = IExchange(exchange).getDepositFee(
-            collateralAmount
-        );
-
-        require(collateralAmount >= depositFee, "amount: less than fees");
-
-        _collectFee(collateral, depositFee);
-
-        collateralAmount -= depositFee;
+        if (executionFee > 0) {
+            _collectExecutionFee(collateral, executionFee);
+            collateralAmount -= executionFee;
+        }
 
         _increaseCollateral(
             adapter,
@@ -238,8 +258,12 @@ contract Account is IAccount {
         address index,
         bool isLong,
         uint256 collateralAmount,
-        uint256 executionFee
+        uint256 executionFee // stable token (1e6)
     ) external payable virtual override onlyOwner {
+        if (executionFee > 0) {
+            _debt += executionFee;
+        }
+
         // slither-disable-next-line controlled-delegatecall,low-level-calls
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
@@ -335,6 +359,13 @@ contract Account is IAccount {
         require(success, string(data));
     }
 
+    function deductDebt(
+        uint256 amount
+    ) external virtual override onlyOrderKeeper {
+        require(amount <= _debt, "amount: greater than debt");
+        _debt -= amount;
+    }
+
     // todo: reentrancy guard
     function createLimitOrder(
         address collateral,
@@ -342,21 +373,19 @@ contract Account is IAccount {
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
-        uint256 executionFee, // collateral token amount
         uint256 triggerPrice,
-        uint256 acceptablePrice
+        uint256 acceptablePrice,
+        uint256 executionFee
     ) external payable virtual override onlyOwner {
-        // todo: validate executionFee
-
-        if (executionFee > 0) {
-            _collectFee(collateral, executionFee);
-            collateralAmount -= executionFee;
-        }
-
         require(
             collateralAmount <= getWithdrawableBalance(collateral),
             "collateralAmount: greater than withdrawable balance"
         );
+
+        if (executionFee > 0) {
+            _collectExecutionFee(collateral, executionFee);
+            collateralAmount -= executionFee;
+        }
 
         _lockedBalances[collateral] += collateralAmount;
 
@@ -366,9 +395,9 @@ contract Account is IAccount {
             collateralAmount,
             size,
             isLong,
-            executionFee,
             triggerPrice,
-            acceptablePrice
+            acceptablePrice,
+            executionFee
         );
     }
 
@@ -381,7 +410,9 @@ contract Account is IAccount {
 
         _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
 
-        _collectFee(limitOrder.collateral, executionFee);
+        if (executionFee > 0) {
+            _collectExecutionFee(limitOrder.collateral, executionFee);
+        }
     }
 
     function executeLimitOrder(
@@ -464,6 +495,10 @@ contract Account is IAccount {
         uint256 acceptablePrice,
         uint256 executionFee
     ) external payable virtual override onlyOwner {
+        if (executionFee > 0) {
+            _debt += executionFee;
+        }
+
         IExchange(exchange).createTriggerOrder(
             address(this),
             adapter,
@@ -480,8 +515,13 @@ contract Account is IAccount {
 
     function cancelTriggerOrder(
         bytes32 positionKey,
-        uint256 triggerOrderId
+        uint256 triggerOrderId,
+        uint256 executionFee
     ) external virtual override onlyOwner {
+        if (executionFee > 0) {
+            _debt += executionFee;
+        }
+
         IExchange(exchange).cancelTriggerOrder(
             address(this),
             positionKey,
@@ -524,6 +564,10 @@ contract Account is IAccount {
         return getBalance(token) - getLockedBalance(token);
     }
 
+    function getDebt() public view virtual override returns (uint256) {
+        return _debt;
+    }
+
     function _increasePosition(
         uint256 marketOrderId,
         address adapter,
@@ -546,13 +590,10 @@ contract Account is IAccount {
             size,
             isLong
         );
-        _collectFee(collateral, positionFee);
-        collateralAmount -= positionFee;
-
-        require(
-            collateralAmount <= getWithdrawableBalance(collateral),
-            "collateralAmount: greater than withdrawable balance"
-        );
+        if (positionFee > 0) {
+            _collectProtocolFee(collateral, positionFee);
+            collateralAmount -= positionFee;
+        }
 
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
@@ -603,6 +644,14 @@ contract Account is IAccount {
             "adapter: not registered"
         );
 
+        uint256 depositFee = IExchange(exchange).getDepositFee(
+            collateralAmount
+        );
+        if (depositFee > 0) {
+            _collectProtocolFee(collateral, depositFee);
+            collateralAmount -= depositFee;
+        }
+
         // slither-disable-next-line controlled-delegatecall,low-level-calls
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
@@ -642,8 +691,18 @@ contract Account is IAccount {
         require(success, string(data));
     }
 
-    function _collectFee(address token, uint256 amount) private {
-        address feeCollector = IExchange(exchange).feeCollector();
-        IERC20(token).transfer(feeCollector, amount);
+    function _collectExecutionFee(address token, uint256 amount) private {
+        IERC20(token).transfer(exchange, amount);
+        IExchange(exchange).collectExecutionFee(address(this), token, amount);
+    }
+
+    function _collectProtocolFee(address token, uint256 amount) private {
+        IERC20(token).transfer(exchange, amount);
+        IExchange(exchange).collectProtocolFee(address(this), token, amount);
+    }
+
+    function _collectDebt(address token, uint256 amount) private {
+        IERC20(token).transfer(exchange, amount);
+        IExchange(exchange).collectDebt(address(this), token, amount);
     }
 }

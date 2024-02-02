@@ -35,6 +35,10 @@ interface IExchange {
     event TierSet(uint8 indexed tierId, uint256 discount);
     event ReferralTierSet(address indexed referral, uint8 indexed tierId);
 
+    event ExecutionFeeCollected(address indexed account, address indexed token, uint256 amount);
+    event ProtocolFeeCollected(address indexed account, address indexed token, uint256 amount);
+    event DebtCollected(address indexed account, address indexed token, uint256 amount);
+
     function accountFactory() external returns (address);
     function warehouse() external returns (address);
     function swapper() external returns (address);
@@ -136,6 +140,22 @@ interface IExchange {
         bytes32 positionKey,
         uint256 triggerOrderId
     ) external returns (IWarehouse.TriggerOrder memory triggerOrder);
+
+    function collectExecutionFee(
+        address account,
+        address token,
+        uint256 amount
+    ) external;
+    function collectProtocolFee(
+        address account,
+        address token,
+        uint256 amount
+    ) external;
+    function collectDebt(
+        address account,
+        address token,
+        uint256 amount
+    ) external;
 
     function validateAddMargin(
         address adapter,
