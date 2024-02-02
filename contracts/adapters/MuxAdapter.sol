@@ -5,6 +5,7 @@ import {IAdapter} from "../interfaces/IAdapter.sol";
 import {IExchange} from "../interfaces/IExchange.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
 import {BaseAdapter} from "./BaseAdapter.sol";
+import "hardhat/console.sol";
 
 interface ILiquidityPool {
     enum ReferenceOracleType {
@@ -481,7 +482,7 @@ contract MuxAdapter is BaseAdapter {
         address collateral,
         address index,
         bool isLong
-    ) external view override returns (IAdapter.Position memory) {
+    ) public view override returns (IAdapter.Position memory) {
         bytes32 subAccountId = _getSubAccountId(
             account,
             collateral,
@@ -551,7 +552,7 @@ contract MuxAdapter is BaseAdapter {
             ? markPrice - position.price
             : position.price - markPrice;
 
-        pnlUsd = (priceDelta * position.size) / (10 ** TOKEN_DEFAULT_DECIMALS);
+        pnlUsd = (priceDelta * position.size) / (10 ** PRICE_DECIMALS);
     }
 
     function getWrapPositionPnlUsd(
@@ -559,7 +560,7 @@ contract MuxAdapter is BaseAdapter {
         address collateral,
         address index,
         bool isLong
-    ) external view override returns (bool hasProfit, uint256 pnlUsd) {
+    ) public view override returns (bool hasProfit, uint256 pnlUsd) {
         return getPositionPnlUsd(account, collateral, index, isLong);
     }
 
@@ -594,7 +595,7 @@ contract MuxAdapter is BaseAdapter {
         uint256 size,
         uint256 fundingRate,
         bool isLong
-    ) external view override returns (uint256) {
+    ) public view override returns (uint256) {
         if (size == 0) {
             return 0;
         }
@@ -636,6 +637,106 @@ contract MuxAdapter is BaseAdapter {
     ) public view override returns (uint256) {
         return getPrice(token, isLong);
     }
+
+    function getLiquidationPrice(
+        address account,
+        address collateral,
+        address index,
+        bool isLong
+    ) external view returns (int256) {
+        IAdapter.Position memory position = getWrapPosition(
+            account,
+            collateral,
+            index,
+            isLong
+        );
+        uint256 fundingFee = getFundingFee(
+            collateral,
+            index,
+            position.size,
+            position.fundingRate,
+            isLong
+        ); // 1e18
+
+        uint256 collateralPrice = getWrapPrice(collateral, isLong); // 1e18
+        uint256 maintenanceMarginRate = _getMaintenanceMarginRate(index);
+        console.log("collateralPrice: %s", collateralPrice);
+        console.log("maintenanceMarginRate: %s", maintenanceMarginRate);
+
+        int256 longFactor = isLong ? int256(1e5) : int256(-1e5);
+        console.logInt(longFactor);
+
+        int256 t = longFactor -
+            (int256(maintenanceMarginRate) * int256(position.size)) /
+            1e5;
+        console.logInt(t);
+
+        int256 p = 0;
+        // if (collateral == index) {
+        //     p = longFactor * int256(position.price) * int256(position.size) / 1e18; // prettier-ignore
+        //     p += int256(fundingFee) / (t + int256(position.collateralAmount));
+        // } else {
+        //     p = longFactor * int256(position.price) * int256(position.size) / 1e18; // prettier-ignore
+        //     p +=
+        //         int256(fundingFee) -
+        //         (int256(collateralPrice) * int256(position.collateralAmount));
+        //     p /= t;
+        // }
+
+        return p;
+    }
+
+    // function getLiquidationPrice(
+    //     address account,
+    //     address collateral,
+    //     address index,
+    //     bool isLong
+    // ) external view returns (uint256) {
+    //     IAdapter.Position memory position = getWrapPosition(
+    //         account,
+    //         collateral,
+    //         index,
+    //         isLong
+    //     );
+
+    //     uint256 collateralPrice = getWrapPrice(collateral, isLong); // 1e18
+    //     uint256 indexPrice = getWrapPrice(index, isLong); // 1e18
+
+    //     bool hasProfit = isLong
+    //         ? indexPrice > position.price
+    //         : indexPrice < position.price;
+
+    //     uint256 collateralUsd
+    //         = (position.collateralAmount * collateralPrice) / (10 ** IERC20(collateral).decimals()); // prettier-ignore
+    //     uint256 fundingFee = getFundingFee(
+    //         collateral,
+    //         index,
+    //         position.size,
+    //         position.fundingRate,
+    //         isLong
+    //     ); // 1e18
+
+    //     price
+    //         = collateralUsd - () - fundingFee / size * marginRat
+
+    //     // if (hasProfit) {} else {}
+
+    //     // uint256 collateralPrice = getPrice(collateral, isLong);
+    //     // uint256 collateralUsd = (position.collateralAmount * collateralPrice) /
+    //     //     (10 ** IERC20(collateral).decimals());
+
+    //     // uint256 fundingFeeUsd = getFundingFee(
+    //     //     collateral,
+    //     //     index,
+    //     //     position.size,
+    //     //     position.fundingRate,
+    //     //     isLong
+    //     // );
+
+    //     // uint256 price = ((collateralUsd + pnlUsd - fundingFeeUsd) *
+    //     //     1e18 *
+    //     //     1e5) / (position.size * marginRate);
+    // }
 
     function getAvailableLiquidity(
         address index,
@@ -708,6 +809,16 @@ contract MuxAdapter is BaseAdapter {
             }
         }
         revert("id: not found");
+    }
+
+    // todo: external -> privat
+    function _getMaintenanceMarginRate(
+        address tokenAddress
+    ) private view returns (uint256) {
+        uint8 tokenId = _getIdFromTokenAddress(tokenAddress);
+        ILiquidityPool.Asset memory asset
+            = ILiquidityPool(_liquidityPool).getAssetInfo(tokenId); // prettier-ignore
+        return asset.maintenanceMarginRate;
     }
 
     function _getPrice(address referenceOracle) private view returns (uint256) {

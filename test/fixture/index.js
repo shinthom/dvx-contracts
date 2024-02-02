@@ -250,6 +250,22 @@ stable:
     console.log(position);
   };
 
+  const checkWrapPosition = async (
+    adapter,
+    account,
+    collateral,
+    index,
+    isLong
+  ) => {
+    const wrapPosition = await adapter.getWrapPosition(
+      account.target,
+      collateral,
+      index,
+      isLong
+    );
+    console.log(wrapPosition);
+  };
+
   const faucet = async (token, tokenAmount) => {
     const abiCoder = new ethers.AbiCoder();
     if (token == WETH) {
@@ -677,6 +693,7 @@ stable:
     vault,
     checkBalance,
     checkPosition,
+    checkWrapPosition,
     faucet,
     deposit,
     executeIncreasePosition,

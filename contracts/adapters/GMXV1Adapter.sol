@@ -433,7 +433,7 @@ contract GmxV1Adapter is BaseAdapter {
         address collateral,
         address index,
         bool isLong
-    ) external view override returns (IAdapter.Position memory) {
+    ) public view override returns (IAdapter.Position memory) {
         // note: The position of GMX in the Reader contract should appear to be one.
         // if (isLong) {
         //     collateral = index;
@@ -471,7 +471,7 @@ contract GmxV1Adapter is BaseAdapter {
                     size: (position.size * (10 ** indexDecimals)) /
                         position.price,
                     lastIncreasedTime: position.lastIncreasedTime,
-                    price: position.price,
+                    price: position.price / 1e12, // 1e18
                     fundingRate: position.fundingRate,
                     isLong: isLong
                 });
@@ -485,7 +485,7 @@ contract GmxV1Adapter is BaseAdapter {
                     size: (position.size * (10 ** indexDecimals)) /
                         position.price,
                     lastIncreasedTime: position.lastIncreasedTime,
-                    price: position.price,
+                    price: position.price / 1e12, // 1e18
                     fundingRate: position.fundingRate,
                     isLong: isLong
                 });
@@ -606,7 +606,7 @@ contract GmxV1Adapter is BaseAdapter {
         uint256 size,
         uint256 fundingRate,
         bool /* isLong */
-    ) external view override returns (uint256) {
+    ) public view override returns (uint256) {
         if (size == 0) {
             return 0;
         }
@@ -637,6 +637,39 @@ contract GmxV1Adapter is BaseAdapter {
     ) external view override returns (uint256) {
         uint256 price = getPrice(token, isLong);
         return price / (10 ** 12); // 1e18
+    }
+
+    function getLiquidationPrice(
+        address account,
+        address collateral,
+        address index,
+        bool isLong
+    ) external view returns (uint256) {
+        IAdapter.Position memory position = getWrapPosition(
+            account,
+            collateral,
+            index,
+            isLong
+        );
+
+        (bool hasProfit, uint256 pnlUsd) = getPositionPnlUsd(
+            account,
+            collateral,
+            index,
+            isLong
+        );
+
+        uint256 collateralPrice = getPrice(collateral, isLong);
+        uint256 collateralUsd = (position.collateralAmount * collateralPrice) /
+            (10 ** IERC20(collateral).decimals());
+
+        uint256 fundingFeeUsd = getFundingFee(
+            collateral,
+            index,
+            position.size,
+            position.fundingRate,
+            isLong
+        );
     }
 
     function getAvailableLiquidity(
