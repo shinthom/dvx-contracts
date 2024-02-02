@@ -8,7 +8,6 @@ import {IQuoterV2} from "@uniswap/v3-periphery/contracts/interfaces/IQuoterV2.so
 contract Quoter {
     uint256 public constant PRICE_DECIMAL = 2;
 
-    address private constant _weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
     address private constant _swapQuoter =
         0x61fFE014bA17989E743c5F6cB21bF9697530B21e; // uniswap V3
 
@@ -35,13 +34,6 @@ contract Quoter {
         address tokenOut,
         uint256 amountIn
     ) external returns (uint256) {
-        if (tokenIn == address(0)) {
-            tokenIn = _weth;
-        }
-        if (tokenOut == address(0)) {
-            tokenOut = _weth;
-        }
-
         IQuoterV2.QuoteExactInputSingleParams memory params = IQuoterV2
             .QuoteExactInputSingleParams({
                 tokenIn: tokenIn,
@@ -61,13 +53,6 @@ contract Quoter {
         address tokenOut,
         uint256 amountOut
     ) external returns (uint256) {
-        if (tokenIn == address(0)) {
-            tokenIn = _weth;
-        }
-        if (tokenOut == address(0)) {
-            tokenOut = _weth;
-        }
-
         IQuoterV2.QuoteExactOutputSingleParams memory params = IQuoterV2
             .QuoteExactOutputSingleParams({
                 tokenIn: tokenIn,

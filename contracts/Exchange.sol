@@ -375,10 +375,27 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     function collectDebt(
         address account,
         address token,
-        uint256 amount
-    ) external override {
-        IERC20(token).transfer(feeCollector, amount);
-        emit DebtCollected(account, token, amount);
+        uint256 amount,
+        uint256 debt
+    ) external override returns (uint256) {
+        uint256 tokenIn = ISwapper(swapper).quoteExactOutput(
+            token,
+            defaultStableToken,
+            debt
+        );
+        require(amount >= tokenIn, "amount: insufficient to cover the debt");
+
+        uint256 tokenOut = ISwapper(swapper).swap(
+            token,
+            defaultStableToken,
+            tokenIn
+        );
+        IERC20(token).transfer(feeCollector, tokenOut);
+        emit DebtCollected(account, token, tokenIn, debt);
+
+        IERC20(token).transfer(account, amount - tokenIn);
+
+        return amount - tokenIn;
     }
 
     function validateAddMargin(

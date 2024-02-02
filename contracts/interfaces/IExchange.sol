@@ -37,7 +37,7 @@ interface IExchange {
 
     event ExecutionFeeCollected(address indexed account, address indexed token, uint256 amount);
     event ProtocolFeeCollected(address indexed account, address indexed token, uint256 amount);
-    event DebtCollected(address indexed account, address indexed token, uint256 amount);
+    event DebtCollected(address indexed account, address indexed token, uint256 amount, uint256 debt);
 
     function accountFactory() external returns (address);
     function warehouse() external returns (address);
@@ -154,8 +154,9 @@ interface IExchange {
     function collectDebt(
         address account,
         address token,
-        uint256 amount
-    ) external;
+        uint256 amount,
+        uint256 debt
+    ) external returns (uint256);
 
     function validateAddMargin(
         address adapter,

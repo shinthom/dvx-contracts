@@ -79,6 +79,11 @@ contract Account is IAccount {
             _collectExecutionFee(token, executionFee);
             amount -= executionFee;
         }
+
+        if (_debt > 0) {
+            amount = _repayDebt(token, amount);
+        }
+
         IERC20(token).transfer(msg.sender, amount);
 
         address logger = IExchange(exchange).logger();
@@ -137,6 +142,10 @@ contract Account is IAccount {
             collateralAmount -= executionFee;
         }
 
+        if (_debt > 0) {
+            collateralAmount = _repayDebt(collateral, collateralAmount);
+        }
+
         _marketOrderId++;
         _increasePosition(
             _marketOrderId,
@@ -176,6 +185,13 @@ contract Account is IAccount {
             if (executionFees[i] > 0) {
                 _collectExecutionFee(collateral, executionFees[i]);
                 collateralAmounts[i] -= executionFees[i];
+            }
+
+            if (_debt > 0) {
+                collateralAmounts[i] = _repayDebt(
+                    collateral,
+                    collateralAmounts[i]
+                );
             }
 
             _increasePosition(
@@ -240,6 +256,10 @@ contract Account is IAccount {
         if (executionFee > 0) {
             _collectExecutionFee(collateral, executionFee);
             collateralAmount -= executionFee;
+        }
+
+        if (_debt > 0) {
+            collateralAmount = _repayDebt(collateral, collateralAmount);
         }
 
         _increaseCollateral(
@@ -357,6 +377,20 @@ contract Account is IAccount {
         // todo: getProfitToken
         // adapter.getProfitToken
         require(success, string(data));
+    }
+
+    function repayDebt(
+        address token,
+        uint256 amount
+    ) external virtual override onlyOwner {
+        require(
+            amount <= getWithdrawableBalance(token),
+            "amount: greater than withdrawable balance"
+        );
+
+        if (_debt > 0) {
+            _repayDebt(token, amount);
+        }
     }
 
     function deductDebt(
@@ -665,7 +699,6 @@ contract Account is IAccount {
         require(success, string(data));
     }
 
-    // todo: exeutionFee?
     function _addMargin(
         address adapter,
         address collateral,
@@ -691,6 +724,22 @@ contract Account is IAccount {
         require(success, string(data));
     }
 
+    function _repayDebt(
+        address token,
+        uint256 amount
+    ) private returns (uint256 amountAfterDebt) {
+        IERC20(token).transfer(token, amount);
+
+        amountAfterDebt = IExchange(exchange).collectDebt(
+            address(this),
+            token,
+            amount,
+            _debt
+        );
+
+        _debt = 0;
+    }
+
     function _collectExecutionFee(address token, uint256 amount) private {
         IERC20(token).transfer(exchange, amount);
         IExchange(exchange).collectExecutionFee(address(this), token, amount);
@@ -699,10 +748,5 @@ contract Account is IAccount {
     function _collectProtocolFee(address token, uint256 amount) private {
         IERC20(token).transfer(exchange, amount);
         IExchange(exchange).collectProtocolFee(address(this), token, amount);
-    }
-
-    function _collectDebt(address token, uint256 amount) private {
-        IERC20(token).transfer(exchange, amount);
-        IExchange(exchange).collectDebt(address(this), token, amount);
     }
 }
