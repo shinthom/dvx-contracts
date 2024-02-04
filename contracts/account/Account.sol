@@ -632,14 +632,13 @@ contract Account is IAccount {
 
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
-                "increasePosition(uint256,address,address,uint256,uint256,bool,uint256)",
+                "increasePosition(uint256,address,address,uint256,uint256,bool)",
                 marketOrderId,
                 collateral,
                 index,
                 collateralAmount,
                 size,
-                isLong,
-                executionFee + positionFee
+                isLong
             )
         );
         require(success, string(data));

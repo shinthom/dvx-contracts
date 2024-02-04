@@ -302,7 +302,7 @@ stable:
     await faucet(token, tokenAmount);
     const erc20 = await ethers.getContractAt("IERC20", token);
     await erc20.connect(owner).approve(account.target, tokenAmount);
-    await account.connect(owner).deposit(token, tokenAmount);
+    await account.connect(owner).deposit(token, tokenAmount, 0);
   };
 
   const increasePosition = async (
