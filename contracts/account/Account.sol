@@ -373,7 +373,7 @@ contract Account is IAccount {
         // slither-disable-next-line controlled-delegatecall,low-level-calls
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
-                "subAcmmMargin(address,address,uint256,bool)",
+                "subAcmmMargin(address,address,bool,uint256)",
                 collateral,
                 index,
                 isLong,
@@ -706,11 +706,11 @@ contract Account is IAccount {
         // slither-disable-next-line controlled-delegatecall,low-level-calls
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
-                "addAcmmMargin(address,address,uint256,bool)",
+                "addAcmmMargin(address,address,bool,uint256)",
                 collateral,
                 index,
-                marginAmount,
-                isLong
+                isLong,
+                marginAmount
             )
         );
         require(success, string(data));

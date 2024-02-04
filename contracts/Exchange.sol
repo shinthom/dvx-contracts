@@ -407,7 +407,9 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address index,
         bool isLong,
         uint256 marginAmount
-    ) external view override returns (bool) {}
+    ) external view override returns (bool) {
+        return true;
+    }
 
     function validateSubAcmmMargin(
         address adapter,
@@ -415,7 +417,9 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address index,
         bool isLong,
         uint256 profitAmount
-    ) external view override returns (bool) {}
+    ) external view override returns (bool) {
+        return true;
+    }
 
     function getAllRegisteredAdapters()
         external

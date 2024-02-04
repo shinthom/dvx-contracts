@@ -362,6 +362,28 @@ stable:
     }
   };
 
+  const subAcmmMargin = async (
+    adapter,
+    collateral,
+    index,
+    isLong,
+    marginAmount,
+    executionFee
+  ) => {
+    const adapterFee = await adapter.getMinExecutionFee();
+    await account
+      .connect(orderKeeper)
+      .subAcmmMargin(adapter.target, collateral, index, isLong, marginAmount, {
+        value: adapterFee,
+      });
+
+    if (adapter.target == gmxV1Adapter.target) {
+      await executeDecreasePosition(account.target);
+    } else if (adapter.target == muxAdapter.target) {
+      await fillPositionOrder();
+    }
+  };
+
   const decreaseCollateral = async (
     adapter,
     collateral,
@@ -709,6 +731,7 @@ stable:
     executeLimitOrder,
     createTriggerOrder,
     executeTriggerOrder,
+    subAcmmMargin,
   };
 };
 
