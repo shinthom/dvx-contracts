@@ -26,6 +26,12 @@ interface IVault {
         uint256 _tokenAmount
     ) external view returns (uint256);
 
+    function marginFeeBasisPoints() external view returns (uint256);
+
+    function liquidationFeeUsd() external view returns (uint256);
+
+    function maxLeverage() external view returns (uint256);
+
     function guaranteedUsd(address _token) external view returns (uint256);
 
     function globalShortSizes(address _token) external view returns (uint256);
@@ -642,32 +648,60 @@ contract GmxV1Adapter is BaseAdapter {
         address collateral,
         address index,
         bool isLong
-    ) external view returns (uint256) {
-        IAdapter.Position memory position = getWrapPosition(
+    ) external view override returns (int256) {
+        IAdapter.Position memory position = getPosition(
             account,
             collateral,
             index,
             isLong
         );
 
-        (bool hasProfit, uint256 pnlUsd) = getPositionPnlUsd(
-            account,
-            collateral,
-            index,
-            isLong
-        );
+        uint256 fundingFee = getFundingFee(collateral, index, position.size, position.fundingRate, isLong);
+        uint256 totalFees = _calculateTotalFees(position.size, fundingFee);
 
-        uint256 collateralPrice = getPrice(collateral, isLong);
-        uint256 collateralUsd = (position.collateralAmount * collateralPrice) /
-            (10 ** IERC20(collateral).decimals());
+        uint256 liquidationPriceForFees = _getLiquidationPriceFromDelta(
+            totalFees, position.size, position.collateralAmount, position.price, isLong);
 
-        uint256 fundingFeeUsd = getFundingFee(
-            collateral,
-            index,
-            position.size,
-            position.fundingRate,
-            isLong
-        );
+        uint256 maxLeverage = IVault(_vault).maxLeverage();
+        uint256 liquidationPriceForMaxLevearge = _getLiquidationPriceFromDelta(
+            position.size * BASIS_POINTS_DIVISOR / maxLeverage, position.size, position.collateralAmount, position.price, isLong);
+
+        uint256 p;
+        if (isLong) {
+            p = liquidationPriceForFees > liquidationPriceForMaxLevearge ? liquidationPriceForFees : liquidationPriceForMaxLevearge;
+        } else {
+            p = liquidationPriceForFees < liquidationPriceForMaxLevearge ? liquidationPriceForFees : liquidationPriceForMaxLevearge;
+        }
+
+        // 1e30 -> 1e18
+        return int256(p / 1e12);
+    }
+
+    function _calculateTotalFees(uint256 size, uint256 fundingFee) private view returns (uint256) {
+        uint256 marginFeeBasisPoints = IVault(_vault).marginFeeBasisPoints();
+        uint256 liquidationFeeUsd = IVault(_vault).liquidationFeeUsd();
+
+        return (size * marginFeeBasisPoints) / BASIS_POINTS_DIVISOR + fundingFee + liquidationFeeUsd;
+    }
+
+    function _getLiquidationPriceFromDelta(
+        uint256 liquidationAmount,
+        uint256 size,
+        uint256 collateralAmount,
+        uint256 averagePrice,
+        bool isLong
+    ) private view returns (uint256) {
+        if (liquidationAmount > collateralAmount) {
+            uint256 liquidationDelta = liquidationAmount - collateralAmount;
+            uint256 priceDelta = liquidationDelta * averagePrice / size;
+
+            return isLong ? averagePrice + priceDelta : averagePrice - priceDelta;
+        }
+
+        uint256 liquidationDelta = collateralAmount - liquidationAmount;
+        uint256 priceDelta = liquidationDelta * averagePrice / size;
+
+        return isLong ? averagePrice - priceDelta : averagePrice + priceDelta;
     }
 
     function getAvailableLiquidity(

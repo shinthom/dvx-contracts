@@ -5,7 +5,6 @@ import {IAdapter} from "../interfaces/IAdapter.sol";
 import {IExchange} from "../interfaces/IExchange.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
 import {BaseAdapter} from "./BaseAdapter.sol";
-import "hardhat/console.sol";
 
 interface ILiquidityPool {
     enum ReferenceOracleType {
@@ -641,100 +640,43 @@ contract MuxAdapter is BaseAdapter {
         address collateral,
         address index,
         bool isLong
-    ) external view returns (int256) {
-        IAdapter.Position memory position = getWrapPosition(
+    ) external view override returns (int256 p) {
+        IAdapter.Position memory position = getPosition(
             account,
             collateral,
             index,
             isLong
         );
-        uint256 fundingFee = getFundingFee(
-            collateral,
-            index,
-            position.size,
-            position.fundingRate,
-            isLong
-        ); // 1e18
 
-        uint256 collateralPrice = getWrapPrice(collateral, isLong); // 1e18
-        uint256 maintenanceMarginRate = _getMaintenanceMarginRate(index);
-        console.log("collateralPrice: %s", collateralPrice);
-        console.log("maintenanceMarginRate: %s", maintenanceMarginRate);
+        int256 maintenanceMarginRate = int256(
+            _getMaintenanceMarginRate(index)
+        );
 
         int256 longFactor = isLong ? int256(1e5) : int256(-1e5);
-        console.logInt(longFactor);
+        int256 t = (longFactor - maintenanceMarginRate) * int256(position.size) / 1e5;
 
-        int256 t = longFactor -
-            (int256(maintenanceMarginRate) * int256(position.size)) /
-            1e5;
-        console.logInt(t);
+        if (collateral == index) {
+            p = longFactor * int256(position.price) * int256(position.size) / 1e18 / 1e5;
 
-        int256 p = 0;
-        // if (collateral == index) {
-        //     p = longFactor * int256(position.price) * int256(position.size) / 1e18; // prettier-ignore
-        //     p += int256(fundingFee) / (t + int256(position.collateralAmount));
-        // } else {
-        //     p = longFactor * int256(position.price) * int256(position.size) / 1e18; // prettier-ignore
-        //     p +=
-        //         int256(fundingFee) -
-        //         (int256(collateralPrice) * int256(position.collateralAmount));
-        //     p /= t;
-        // }
+            int256 fundingFee
+                = int256(getFundingFee(collateral, index, position.size, position.fundingRate, isLong));
+            p += fundingFee;
 
-        return p;
+            p *= 1e18;
+            p /= t + int256(position.collateralAmount);
+        } else {
+            p = longFactor * int256(position.price) * int256(position.size) / 1e18 / 1e5;
+
+            int256 fundingFee
+                = int256(getFundingFee(collateral, index, position.size, position.fundingRate, isLong));
+            p += fundingFee;
+
+            int256 collateralPrice = int256(getPrice(collateral, isLong));
+            p -= collateralPrice * int256(position.collateralAmount) / 1e18; // https://github.com/mux-world/mux-protocol/blob/21103d644d4c4c3d4a18dd51182ee981efc94453/contracts/core/Account.sol#L51
+
+            p = p * 1e18 / t;
+        }
     }
-
-    // function getLiquidationPrice(
-    //     address account,
-    //     address collateral,
-    //     address index,
-    //     bool isLong
-    // ) external view returns (uint256) {
-    //     IAdapter.Position memory position = getWrapPosition(
-    //         account,
-    //         collateral,
-    //         index,
-    //         isLong
-    //     );
-
-    //     uint256 collateralPrice = getWrapPrice(collateral, isLong); // 1e18
-    //     uint256 indexPrice = getWrapPrice(index, isLong); // 1e18
-
-    //     bool hasProfit = isLong
-    //         ? indexPrice > position.price
-    //         : indexPrice < position.price;
-
-    //     uint256 collateralUsd
-    //         = (position.collateralAmount * collateralPrice) / (10 ** IERC20(collateral).decimals()); // prettier-ignore
-    //     uint256 fundingFee = getFundingFee(
-    //         collateral,
-    //         index,
-    //         position.size,
-    //         position.fundingRate,
-    //         isLong
-    //     ); // 1e18
-
-    //     price
-    //         = collateralUsd - () - fundingFee / size * marginRat
-
-    //     // if (hasProfit) {} else {}
-
-    //     // uint256 collateralPrice = getPrice(collateral, isLong);
-    //     // uint256 collateralUsd = (position.collateralAmount * collateralPrice) /
-    //     //     (10 ** IERC20(collateral).decimals());
-
-    //     // uint256 fundingFeeUsd = getFundingFee(
-    //     //     collateral,
-    //     //     index,
-    //     //     position.size,
-    //     //     position.fundingRate,
-    //     //     isLong
-    //     // );
-
-    //     // uint256 price = ((collateralUsd + pnlUsd - fundingFeeUsd) *
-    //     //     1e18 *
-    //     //     1e5) / (position.size * marginRate);
-    // }
 
     function getAvailableLiquidity(
         address index,
