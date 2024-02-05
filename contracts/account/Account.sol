@@ -10,8 +10,10 @@ import {ILogger} from "../interfaces/ILogger.sol";
 contract Account is IAccount {
     address private constant _weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
 
-    address public immutable override owner;
-    address public immutable override exchange;
+    address public override owner;
+    address public override exchange;
+
+    bool private _intitalized;
 
     uint256 private _marketOrderId;
 
@@ -24,7 +26,10 @@ contract Account is IAccount {
         }
     }
 
-    constructor(address _owner, address _exchange) {
+    function initialize(address _owner, address _exchange) external override {
+        require(!_intitalized, "already initialized");
+        _intitalized = true;
+
         require(_owner != address(0), "owner: zero address");
         require(_exchange != address(0), "exchange: zero address");
 

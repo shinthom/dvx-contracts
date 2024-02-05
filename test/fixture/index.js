@@ -161,6 +161,8 @@ const deploy = async (noAccount) => {
   exchange = await ethers.getContractAt("Exchange", exchangeProxy.target);
   await exchange.initialize();
 
+  const accountTargetContract = await ethers.deployContract("Account", []);
+
   const accountFactoryImpl = await ethers.deployContract("AccountFactory", []);
   const accountFactoryProxy = await ethers.deployContract("ERC1967Proxy", [
     accountFactoryImpl.target,
@@ -170,7 +172,10 @@ const deploy = async (noAccount) => {
     "AccountFactory",
     accountFactoryProxy.target
   );
-  await accountFactory.initialize(exchange.target);
+  await accountFactory.initialize(
+    accountTargetContract.target,
+    exchange.target
+  );
 
   const warehouseImpl = await ethers.deployContract("Warehouse", []);
   const warehouseProxy = await ethers.deployContract("ERC1967Proxy", [

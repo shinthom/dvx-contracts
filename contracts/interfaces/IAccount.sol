@@ -8,6 +8,8 @@ interface IAccount {
     function owner() external view returns (address);
     function exchange() external view returns (address);
 
+    function initialize(address _owner, address _exchange) external;
+
     function deposit(address token, uint256 amount, uint256 executionFee) external;
     function withdraw(address token, uint256 amount, uint256 executionFee) external;
     function swap(
