@@ -68,12 +68,13 @@ const indexList = [
 let deployer;
 let owner;
 let other;
+let orderKeeper;
+let relayer;
 let feeCollector; // todo: deploy feeCollector contract
 let ownerPk;
 // va
 let vaPk;
 let va;
-let vaAddress;
 // gmx accounts
 let impersonatedAdmin;
 let impersonatedGov;
@@ -113,9 +114,8 @@ let account;
 const deploy = async (noAccount) => {
   vaPk = ethers.Wallet.createRandom().privateKey;
   va = new ethers.Wallet(vaPk);
-  vaAddress = va.address;
 
-  [deployer, owner, other, orderKeeper, feeCollector] =
+  [deployer, owner, other, orderKeeper, relayer, feeCollector] =
     await ethers.getSigners();
   ownerPk =
     "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"; // todo: fix
@@ -222,6 +222,7 @@ const deploy = async (noAccount) => {
   await exchange.setSwapper(swapper.target);
   await exchange.setFeeCollector(feeCollector.address);
   await exchange.setOrderKeeper(orderKeeper.address, true);
+  await exchange.setRelayer(relayer.address, true);
   await exchange.registerAdapter(gmxV1Adapter.target);
   await exchange.registerAdapter(muxAdapter.target);
   await exchange.setStableToken(USDC, true);
@@ -232,7 +233,7 @@ const deploy = async (noAccount) => {
   await warehouse.setExchange(exchange.target);
 
   if (!noAccount) {
-    await exchange.connect(owner).createAccount(vaAddress, ethers.MaxUint256);
+    await exchange.connect(owner).createAccount(va.address, ethers.MaxUint256);
 
     account = await ethers.getContractAt(
       "Account",
@@ -315,11 +316,11 @@ stable:
     }
   };
 
-  const deposit = async (token, tokenAmount) => {
+  const deposit = async (token, tokenAmount, signature) => {
     await faucet(token, tokenAmount);
     const erc20 = await ethers.getContractAt("IERC20", token);
     await erc20.connect(owner).approve(account.target, tokenAmount);
-    await account.connect(owner).deposit(token, tokenAmount, 0);
+    await account.connect(owner).deposit(token, tokenAmount, 0, "0x");
   };
 
   const increasePosition = async (
@@ -704,8 +705,11 @@ stable:
     deployer,
     owner,
     other,
+    relayer,
     orderKeeper,
     ownerPk,
+    vaPk,
+    va,
     impersonatedBroker,
     impersonatedOwner,
     weth,

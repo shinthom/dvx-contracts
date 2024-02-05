@@ -280,7 +280,7 @@ contract Account is IAccount {
         uint256 acceptablePrice,
         uint256 executionFee,
         bytes calldata signature
-    ) external payable virtual override onlyOwner {
+    ) external payable virtual override onlyOwnerOrRelayer {
         if (msg.sender != owner) {
             require(
                 _verifySignature(
@@ -332,6 +332,7 @@ contract Account is IAccount {
         );
     }
 
+    // todo: remove this function
     function increasePositionMulti(
         address[] calldata adapters,
         address collateral,
@@ -342,7 +343,7 @@ contract Account is IAccount {
         uint256 acceptablePrice,
         uint256[] calldata executionFees
         // bytes calldata signature (todo: stack too deep)
-    ) external payable virtual override onlyOwner {
+    ) external payable virtual override onlyOwnerOrRelayer {
         // if (msg.sender != owner) {
         //     require(
         //         _verifySignature(
@@ -1030,32 +1031,40 @@ contract Account is IAccount {
         IExchange(exchange).collectProtocolFee(address(this), token, amount);
     }
 
-    function _verifySignature(address signer, bytes32 message, bytes memory signature) private view returns (bool) {
+    function _verifySignature(
+        address signer,
+        bytes32 messageHash,
+        bytes memory signature
+    ) private view returns (bool) {
         require(
             delegatedAccount.expiration > block.timestamp,
             "delegatedAccount: expired"
         );
-
-        return _recoverSigner(message, signature) == signer;
+        return _recoverSigner(_getEthSignedMessageHash(messageHash), signature) == signer;
     }
 
-    function _recoverSigner(bytes32 ethSignedMessageHash, bytes memory signature) private pure returns (address) {
+    function _getEthSignedMessageHash(
+        bytes32 _messageHash
+    ) private pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked("\x19Ethereum Signed Message:\n32", _messageHash)
+            );
+    }
+
+    function _recoverSigner(
+        bytes32 message,
+        bytes memory signature
+    ) private pure returns (address) {
         (bytes32 r, bytes32 s, uint8 v) = _splitSignature(signature);
-        uint256 v_uint256 = uint256(v);
 
-        if (v_uint256 < 27) {
-            v_uint256 += 27;
-        }
-
-        if (v_uint256 != 27 && v_uint256 != 28) {
-            v_uint256 += (chainIdAdjustedV - 27);
-        }
-
-        return ecrecover(ethSignedMessageHash, uint8(v_uint256), r, s);
+        return ecrecover(message, v, r, s);
     }
 
-    function _splitSignature(bytes memory sig) private pure returns (bytes32 r, bytes32 s, uint8 v) {
-        require(sig.length == 65, "Invalid signature length");
+    function _splitSignature(
+        bytes memory sig
+    ) private pure returns (bytes32 r, bytes32 s, uint8 v) {
+        require(sig.length == 65, "invalid signature length");
 
         assembly {
             r := mload(add(sig, 32))

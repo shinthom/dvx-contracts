@@ -4,270 +4,19 @@ const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 const { deploy } = require("../fixture");
 
 describe("marketOrder", () => {
-  // it("collect deposit fee", async () => {
-  //   const {
-  //     owner,
-  //     account,
-  //     gmxV1Adapter,
-  //     logger,
-  //     collateralList,
-  //     WETH,
-  //     deposit,
-  //     executeIncreasePosition,
-  //   } = await loadFixture(deploy);
-
-  //   const collateral = WETH;
-  //   const index = WETH;
-  //   const collateralAmount = ethers.parseEther("1");
-  //   const size = ethers.parseEther("10");
-  //   const isLong = true;
-
-  //   await deposit(WETH, collateralAmount);
-
-  //   const adapterFee = await gmxV1Adapter.getMinExecutionFee();
-  //   await expect(
-  //     account.connect(owner).increasePosition(
-  //       gmxV1Adapter.target,
-  //       WETH,
-  //       WETH,
-  //       collateralAmount,
-  //       size,
-  //       isLong,
-  //       0,
-  //       { value: adapterFee } // by owner
-  //     )
-  //   )
-  //     .to.emit(logger, "PositionIncreased")
-  //     .withArgs(
-  //       1,
-  //       account.target,
-  //       gmxV1Adapter.target,
-  //       collateral,
-  //       index,
-  //       collateralAmount,
-  //       size,
-  //       isLong,
-  //       100,
-  //       0
-  //     );
-  //   await executeIncreasePosition(account.target);
-
-  //   // console.log("`executeIncreasePosition` done");
-
-  //   // for (const collateral of collateralList) {
-  //   //   await deposit(collateral.address, collateral.amount);
-  //   //   await account
-  //   //     .connect(owner)
-  //   //     .increaseCollateral(
-  //   //       gmxV1Adapter.target,
-  //   //       WETH,
-  //   //       WETH,
-  //   //       isLong,
-  //   //       collateral.address,
-  //   //       collateral.amount,
-  //   //       0,
-  //   //       { value: adapterFee }
-  //   //     );
-  //   //   await executeIncreasePosition(account.target);
-  //   // }
-  // });
-
-  // it("fee delegated", async () => {
-  //   const collateral = WETH;
-  //   const index = WETH;
-  //   const collateralAmount = ethers.parseEther("1");
-  //   const size = ethers.parseEther("10");
-  //   const isLong = true;
-
-  //   await deposit(collateral, collateralAmount);
-  //   const answers = await quoter.quote(
-  //     account.target,
-  //     [gmxV1Adapter.target, muxAdapter.target],
-  //     {
-  //       collateral: collateral,
-  //       index: index,
-  //       collateralAmount: collateralAmount,
-  //       size: size,
-  //       isLong: isLong,
-  //     }
-  //   );
-
-  //   console.log(answers);
-
-  //   const selectedAdapter = answers[0].adapter;
-  //   const adapter = await ethers.getContractAt("IAdapter", selectedAdapter);
-  //   const adapterFee = await adapter.getMinExecutionFee();
-  //   await account.connect(owner).increasePosition(
-  //     adapter,
-  //     collateral,
-  //     index,
-  //     collateralAmount,
-  //     size,
-  //     isLong,
-  //     0,
-  //     { value: adapterFee } // by owner
-  //   );
-  //   await fillPositionOrder();
-
-  //   await expect(
-  //     account.connect(owner).increasePosition(
-  //       adapter,
-  //       collateral,
-  //       index,
-  //       collateralAmount,
-  //       size,
-  //       isLong,
-  //       0,
-  //       { value: adapterFee } // by owner
-  //     )
-  //   )
-  //     .to.emit(logger, "Deposited")
-  //     .withArgs(account.target, token, tokenAmount);
-  // });
-
-  // describe("gmxV1 - long", () => {
-  //   it("should execute a market order", async () => {
-  //     const {
-  //       owner,
-  //       account,
-  //       gmxV1Adapter,
-  //       logger,
-  //       collateralList,
-  //       WETH,
-  //       setDummyPrice,
-  //       deposit,
-  //       checkBalance,
-  //       executeIncreasePosition,
-  //     } = await loadFixture(deploy);
-
-  //     await setDummyPrice();
-
-  //     const collateral = WETH;
-  //     const index = WETH;
-  //     const collateralAmount = ethers.parseEther("1");
-  //     const size = ethers.parseEther("10");
-  //     const isLong = true;
-
-  //     await deposit(WETH, collateralAmount);
-  //     await checkBalance(account);
-
-  //     // const request = { collateral, index, collateralAmount, size, isLong };
-  //     // const answers = await quoter.quote(
-  //     //   account.target,
-  //     //   [gmxV1Adapter.target],
-  //     //   request
-  //     // );
-
-  //     const executionFee = await gmxV1Adapter.getMinExecutionFee();
-  //     await account
-  //       .connect(owner)
-  //       .increasePosition(
-  //         gmxV1Adapter.target,
-  //         collateral,
-  //         index,
-  //         collateralAmount,
-  //         size,
-  //         isLong,
-  //         0,
-  //         { value: executionFee }
-  //       );
-  //     await executeIncreasePosition(account.target);
-  //     const wrapPosition = await gmxV1Adapter.getWrapPosition(
-  //       account.target,
-  //       collateral,
-  //       index,
-  //       isLong
-  //     );
-  //     console.log(wrapPosition);
-  //     // await deposit(collateral, collateralAmount);
-  //     // await account
-  //     //   .connect(owner)
-  //     //   .increaseCollateral(
-  //     //     gmxV1Adapter.target,
-  //     //     collateral,
-  //     //     index,
-  //     //     isLong,
-  //     //     collateral,
-  //     //     collateralAmount,
-  //     //     0,
-  //     //     {
-  //     //       value: executionFee,
-  //     //     }
-  //     //   );
-  //     // await executeIncreasePosition(account.target);
-  //     // console.log(
-  //     //   await gmxV1Adapter.getPosition(
-  //     //     account.target,
-  //     //     collateral,
-  //     //     index,
-  //     //     isLong
-  //     //   )
-  //     // );
-  //     // await checkBalance(account);
-
-  //     // await account
-  //     //   .connect(owner)
-  //     //   .decreaseCollateral(
-  //     //     gmxV1Adapter.target,
-  //     //     collateral,
-  //     //     index,
-  //     //     isLong,
-  //     //     collateralAmount,
-  //     //     0,
-  //     //     {
-  //     //       value: executionFee,
-  //     //     }
-  //     //   );
-  //     // await executeDecreasePosition(account.target);
-  //     // console.log(
-  //     //   await gmxV1Adapter.getPosition(
-  //     //     account.target,
-  //     //     collateral,
-  //     //     index,
-  //     //     isLong
-  //     //   )
-  //     // );
-  //     // await checkBalance(account);
-
-  //     // await account
-  //     //   .connect(owner)
-  //     //   .decreasePosition(
-  //     //     gmxV1Adapter.target,
-  //     //     collateral,
-  //     //     index,
-  //     //     isLong,
-  //     //     size,
-  //     //     0,
-  //     //     {
-  //     //       value: executionFee,
-  //     //     }
-  //     //   );
-  //     // await executeDecreasePosition(account.target);
-  //     // console.log(
-  //     //   await gmxV1Adapter.getPosition(
-  //     //     account.target,
-  //     //     collateral,
-  //     //     index,
-  //     //     isLong
-  //     //   )
-  //     // );
-  //     // await checkBalance(account);
-  //   });
-  // });
-
-  describe("mux", () => {
-    it("should execute a market order", async () => {
+  describe("gmxV1 - long", () => {
+    it("directly from EOA", async () => {
       const {
         owner,
         account,
-        muxAdapter,
+        gmxV1Adapter,
         WETH,
-        WBTC,
-        checkBalance,
+        setDummyPrice,
         deposit,
-        fillPositionOrder,
-        fillWithdrawalOrder,
+        executeIncreasePosition,
+        executeDecreasePosition,
       } = await loadFixture(deploy);
+      await setDummyPrice();
 
       const collateral = WETH;
       const index = WETH;
@@ -275,8 +24,394 @@ describe("marketOrder", () => {
       const size = ethers.parseEther("10");
       const isLong = true;
 
-      await deposit(WETH, collateralAmount);
+      const acceptablePrice = ethers.parseUnits("2000", 18);
+      const executionFee = 0;
+      const adapterFee = await gmxV1Adapter.getMinExecutionFee();
 
+      // deposit
+      await deposit(collateral, collateralAmount, "0x");
+
+      // increasePosition
+      await account
+        .connect(owner)
+        .increasePosition(
+          gmxV1Adapter.target,
+          collateral,
+          index,
+          collateralAmount,
+          size,
+          isLong,
+          acceptablePrice,
+          executionFee,
+          "0x",
+          { value: adapterFee }
+        );
+      await executeIncreasePosition(account.target);
+      var wrapPosition = await gmxV1Adapter.getWrapPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(wrapPosition);
+      var position = await gmxV1Adapter.getPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(position);
+
+      // deposit to add collateral
+      await deposit(collateral, collateralAmount, "0x");
+
+      // increaseCollateral
+      await account.connect(owner).increaseCollateral(
+        gmxV1Adapter.target,
+        collateral,
+        index,
+        isLong,
+        collateral, // tokenIn
+        collateralAmount, // amountIn
+        executionFee,
+        "0x",
+        { value: adapterFee }
+      );
+      await executeIncreasePosition(account.target);
+      var wrapPosition = await gmxV1Adapter.getWrapPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(wrapPosition);
+      var position = await gmxV1Adapter.getPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(position);
+
+      // decreaseCollateral
+      await account
+        .connect(owner)
+        .decreaseCollateral(
+          gmxV1Adapter.target,
+          collateral,
+          index,
+          isLong,
+          collateralAmount,
+          executionFee,
+          "0x",
+          { value: adapterFee }
+        );
+      await executeDecreasePosition(account.target);
+      var wrapPosition = await gmxV1Adapter.getWrapPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(wrapPosition);
+      var position = await gmxV1Adapter.getPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(position);
+
+      // decreasePosition
+      await account
+        .connect(owner)
+        .decreasePosition(
+          gmxV1Adapter.target,
+          collateral,
+          index,
+          isLong,
+          size,
+          executionFee,
+          "0x",
+          { value: adapterFee }
+        );
+      await executeDecreasePosition(account.target);
+      var wrapPosition = await gmxV1Adapter.getWrapPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(wrapPosition);
+      var position = await gmxV1Adapter.getPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(position);
+    });
+
+    it("relayed from relayer", async () => {
+      const {
+        va,
+        relayer,
+        account,
+        gmxV1Adapter,
+        WETH,
+        setDummyPrice,
+        deposit,
+        executeIncreasePosition,
+        executeDecreasePosition,
+      } = await loadFixture(deploy);
+      await setDummyPrice();
+
+      const collateral = WETH;
+      const index = WETH;
+      const collateralAmount = ethers.parseEther("1");
+      const size = ethers.parseEther("10");
+      const isLong = true;
+
+      const acceptablePrice = ethers.parseUnits("2000", 18);
+      const executionFee = 0;
+      const adapterFee = await gmxV1Adapter.getMinExecutionFee();
+
+      // deposit
+      await deposit(collateral, collateralAmount, "0x");
+
+      // make signature from relayer
+      var messageHash = ethers.solidityPackedKeccak256(
+        [
+          "address", // adapter
+          "address", // collateral
+          "address", // index
+          "uint256", // collateralAmount
+          "uint256", // size
+          "bool", // isLong
+          "uint256", // acceptablePrice
+          "uint256", // executionFee
+        ],
+        [
+          gmxV1Adapter.target,
+          collateral,
+          index,
+          collateralAmount,
+          size,
+          isLong,
+          acceptablePrice,
+          executionFee,
+        ]
+      );
+      var signature = await va.signMessage(ethers.getBytes(messageHash));
+
+      // increasePosition
+      await account
+        .connect(relayer)
+        .increasePosition(
+          gmxV1Adapter.target,
+          collateral,
+          index,
+          collateralAmount,
+          size,
+          isLong,
+          acceptablePrice,
+          executionFee,
+          signature,
+          { value: adapterFee }
+        );
+      await executeIncreasePosition(account.target);
+      var wrapPosition = await gmxV1Adapter.getWrapPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(wrapPosition);
+      var position = await gmxV1Adapter.getPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(position);
+
+      // deposit to add collateral
+      await deposit(collateral, collateralAmount, "0x");
+
+      // make signature from relayer
+      var messageHash = ethers.solidityPackedKeccak256(
+        [
+          "address", // adapter
+          "address", // collateral
+          "address", // index
+          "bool", // isLong
+          "address", // tokenIn
+          "uint256", // amountIn
+          "uint256", // executionFee
+        ],
+        [
+          gmxV1Adapter.target,
+          collateral,
+          index,
+          isLong,
+          collateral, // tokenIn
+          collateralAmount, // amountIn
+          executionFee,
+        ]
+      );
+      var signature = await va.signMessage(ethers.getBytes(messageHash));
+
+      // increaseCollateral
+      await account.connect(relayer).increaseCollateral(
+        gmxV1Adapter.target,
+        collateral,
+        index,
+        isLong,
+        collateral, // tokenIn
+        collateralAmount, // amountIn
+        executionFee,
+        signature,
+        { value: adapterFee }
+      );
+      await executeIncreasePosition(account.target);
+      var wrapPosition = await gmxV1Adapter.getWrapPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(wrapPosition);
+      var position = await gmxV1Adapter.getPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(position);
+
+      // make signature from relayer
+      var messageHash = ethers.solidityPackedKeccak256(
+        [
+          "address", // adapter
+          "address", // collateral
+          "address", // index
+          "bool", // isLong
+          "uint256", // collateralAmount
+          "uint256", // executionFee
+        ],
+        [
+          gmxV1Adapter.target,
+          collateral,
+          index,
+          isLong,
+          collateralAmount,
+          executionFee,
+        ]
+      );
+      var signature = await va.signMessage(ethers.getBytes(messageHash));
+
+      // decreaseCollateral
+      await account
+        .connect(relayer)
+        .decreaseCollateral(
+          gmxV1Adapter.target,
+          collateral,
+          index,
+          isLong,
+          collateralAmount,
+          executionFee,
+          signature,
+          { value: adapterFee }
+        );
+      await executeDecreasePosition(account.target);
+      var wrapPosition = await gmxV1Adapter.getWrapPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(wrapPosition);
+      var position = await gmxV1Adapter.getPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(position);
+
+      // make signature from relayer
+      var messageHash = ethers.solidityPackedKeccak256(
+        [
+          "address", // adapter
+          "address", // collateral
+          "address", // index
+          "bool", // isLong
+          "uint256", // size
+          "uint256", // executionFee
+        ],
+        [gmxV1Adapter.target, collateral, index, isLong, size, executionFee]
+      );
+      var signature = await va.signMessage(ethers.getBytes(messageHash));
+
+      // decreasePosition
+      await account
+        .connect(relayer)
+        .decreasePosition(
+          gmxV1Adapter.target,
+          collateral,
+          index,
+          isLong,
+          size,
+          executionFee,
+          signature,
+          { value: adapterFee }
+        );
+      await executeDecreasePosition(account.target);
+      var wrapPosition = await gmxV1Adapter.getWrapPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(wrapPosition);
+      var position = await gmxV1Adapter.getPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(position);
+    });
+  });
+
+  describe("mux", () => {
+    it("directly from EOA", async () => {
+      const {
+        owner,
+        account,
+        muxAdapter,
+        WETH,
+        setDummyPrice,
+        deposit,
+        fillPositionOrder,
+        fillWithdrawalOrder,
+      } = await loadFixture(deploy);
+      await setDummyPrice();
+
+      const collateral = WETH;
+      const index = WETH;
+      const collateralAmount = ethers.parseEther("1");
+      const size = ethers.parseEther("10");
+      const isLong = true;
+
+      const acceptablePrice = ethers.parseUnits("2000", 18);
+      const executionFee = 0;
+      const adapterFee = await muxAdapter.getMinExecutionFee();
+
+      // deposit
+      await deposit(collateral, collateralAmount, "0x");
+
+      // increasePosition
       await account
         .connect(owner)
         .increasePosition(
@@ -286,190 +421,344 @@ describe("marketOrder", () => {
           collateralAmount,
           size,
           isLong,
-          0,
-          { value: 0 }
+          acceptablePrice,
+          executionFee,
+          "0x",
+          { value: adapterFee }
         );
       await fillPositionOrder();
-
-      const liquidationPrice = await muxAdapter.getLiquidationPrice(
+      var wrapPosition = await muxAdapter.getWrapPosition(
         account.target,
         collateral,
         index,
         isLong
       );
-      console.log(liquidationPrice.toString());
+      console.log(wrapPosition);
+      var position = await muxAdapter.getPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(position);
 
-      // await deposit(collateral, collateralAmount);
-      // await account
-      //   .connect(owner)
-      //   .increaseCollateral(
-      //     muxAdapter.target,
-      //     collateral,
-      //     index,
-      //     isLong,
-      //     collateral,
-      //     collateralAmount,
-      //     0,
-      //     {
-      //       value: executionFee,
-      //     }
-      //   );
-      // console.log(
-      //   await muxAdapter.getWrapPosition(
-      //     account.target,
-      //     collateral,
-      //     index,
-      //     isLong
-      //   )
-      // );
-      // await checkBalance(account);
+      // deposit to add collateral
+      await deposit(collateral, collateralAmount, "0x");
 
-      // await account
-      //   .connect(owner)
-      //   .decreaseCollateral(
-      //     muxAdapter.target,
-      //     collateral,
-      //     index,
-      //     isLong,
-      //     collateralAmount,
-      //     0,
-      //     {
-      //       value: executionFee,
-      //     }
-      //   );
-      // await fillWithdrawalOrder(account.target);
-      // console.log(
-      //   await muxAdapter.getWrapPosition(
-      //     account.target,
-      //     collateral,
-      //     index,
-      //     isLong
-      //   )
-      // );
-      // await checkBalance(account);
+      // increaseCollateral
+      await account.connect(owner).increaseCollateral(
+        muxAdapter.target,
+        collateral,
+        index,
+        isLong,
+        collateral, // tokenIn
+        collateralAmount, // amountIn
+        executionFee,
+        "0x",
+        { value: adapterFee }
+      );
+      var wrapPosition = await muxAdapter.getWrapPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(wrapPosition);
+      var position = await muxAdapter.getPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(position);
 
-      // await account
-      //   .connect(owner)
-      //   .decreasePosition(
-      //     muxAdapter.target,
-      //     collateral,
-      //     index,
-      //     isLong,
-      //     size,
-      //     0,
-      //     { value: executionFee }
-      //   );
-      // await fillPositionOrder();
-      // console.log(
-      //   await muxAdapter.getWrapPosition(
-      //     account.target,
-      //     collateral,
-      //     index,
-      //     isLong
-      //   )
-      // );
-      // await checkBalance(account);
+      // decreaseCollateral
+      await account
+        .connect(owner)
+        .decreaseCollateral(
+          muxAdapter.target,
+          collateral,
+          index,
+          isLong,
+          collateralAmount,
+          executionFee,
+          "0x",
+          { value: adapterFee }
+        );
+      await fillWithdrawalOrder();
+      var wrapPosition = await muxAdapter.getWrapPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(wrapPosition);
+      var position = await muxAdapter.getPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(position);
+
+      // decreasePosition
+      await account
+        .connect(owner)
+        .decreasePosition(
+          muxAdapter.target,
+          collateral,
+          index,
+          isLong,
+          size,
+          executionFee,
+          "0x",
+          { value: adapterFee }
+        );
+      await fillPositionOrder();
+      var wrapPosition = await muxAdapter.getWrapPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(wrapPosition);
+      var position = await muxAdapter.getPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(position);
+    });
+
+    it("relayed from relayer", async () => {
+      const {
+        va,
+        relayer,
+        account,
+        muxAdapter,
+        WETH,
+        setDummyPrice,
+        deposit,
+        fillPositionOrder,
+        fillWithdrawalOrder,
+      } = await loadFixture(deploy);
+      await setDummyPrice();
+
+      const collateral = WETH;
+      const index = WETH;
+      const collateralAmount = ethers.parseEther("1");
+      const size = ethers.parseEther("10");
+      const isLong = true;
+
+      const acceptablePrice = ethers.parseUnits("2000", 18);
+      const executionFee = 0;
+      const adapterFee = await muxAdapter.getMinExecutionFee();
+
+      // deposit
+      await deposit(collateral, collateralAmount, "0x");
+
+      // make signature from relayer
+      var messageHash = ethers.solidityPackedKeccak256(
+        [
+          "address", // adapter
+          "address", // collateral
+          "address", // index
+          "uint256", // collateralAmount
+          "uint256", // size
+          "bool", // isLong
+          "uint256", // acceptablePrice
+          "uint256", // executionFee
+        ],
+        [
+          muxAdapter.target,
+          collateral,
+          index,
+          collateralAmount,
+          size,
+          isLong,
+          acceptablePrice,
+          executionFee,
+        ]
+      );
+      var signature = await va.signMessage(ethers.getBytes(messageHash));
+
+      // increasePosition
+      await account
+        .connect(relayer)
+        .increasePosition(
+          muxAdapter.target,
+          collateral,
+          index,
+          collateralAmount,
+          size,
+          isLong,
+          acceptablePrice,
+          executionFee,
+          signature,
+          { value: adapterFee }
+        );
+      await fillPositionOrder();
+      var wrapPosition = await muxAdapter.getWrapPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(wrapPosition);
+      var position = await muxAdapter.getPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(position);
+
+      // deposit to add collateral
+      await deposit(collateral, collateralAmount, "0x");
+
+      // make signature from relayer
+      var messageHash = ethers.solidityPackedKeccak256(
+        [
+          "address", // adapter
+          "address", // collateral
+          "address", // index
+          "bool", // isLong
+          "address", // tokenIn
+          "uint256", // amountIn
+          "uint256", // executionFee
+        ],
+        [
+          muxAdapter.target,
+          collateral,
+          index,
+          isLong,
+          collateral, // tokenIn
+          collateralAmount, // amountIn
+          executionFee,
+        ]
+      );
+      var signature = await va.signMessage(ethers.getBytes(messageHash));
+
+      // increaseCollateral
+      await account.connect(relayer).increaseCollateral(
+        muxAdapter.target,
+        collateral,
+        index,
+        isLong,
+        collateral, // tokenIn
+        collateralAmount, // amountIn
+        executionFee,
+        signature,
+        { value: adapterFee }
+      );
+      var wrapPosition = await muxAdapter.getWrapPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(wrapPosition);
+      var position = await muxAdapter.getPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(position);
+
+      // make signature from relayer
+      var messageHash = ethers.solidityPackedKeccak256(
+        [
+          "address", // adapter
+          "address", // collateral
+          "address", // index
+          "bool", // isLong
+          "uint256", // collateralAmount
+          "uint256", // executionFee
+        ],
+        [
+          muxAdapter.target,
+          collateral,
+          index,
+          isLong,
+          collateralAmount,
+          executionFee,
+        ]
+      );
+      var signature = await va.signMessage(ethers.getBytes(messageHash));
+
+      // decreaseCollateral
+      await account
+        .connect(relayer)
+        .decreaseCollateral(
+          muxAdapter.target,
+          collateral,
+          index,
+          isLong,
+          collateralAmount,
+          executionFee,
+          signature,
+          { value: adapterFee }
+        );
+      await fillWithdrawalOrder();
+      var wrapPosition = await muxAdapter.getWrapPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(wrapPosition);
+      var position = await muxAdapter.getPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(position);
+
+      // make signature from relayer
+      var messageHash = ethers.solidityPackedKeccak256(
+        [
+          "address", // adapter
+          "address", // collateral
+          "address", // index
+          "bool", // isLong
+          "uint256", // size
+          "uint256", // executionFee
+        ],
+        [muxAdapter.target, collateral, index, isLong, size, executionFee]
+      );
+      var signature = await va.signMessage(ethers.getBytes(messageHash));
+
+      // decreasePosition
+      await account
+        .connect(relayer)
+        .decreasePosition(
+          muxAdapter.target,
+          collateral,
+          index,
+          isLong,
+          size,
+          executionFee,
+          signature,
+          { value: adapterFee }
+        );
+      await fillPositionOrder();
+      var wrapPosition = await muxAdapter.getWrapPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(wrapPosition);
+      var position = await muxAdapter.getPosition(
+        account.target,
+        collateral,
+        index,
+        isLong
+      );
+      console.log(position);
     });
   });
-
-  // describe("gmx & mux", () => {
-  //   it("should execute a market order", async () => {
-  //     const {
-  //       owner,
-  //       account,
-  //       gmxV1Adapter,
-  //       muxAdapter,
-  //       WETH,
-  //       WBTC,
-  //       checkBalance,
-  //       deposit,
-  //       executeIncreasePosition,
-  //       executeDecreasePosition,
-  //       fillPositionOrder,
-  //     } = await loadFixture(deploy);
-
-  //     const collateral = WETH;
-  //     const index = WBTC;
-  //     const collateralAmount = ethers.parseEther("1");
-  //     const size = ethers.parseUnits("1", 8);
-  //     const isLong = true;
-
-  //     await deposit(WETH, collateralAmount);
-  //     await deposit(WETH, collateralAmount);
-  //     await checkBalance(account);
-
-  //     var adapterFee =
-  //       (await gmxV1Adapter.getMinExecutionFee()) +
-  //       (await muxAdapter.getMinExecutionFee());
-  //     await account
-  //       .connect(owner)
-  //       .increasePositionMulti(
-  //         [gmxV1Adapter.target, muxAdapter.target],
-  //         collateral,
-  //         index,
-  //         [collateralAmount, collateralAmount],
-  //         [size, size],
-  //         isLong,
-  //         0,
-  //         { value: adapterFee }
-  //       );
-  //     await executeIncreasePosition(account.target);
-  //     await fillPositionOrder();
-  //     console.log(
-  //       await gmxV1Adapter.getWrapPosition(
-  //         account.target,
-  //         collateral,
-  //         index,
-  //         isLong
-  //       )
-  //     );
-  //     console.log(
-  //       await muxAdapter.getWrapPosition(
-  //         account.target,
-  //         collateral,
-  //         index,
-  //         isLong
-  //       )
-  //     );
-  //     await checkBalance(account);
-
-  //     var adapterFee = await gmxV1Adapter.getMinExecutionFee();
-  //     await account
-  //       .connect(owner)
-  //       .decreasePosition(gmxV1Adapter.target, index, index, isLong, size, 0, {
-  //         value: adapterFee,
-  //       });
-  //     var adapterFee = await muxAdapter.getMinExecutionFee();
-  //     await account
-  //       .connect(owner)
-  //       .decreasePosition(
-  //         muxAdapter.target,
-  //         collateral,
-  //         index,
-  //         isLong,
-  //         size,
-  //         0,
-  //         { value: adapterFee }
-  //       );
-  //     await executeDecreasePosition(account.target);
-  //     await fillPositionOrder();
-  //     console.log(
-  //       await gmxV1Adapter.getWrapPosition(
-  //         account.target,
-  //         collateral,
-  //         index,
-  //         isLong
-  //       )
-  //     );
-  //     console.log(
-  //       await muxAdapter.getWrapPosition(
-  //         account.target,
-  //         collateral,
-  //         index,
-  //         isLong
-  //       )
-  //     );
-  //     await checkBalance(account);
-  //   });
-  // });
 });
