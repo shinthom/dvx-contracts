@@ -186,6 +186,7 @@ contract MuxAdapter is BaseAdapter {
         address index,
         uint256 collateralAmount,
         uint256 size,
+        uint256 acceptablePrice,
         bool isLong
     ) external payable override {
         uint8 collateralId = _getIdFromTokenAddress(collateral);
@@ -197,15 +198,13 @@ contract MuxAdapter is BaseAdapter {
             isLong
         );
 
-        uint256 adjustedSize = _adjustSizeDecimal(index, size);
-
         if (collateralId == _wethTokenId) {
             IERC20(collateral).withdraw(collateralAmount);
 
             IOrderBook(_orderBook).placePositionOrder3{value: collateralAmount}(
                 subAccountId,
                 uint96(collateralAmount),
-                uint96(adjustedSize),
+                uint96(_adjustSizeDecimal(index, size)), // stack too deep
                 0,
                 0,
                 192,
@@ -214,12 +213,12 @@ contract MuxAdapter is BaseAdapter {
                 IOrderBook.PositionOrderExtra(0, 0, 0, 0)
             );
         } else {
-            // slither-disable-next-line unused-return
             IERC20(collateral).approve(_orderBook, collateralAmount);
+
             IOrderBook(_orderBook).placePositionOrder3(
                 subAccountId,
                 uint96(collateralAmount),
-                uint96(adjustedSize),
+                uint96(_adjustSizeDecimal(index, size)), // stack too deep
                 0,
                 0,
                 192,
@@ -239,7 +238,8 @@ contract MuxAdapter is BaseAdapter {
             collateralAmount,
             size,
             isLong,
-            entryPrice
+            entryPrice,
+            acceptablePrice
         );
     }
 

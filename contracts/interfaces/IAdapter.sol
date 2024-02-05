@@ -21,6 +21,7 @@ interface IAdapter {
         address index,
         uint256 collateralAmount,
         uint256 size,
+        uint256 acceptablePrice,
         bool isLong
     ) external payable;
     function decreasePosition(

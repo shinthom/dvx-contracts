@@ -231,6 +231,7 @@ contract GmxV1Adapter is BaseAdapter {
         address index,
         uint256 collateralAmount,
         uint256 size,
+        uint256 acceptablePrice,
         bool isLong
     ) public payable override {
         if (!IRouter(_router).approvedPlugins(address(this), _positionRouter)) {
@@ -244,7 +245,8 @@ contract GmxV1Adapter is BaseAdapter {
 
         uint256 sizeUsd = (size * indexPrice) / (10 ** indexDecimal);
 
-        _increase(collateral, index, collateralAmount, sizeUsd, isLong);
+        acceptablePrice *= 1e12; // 1e30
+        _increase(collateral, index, collateralAmount, sizeUsd, acceptablePrice, isLong);
 
         uint256 entryPrice = indexPrice / 1e12; // 1e18
         logIncreasePosition(
@@ -256,7 +258,8 @@ contract GmxV1Adapter is BaseAdapter {
             collateralAmount,
             size,
             isLong,
-            entryPrice
+            entryPrice,
+            acceptablePrice
         );
     }
 
@@ -300,7 +303,7 @@ contract GmxV1Adapter is BaseAdapter {
         require(collateral != address(0), "collateral: zero address");
         require(index != address(0), "index: zero address");
 
-        _increase(collateral, index, collateralAmount, 0, isLong);
+        _increase(collateral, index, collateralAmount, 0, 0, isLong);
 
         logIncreaseCollateral(
             address(this),
@@ -352,7 +355,7 @@ contract GmxV1Adapter is BaseAdapter {
         require(collateral != address(0), "collateral: zero address");
         require(index != address(0), "index: zero address");
 
-        _increase(collateral, index, marginAmount, 0, isLong);
+        _increase(collateral, index, marginAmount, 0, 0, isLong);
 
         logAddAcmmMargin(address(this), _this, collateral, index, marginAmount);
     }
@@ -725,6 +728,7 @@ contract GmxV1Adapter is BaseAdapter {
         address index,
         uint256 collateralAmount,
         uint256 size,
+        uint256 acceptablePrice,
         bool isLong
     ) private {
         if (isLong && (collateral != index)) {
@@ -755,12 +759,15 @@ contract GmxV1Adapter is BaseAdapter {
             collateral = defaultStableToken;
         }
 
-        uint256 price = isLong ? type(uint256).max : 0;
         uint256 executionFee = IPositionRouter(_positionRouter)
             .minExecutionFee();
 
         address[] memory path = new address[](1);
         path[0] = collateral;
+
+        if (acceptablePrice == 0) {
+            acceptablePrice = isLong ? type(uint256).max : 0;
+        }
 
         IERC20(collateral).approve(_router, collateralAmount);
         IPositionRouter(_positionRouter).createIncreasePosition{
@@ -772,7 +779,7 @@ contract GmxV1Adapter is BaseAdapter {
             0,
             size,
             isLong,
-            price,
+            acceptablePrice,
             executionFee,
             0x0,
             address(0)
