@@ -69,6 +69,7 @@ let deployer;
 let owner;
 let other;
 let feeCollector; // todo: deploy feeCollector contract
+let ownerPk;
 // va
 let vaPk;
 let va;
@@ -111,11 +112,14 @@ let account;
 
 const deploy = async (noAccount) => {
   vaPk = ethers.Wallet.createRandom().privateKey;
-  va = wallet = new ethers.Wallet(vaPk);
+  va = new ethers.Wallet(vaPk);
   vaAddress = va.address;
 
   [deployer, owner, other, orderKeeper, feeCollector] =
     await ethers.getSigners();
+  ownerPk =
+    "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"; // todo: fix
+
   // gmx accounts
   impersonatedAdmin = await ethers.getImpersonatedSigner(
     "0xb4d2603b2494103c90b2c607261dd85484b49ef0"
@@ -701,6 +705,7 @@ stable:
     owner,
     other,
     orderKeeper,
+    ownerPk,
     impersonatedBroker,
     impersonatedOwner,
     weth,
