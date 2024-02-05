@@ -20,11 +20,23 @@ async function main() {
     console.log("gasUsed:", gasUsed);
   };
 
+  // deploy Exchange contract
+  const ExchangeImpl = await ethers.getContractFactory("Exchange");
+  const exchangeImpl = await ExchangeImpl.deploy();
+  await waitAndLogAccumulatedGasUsed(exchangeImpl.deploymentTransaction());
+  console.log("ExchangeImpl deployed at:", exchangeImpl.target, "\n");
+  const ExchangeProxy = await ethers.getContractFactory("ERC1967Proxy");
+  const exchangeProxy = await ExchangeProxy.deploy(exchangeImpl.target, "0x");
+  await waitAndLogAccumulatedGasUsed(exchangeProxy.deploymentTransaction());
+  console.log("ExchangeProxy deployed at:", exchangeProxy.target, "\n");
+  const exchange = await ethers.getContractAt("Exchange", exchangeProxy.target);
+  await waitAndLogAccumulatedGasUsed(await exchange.initialize());
+  console.log("Exchange: initialize\n");
+
   const WarehouseImpl = await ethers.getContractFactory("Warehouse");
   const warehouseImpl = await WarehouseImpl.deploy();
   await waitAndLogAccumulatedGasUsed(warehouseImpl.deploymentTransaction());
   console.log("WarehouseImpl deployed at:", warehouseImpl.target, "\n");
-
   const WarehouseProxy = await ethers.getContractFactory("ERC1967Proxy");
   const warehouseProxy = await WarehouseProxy.deploy(
     warehouseImpl.target,
@@ -32,7 +44,6 @@ async function main() {
   );
   await waitAndLogAccumulatedGasUsed(warehouseProxy.deploymentTransaction());
   console.log("WarehouseProxy deployed at:", warehouseProxy.target, "\n");
-
   const warehouse = await ethers.getContractAt(
     "Warehouse",
     warehouseProxy.target
@@ -40,33 +51,66 @@ async function main() {
   await waitAndLogAccumulatedGasUsed(await warehouse.initialize());
   console.log("Warehouse: initialize\n");
 
-  const ExchangeImpl = await ethers.getContractFactory("Exchange");
-  const exchangeImpl = await ExchangeImpl.deploy();
-  await waitAndLogAccumulatedGasUsed(exchangeImpl.deploymentTransaction());
-  console.log("ExchangeImpl deployed at:", exchangeImpl.target, "\n");
+  const AccountTarget = await ethers.getContractFactory("Account");
+  const accountTarget = await AccountTarget.deploy();
+  await waitAndLogAccumulatedGasUsed(accountTarget.deploymentTransaction());
+  console.log("AccountTarget deployed at:", accountTarget.target, "\n");
 
-  const ExchangeProxy = await ethers.getContractFactory("ERC1967Proxy");
-  const exchangeProxy = await ExchangeProxy.deploy(exchangeImpl.target, "0x");
-  await waitAndLogAccumulatedGasUsed(exchangeProxy.deploymentTransaction());
-  console.log("ExchangeProxy deployed at:", exchangeProxy.target, "\n");
+  const AccountFactoryImpl = await ethers.getContractFactory("AccountFactory");
+  const accountFactoryImpl = await AccountFactoryImpl.deploy();
+  await waitAndLogAccumulatedGasUsed(
+    accountFactoryImpl.deploymentTransaction()
+  );
+  console.log(
+    "AccountFactoryImpl deployed at:",
+    accountFactoryImpl.target,
+    "\n"
+  );
+  const AccountFactoryProxy = await ethers.getContractFactory("ERC1967Proxy");
+  const accountFactoryProxy = await AccountFactoryProxy.deploy(
+    accountFactoryImpl.target,
+    "0x"
+  );
+  await waitAndLogAccumulatedGasUsed(
+    accountFactoryProxy.deploymentTransaction()
+  );
+  console.log(
+    "AccountFactoryProxy deployed at:",
+    accountFactoryProxy.target,
+    "\n"
+  );
+  const accountFactory = await ethers.getContractAt(
+    "AccountFactory",
+    accountFactoryProxy.target
+  );
+  await waitAndLogAccumulatedGasUsed(
+    await accountFactory.initialize(accountTarget.target, exchange.target)
+  );
+  console.log("AccountFactory: initialize\n");
 
-  const exchange = await ethers.getContractAt("Exchange", exchangeProxy.target);
-  await waitAndLogAccumulatedGasUsed(await exchange.initialize());
-  console.log("Exchange: initialize\n");
+  const Logger = await ethers.getContractFactory("Logger");
+  const logger = await Logger.deploy();
+  await waitAndLogAccumulatedGasUsed(logger.deploymentTransaction());
+  console.log("Logger deployed at:", logger.target, "\n");
 
   const GmxV1Adapter = await ethers.getContractFactory("GmxV1Adapter");
   const gmxV1Adapter = await GmxV1Adapter.deploy(
     PositionRouter,
     Router,
     Vault,
-    exchange.target
+    exchange.target,
+    logger.target
   );
   await waitAndLogAccumulatedGasUsed(gmxV1Adapter.deploymentTransaction());
   console.log("GmxV1Adapter deployed at:", gmxV1Adapter.target, "\n");
 
   const MuxAdapter = await ethers.getContractFactory("MuxAdapter");
-  // 11 is usdc
-  const muxAdapter = await MuxAdapter.deploy(OrderBook, LiquidityPool, 11);
+  const muxAdapter = await MuxAdapter.deploy(
+    OrderBook,
+    LiquidityPool,
+    exchange.target,
+    logger.target
+  );
   await waitAndLogAccumulatedGasUsed(muxAdapter.deploymentTransaction());
   console.log("MuxAdapter deployed at:", muxAdapter.target, "\n");
 
@@ -80,15 +124,30 @@ async function main() {
   await waitAndLogAccumulatedGasUsed(reader.deploymentTransaction());
   console.log("Reader deployed at:", reader.target, "\n");
 
+  const Swapper = await ethers.getContractFactory("Swapper");
+  const swapper = await Swapper.deploy();
+  await waitAndLogAccumulatedGasUsed(swapper.deploymentTransaction());
+  console.log("Swapper deployed at:", swapper.target, "\n");
+
   await waitAndLogAccumulatedGasUsed(
-    await warehouse.setExchange(exchange.target)
+    await exchange.setAccountFactory(accountFactory.target)
   );
-  console.log("Warehouse: setExchange\n");
+  console.log("Exchange: setAccountFactory\n");
 
   await waitAndLogAccumulatedGasUsed(
     await exchange.setWarehouse(warehouse.target)
   );
   console.log("Exchange: setWarehouse\n");
+
+  await waitAndLogAccumulatedGasUsed(await exchange.setLogger(logger.target));
+  console.log("Exchange: setLogger\n");
+
+  await waitAndLogAccumulatedGasUsed(await exchange.setSwapper(swapper.target));
+  console.log("Exchange: setSwapper\n");
+
+  // todo: feeCollector
+  // await waitAndLogAccumulatedGasUsed(await exchange.setFeeCollector(feeCollector.target));
+  // console.log("Exchange: setFeeCollector\n");
 
   await waitAndLogAccumulatedGasUsed(
     await exchange.registerAdapter(gmxV1Adapter.target)
@@ -110,6 +169,16 @@ async function main() {
     await exchange.setStableToken(USDCe, true)
   );
   console.log("Exchange: setStableToken\n");
+
+  await waitAndLogAccumulatedGasUsed(
+    await exchange.setDefaultStableToken(USDCe)
+  );
+  console.log("Exchange: setDefaultStableToken\n");
+
+  await waitAndLogAccumulatedGasUsed(
+    await warehouse.setExchange(exchange.target)
+  );
+  console.log("Warehouse: setExchange\n");
 }
 
 main().catch((error) => {

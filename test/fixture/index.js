@@ -173,6 +173,14 @@ const deploy = async (noAccount) => {
   exchange = await ethers.getContractAt("Exchange", exchangeProxy.target);
   await exchange.initialize();
 
+  const warehouseImpl = await ethers.deployContract("Warehouse", []);
+  const warehouseProxy = await ethers.deployContract("ERC1967Proxy", [
+    warehouseImpl.target,
+    "0x",
+  ]);
+  warehouse = await ethers.getContractAt("Warehouse", warehouseProxy.target);
+  await warehouse.initialize();
+
   const accountTargetContract = await ethers.deployContract("Account", []);
 
   const accountFactoryImpl = await ethers.deployContract("AccountFactory", []);
@@ -188,14 +196,6 @@ const deploy = async (noAccount) => {
     accountTargetContract.target,
     exchange.target
   );
-
-  const warehouseImpl = await ethers.deployContract("Warehouse", []);
-  const warehouseProxy = await ethers.deployContract("ERC1967Proxy", [
-    warehouseImpl.target,
-    "0x",
-  ]);
-  warehouse = await ethers.getContractAt("Warehouse", warehouseProxy.target);
-  await warehouse.initialize();
 
   logger = await ethers.deployContract("Logger", []);
 
@@ -344,6 +344,7 @@ stable:
         isLong,
         acceptablePrice,
         0,
+        "0x",
         { value: adapterFee }
       );
 
