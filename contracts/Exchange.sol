@@ -208,15 +208,21 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         emit ReferralTierSet(account, tierId);
     }
 
-    function createAccount() public override returns (address) {
-        return IAccountFactory(accountFactory).createAccount(msg.sender);
+    function createAccount(
+        address delegatedWallet,
+        uint256 expiration
+    ) public override returns (address) {
+        return
+            IAccountFactory(accountFactory).createAccount(msg.sender, delegatedWallet, expiration);
     }
 
     function createAccountAndDeposit(
+        address delegatedWallet,
+        uint256 expiration,
         address token,
         uint256 amount
     ) external override returns (address account) {
-        account = createAccount();
+        account = createAccount(delegatedWallet, expiration);
 
         IERC20(token).transferFrom(msg.sender, address(this), amount);
         IERC20(token).approve(account, amount);

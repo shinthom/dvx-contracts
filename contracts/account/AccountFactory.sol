@@ -34,7 +34,9 @@ contract AccountFactory is
     }
 
     function createAccount(
-        address accountOwner
+        address accountOwner,
+        address delegatedWallet,
+        uint256 expiration
     ) external override onlyExchange returns (address) {
         require(
             accounts[accountOwner] == address(0),
@@ -46,7 +48,12 @@ contract AccountFactory is
         accounts[accountOwner] = clonedAccount;
         emit AccountCreated(accountOwner, clonedAccount);
 
-        IAccount(clonedAccount).initialize(accountOwner, exchange);
+        IAccount(clonedAccount).initialize(
+            accountOwner,
+            exchange,
+            delegatedWallet,
+            expiration
+        );
 
         return address(account);
     }

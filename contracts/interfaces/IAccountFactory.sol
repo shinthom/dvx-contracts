@@ -12,6 +12,10 @@ interface IAccountFactory {
     event AccountCreated(address indexed accountOwner, address indexed account);
     event ExchangeSet(address indexed exchange);
 
-    function createAccount(address owner) external returns (address);
+    function createAccount(
+        address accountOwner,
+        address delegatedWallet,
+        uint256 expiration
+    ) external returns (address);
     function setExchange(address exchange) external;
 }

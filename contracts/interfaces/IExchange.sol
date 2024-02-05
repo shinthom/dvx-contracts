@@ -82,8 +82,13 @@ interface IExchange {
     function setTier(uint8 tierId, uint256 discountRate) external;
     function setReferralTier(address account, uint8 tierId) external;
 
-    function createAccount() external returns (address account);
+    function createAccount(
+        address delegatedWallet,
+        uint256 expiration
+    ) external returns (address account);
     function createAccountAndDeposit(
+        address delegatedWallet,
+        uint256 expiration,
         address token,
         uint256 amount
     ) external returns (address account);

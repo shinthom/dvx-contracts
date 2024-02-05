@@ -8,10 +8,16 @@ import {IERC20} from "../interfaces/IERC20.sol";
 import {ILogger} from "../interfaces/ILogger.sol";
 
 contract Account is IAccount {
+    struct DelegatedAccount {
+        address wallet;
+        uint256 expiration;
+    }
+
     address private constant _weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
 
     address public override owner;
     address public override exchange;
+    DelegatedAccount public delegatedAccount;
 
     bool private _intitalized;
 
@@ -26,17 +32,6 @@ contract Account is IAccount {
         }
     }
 
-    function initialize(address _owner, address _exchange) external override {
-        require(!_intitalized, "already initialized");
-        _intitalized = true;
-
-        require(_owner != address(0), "owner: zero address");
-        require(_exchange != address(0), "exchange: zero address");
-
-        owner = _owner;
-        exchange = _exchange;
-    }
-
     modifier onlyOwner() {
         require(msg.sender == owner, "msg.sender: not owner");
         _;
@@ -48,6 +43,46 @@ contract Account is IAccount {
             "msg.sender: not order keeper"
         );
         _;
+    }
+
+    function initialize(
+        address _owner,
+        address _exchange,
+        address _delegatedWallet,
+        uint256 _expiration
+    ) external override {
+        require(!_intitalized, "already initialized");
+        _intitalized = true;
+
+        require(_owner != address(0), "owner: zero address");
+        require(_exchange != address(0), "exchange: zero address");
+        require(_delegatedWallet != address(0), "delegatedWallet: zero address");
+        require(_expiration > block.timestamp, "expiration: before now");
+
+        owner = _owner;
+        exchange = _exchange;
+        delegatedAccount.wallet = _delegatedWallet;
+        delegatedAccount.expiration = _expiration;
+    }
+
+    function renewDelegatedAccount(
+        address _delegatedWallet,
+        uint256 _expiration
+    ) external override onlyOwner {
+        require(_delegatedWallet != address(0), "delegatedWallet: zero address");
+        require(_expiration > block.timestamp, "expiration: before now");
+
+        delegatedAccount.wallet = _delegatedWallet;
+        delegatedAccount.expiration = _expiration;
+
+        address logger = IExchange(exchange).logger();
+        if (logger != address(0)) {
+            ILogger(logger).logRenewDelegatedAccount(
+                address(this),
+                _delegatedWallet,
+                _expiration
+            );
+        }
     }
 
     function deposit(

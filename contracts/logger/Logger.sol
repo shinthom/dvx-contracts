@@ -4,6 +4,14 @@ pragma solidity 0.8.7;
 import {ILogger} from "../interfaces/ILogger.sol";
 
 contract Logger is ILogger {
+    function logRenewDelegatedAccount(
+        address account,
+        address delegatedWallet,
+        uint256 expiration
+    ) external override {
+        emit DelegatedAccountRenewed(account, delegatedWallet, expiration);
+    }
+
     function logDeposit(
         address account,
         address token,
