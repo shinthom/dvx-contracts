@@ -53,14 +53,16 @@ interface ILogger {
         address adapter,
         address collateral,
         address index,
-        uint256 collateralAmount
+        uint256 collateralAmount,
+        bool isLong
     );
     event CollateralDecreased(
         address indexed account,
         address adapter,
         address collateral,
         address index,
-        uint256 collateralAmount
+        uint256 collateralAmount,
+        bool isLong
     );
 
     event AcmmMarginAdded(
@@ -127,14 +129,16 @@ interface ILogger {
         address adapter,
         address collateral,
         address index,
-        uint256 collateralAmount
+        uint256 collateralAmount,
+        bool isLong
     ) external;
     function logDecreaseCollateral(
         address account,
         address adapter,
         address collateral,
         address index,
-        uint256 collateralAmount
+        uint256 collateralAmount,
+        bool isLong
     ) external;
 
     function logAddAcmmMargin(

@@ -60,14 +60,16 @@ abstract contract BaseAdapter is IAdapter {
         address adapter,
         address collateral,
         address index,
-        uint256 collateralAmount
+        uint256 collateralAmount,
+        bool isLong
     ) internal {
         ILogger(_logger).logIncreaseCollateral(
             account,
             adapter,
             collateral,
             index,
-            collateralAmount
+            collateralAmount,
+            isLong
         );
     }
 
@@ -76,14 +78,16 @@ abstract contract BaseAdapter is IAdapter {
         address adapter,
         address collateral,
         address index,
-        uint256 collateralAmount
+        uint256 collateralAmount,
+        bool isLong
     ) internal {
         ILogger(_logger).logDecreaseCollateral(
             account,
             adapter,
             collateral,
             index,
-            collateralAmount
+            collateralAmount,
+            isLong
         );
     }
 

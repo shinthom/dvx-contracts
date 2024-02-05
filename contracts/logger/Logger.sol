@@ -87,14 +87,16 @@ contract Logger is ILogger {
         address adapter,
         address collateral,
         address index,
-        uint256 collateralAmount
+        uint256 collateralAmount,
+        bool isLong
     ) external override {
         emit CollateralIncreased(
             account,
             adapter,
             collateral,
             index,
-            collateralAmount
+            collateralAmount,
+            isLong
         );
     }
 
@@ -103,14 +105,16 @@ contract Logger is ILogger {
         address adapter,
         address collateral,
         address index,
-        uint256 collateralAmount
+        uint256 collateralAmount,
+        bool isLong
     ) external override {
         emit CollateralDecreased(
             account,
             adapter,
             collateral,
             index,
-            collateralAmount
+            collateralAmount,
+            isLong
         );
     }
 

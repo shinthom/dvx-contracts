@@ -310,7 +310,8 @@ contract GmxV1Adapter is BaseAdapter {
             _this,
             collateral,
             index,
-            collateralAmount
+            collateralAmount,
+            isLong
         );
     }
 
@@ -342,7 +343,8 @@ contract GmxV1Adapter is BaseAdapter {
             _this,
             collateral,
             index,
-            collateralAmount
+            collateralAmount,
+            isLong
         );
     }
 

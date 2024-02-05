@@ -324,7 +324,8 @@ contract MuxAdapter is BaseAdapter {
             _this,
             collateral,
             index,
-            collateralAmount
+            collateralAmount,
+            isLong
         );
     }
 
@@ -359,7 +360,8 @@ contract MuxAdapter is BaseAdapter {
             _this,
             collateral,
             index,
-            collateralAmount
+            collateralAmount,
+            isLong
         );
     }
 
