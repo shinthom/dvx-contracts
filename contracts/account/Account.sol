@@ -8,10 +8,7 @@ import {IERC20} from "../interfaces/IERC20.sol";
 import {ILogger} from "../interfaces/ILogger.sol";
 
 contract Account is IAccount {
-    struct DelegatedAccount {
-        address wallet;
-        uint256 expiration;
-    }
+    uint256 private constant chainIdAdjustedV = 35 + 42161 * 2;
 
     address private constant _weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
 
@@ -41,6 +38,14 @@ contract Account is IAccount {
         require(
             IExchange(exchange).isOrderKeeper(msg.sender),
             "msg.sender: not order keeper"
+        );
+        _;
+    }
+
+    modifier onlyOwnerOrRelayer() {
+        require(
+            msg.sender == owner || IExchange(exchange).isRelayer(msg.sender),
+            "msg.sender: not owner or relayer"
         );
         _;
     }
@@ -88,9 +93,26 @@ contract Account is IAccount {
     function deposit(
         address token,
         uint256 amount,
-        uint256 executionFee
-    ) external virtual override onlyOwner {
-        _deposit(token, amount, executionFee);
+        uint256 executionFee,
+        bytes calldata signature
+    ) external virtual override onlyOwnerOrRelayer {
+        if (msg.sender != owner) {
+            require(
+                _verifySignature(
+                    delegatedAccount.wallet,
+                    keccak256(
+                        abi.encodePacked(
+                            token,
+                            amount,
+                            executionFee
+                        )),
+                    signature
+                ),
+                "signature: invalid"
+            );
+        }
+
+        _deposit(token, amount, executionFee, signature);
     }
 
     function deposit(
@@ -99,24 +121,45 @@ contract Account is IAccount {
         uint8 v,
         bytes32 r,
         bytes32 s,
-        uint256 executionFee
-    ) external virtual override onlyOwner {
+        uint256 executionFee,
+        bytes calldata signature
+    ) external virtual override onlyOwnerOrRelayer {
+        if (msg.sender != owner) {
+            require(
+                _verifySignature(
+                    delegatedAccount.wallet,
+                    keccak256(
+                        abi.encodePacked(
+                            token,
+                            amount,
+                            v,
+                            r,
+                            s,
+                            executionFee
+                        )),
+                    signature
+                ),
+                "signature: invalid"
+            );
+        }
+
         IERC20(token).permit(
-            msg.sender,
+            owner,
             address(this),
             amount,
-            type(uint256).max,
+            type(uint256).max, // todo: test
             v,
             r,
             s
         );
-        _deposit(token, amount, executionFee);
+        _deposit(token, amount, executionFee, signature);
     }
 
     function _deposit(
         address token,
         uint256 amount,
-        uint256 executionFee
+        uint256 executionFee,
+        bytes calldata signature
     ) private {
         require(amount != 0, "amount: zero");
 
@@ -135,8 +178,25 @@ contract Account is IAccount {
     function withdraw(
         address token,
         uint256 amount,
-        uint256 executionFee
-    ) external virtual override onlyOwner {
+        uint256 executionFee,
+        bytes calldata signature
+    ) external virtual override onlyOwnerOrRelayer {
+        if (msg.sender != owner) {
+            require(
+                _verifySignature(
+                    delegatedAccount.wallet,
+                    keccak256(
+                        abi.encodePacked(
+                            token,
+                            amount,
+                            executionFee
+                        )),
+                    signature
+                ),
+                "signature: invalid"
+            );
+        }
+
         require(amount != 0, "amount: zero");
         require(
             amount <= getWithdrawableBalance(token),
@@ -165,8 +225,26 @@ contract Account is IAccount {
         address tokenIn,
         address tokenOut,
         uint256 amountIn,
-        uint256 executionFee
-    ) external virtual override onlyOwner returns (uint256 amountOut) {
+        uint256 executionFee,
+        bytes calldata signature
+    ) external virtual override onlyOwnerOrRelayer returns (uint256 amountOut) {
+        if (msg.sender != owner) {
+            require(
+                _verifySignature(
+                    delegatedAccount.wallet,
+                    keccak256(
+                        abi.encodePacked(
+                            tokenIn,
+                            tokenOut,
+                            amountIn,
+                            executionFee
+                        )),
+                    signature
+                ),
+                "signature: invalid"
+            );
+        }
+
         require(
             amountIn <= getWithdrawableBalance(tokenIn),
             "amountIn: greater than withdrawable balance"
@@ -200,8 +278,30 @@ contract Account is IAccount {
         uint256 size,
         bool isLong,
         uint256 acceptablePrice,
-        uint256 executionFee
+        uint256 executionFee,
+        bytes calldata signature
     ) external payable virtual override onlyOwner {
+        if (msg.sender != owner) {
+            require(
+                _verifySignature(
+                    delegatedAccount.wallet,
+                    keccak256(
+                        abi.encodePacked(
+                            adapter,
+                            collateral,
+                            index,
+                            collateralAmount,
+                            size,
+                            isLong,
+                            acceptablePrice,
+                            executionFee
+                        )),
+                    signature
+                ),
+                "signature: invalid"
+            );
+        }
+
         require(
             collateralAmount <= getWithdrawableBalance(collateral),
             "collateralAmount: greater than withdrawable balance"
@@ -241,7 +341,29 @@ contract Account is IAccount {
         bool isLong,
         uint256 acceptablePrice,
         uint256[] calldata executionFees
+        // bytes calldata signature (todo: stack too deep)
     ) external payable virtual override onlyOwner {
+        // if (msg.sender != owner) {
+        //     require(
+        //         _verifySignature(
+        //             delegatedAccount.wallet,
+        //             keccak256(
+        //                 abi.encodePacked(
+        //                     adapters,
+        //                     collateral,
+        //                     index,
+        //                     collateralAmounts,
+        //                     sizes,
+        //                     isLong,
+        //                     acceptablePrice,
+        //                     executionFees
+        //                 )),
+        //             signature
+        //         ),
+        //         "signature: invalid"
+        //     );
+        // }
+
         require(
             adapters.length == collateralAmounts.length &&
                 adapters.length == sizes.length &&
@@ -287,8 +409,28 @@ contract Account is IAccount {
         address index,
         bool isLong,
         uint256 size,
-        uint256 executionFee
-    ) external payable virtual override onlyOwner {
+        uint256 executionFee,
+        bytes calldata signature
+    ) external payable virtual override onlyOwnerOrRelayer {
+        if (msg.sender != owner) {
+            require(
+                _verifySignature(
+                    delegatedAccount.wallet,
+                    keccak256(
+                        abi.encodePacked(
+                            adapter,
+                            collateral,
+                            index,
+                            isLong,
+                            size,
+                            executionFee
+                        )),
+                    signature
+                ),
+                "signature: invalid"
+            );
+        }
+
         if (executionFee > 0) {
             _feeDebts[collateral] += executionFee;
         }
@@ -310,8 +452,29 @@ contract Account is IAccount {
         bool isLong,
         address tokenIn,
         uint256 amountIn,
-        uint256 executionFee
-    ) external payable virtual override onlyOwner {
+        uint256 executionFee,
+        bytes calldata signature
+    ) external payable virtual override onlyOwnerOrRelayer {
+        if (msg.sender != owner) {
+            require(
+                _verifySignature(
+                    delegatedAccount.wallet,
+                    keccak256(
+                        abi.encodePacked(
+                            adapter,
+                            collateral,
+                            index,
+                            isLong,
+                            tokenIn,
+                            amountIn,
+                            executionFee
+                        )),
+                    signature
+                ),
+                "signature: invalid"
+            );
+        }
+
         require(
             amountIn <= getWithdrawableBalance(tokenIn),
             "tokenIn: greater than withdrawable balance"
@@ -354,8 +517,28 @@ contract Account is IAccount {
         address index,
         bool isLong,
         uint256 collateralAmount,
-        uint256 executionFee
-    ) external payable virtual override onlyOwner {
+        uint256 executionFee,
+        bytes calldata signature
+    ) external payable virtual override onlyOwnerOrRelayer {
+        if (msg.sender != owner) {
+            require(
+                _verifySignature(
+                    delegatedAccount.wallet,
+                    keccak256(
+                        abi.encodePacked(
+                            adapter,
+                            collateral,
+                            index,
+                            isLong,
+                            collateralAmount,
+                            executionFee
+                        )),
+                    signature
+                ),
+                "signature: invalid"
+            );
+        }
+
         if (executionFee > 0) {
             _feeDebts[collateral] += executionFee;
         }
@@ -483,8 +666,30 @@ contract Account is IAccount {
         bool isLong,
         uint256 triggerPrice,
         uint256 acceptablePrice,
-        uint256 executionFee
-    ) external payable virtual override onlyOwner {
+        uint256 executionFee,
+        bytes calldata signature
+    ) external payable virtual override onlyOwnerOrRelayer {
+        if (msg.sender != owner) {
+            require(
+                _verifySignature(
+                    delegatedAccount.wallet,
+                    keccak256(
+                        abi.encodePacked(
+                            collateral,
+                            index,
+                            collateralAmount,
+                            size,
+                            isLong,
+                            triggerPrice,
+                            acceptablePrice,
+                            executionFee
+                        )),
+                    signature
+                ),
+                "signature: invalid"
+            );
+        }
+
         require(
             collateralAmount <= getWithdrawableBalance(collateral),
             "collateralAmount: greater than withdrawable balance"
@@ -511,8 +716,24 @@ contract Account is IAccount {
 
     function cancelLimitOrder(
         uint256 limitOrderId,
-        uint256 executionFee
-    ) external payable virtual override onlyOwner {
+        uint256 executionFee,
+        bytes calldata signature
+    ) external payable virtual override onlyOwnerOrRelayer {
+        if (msg.sender != owner) {
+            require(
+                _verifySignature(
+                    delegatedAccount.wallet,
+                    keccak256(
+                        abi.encodePacked(
+                            limitOrderId,
+                            executionFee
+                        )),
+                    signature
+                ),
+                "signature: invalid"
+            );
+        }
+
         IWarehouse.LimitOrder memory limitOrder
             = IExchange(exchange).cancelLimitOrder(address(this), limitOrderId); // prettier-ignore
 
@@ -604,7 +825,7 @@ contract Account is IAccount {
         uint256 triggerPrice,
         uint256 acceptablePrice,
         uint256 executionFee
-    ) external payable virtual override onlyOwner {
+    ) external payable virtual override onlyOwnerOrRelayer {
         if (executionFee > 0) {
             _feeDebts[collateral] += executionFee;
         }
@@ -627,7 +848,7 @@ contract Account is IAccount {
         bytes32 positionKey,
         uint256 triggerOrderId,
         uint256 executionFee
-    ) external virtual override onlyOwner {
+    ) external virtual override onlyOwnerOrRelayer {
         IWarehouse.TriggerOrder memory triggerOrder = IExchange(exchange)
             .cancelTriggerOrder(address(this), positionKey, triggerOrderId);
 
@@ -807,5 +1028,39 @@ contract Account is IAccount {
     function _collectProtocolFee(address token, uint256 amount) private {
         IERC20(token).transfer(exchange, amount);
         IExchange(exchange).collectProtocolFee(address(this), token, amount);
+    }
+
+    function _verifySignature(address signer, bytes32 message, bytes memory signature) private view returns (bool) {
+        require(
+            delegatedAccount.expiration > block.timestamp,
+            "delegatedAccount: expired"
+        );
+
+        return _recoverSigner(message, signature) == signer;
+    }
+
+    function _recoverSigner(bytes32 ethSignedMessageHash, bytes memory signature) private pure returns (address) {
+        (bytes32 r, bytes32 s, uint8 v) = _splitSignature(signature);
+        uint256 v_uint256 = uint256(v);
+
+        if (v_uint256 < 27) {
+            v_uint256 += 27;
+        }
+
+        if (v_uint256 != 27 && v_uint256 != 28) {
+            v_uint256 += (chainIdAdjustedV - 27);
+        }
+
+        return ecrecover(ethSignedMessageHash, uint8(v_uint256), r, s);
+    }
+
+    function _splitSignature(bytes memory sig) private pure returns (bytes32 r, bytes32 s, uint8 v) {
+        require(sig.length == 65, "Invalid signature length");
+
+        assembly {
+            r := mload(add(sig, 32))
+            s := mload(add(sig, 64))
+            v := byte(0, mload(add(sig, 96)))
+        }
     }
 }

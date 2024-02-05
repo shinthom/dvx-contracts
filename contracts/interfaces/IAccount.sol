@@ -5,6 +5,11 @@ import {IWarehouse} from "./IWarehouse.sol";
 
 // prettier-ignore
 interface IAccount {
+    struct DelegatedAccount {
+        address wallet;
+        uint256 expiration;
+    }
+
     function owner() external view returns (address);
     function exchange() external view returns (address);
 
@@ -19,21 +24,33 @@ interface IAccount {
         uint256 _expiration
     ) external;
 
-    function deposit(address token, uint256 amount, uint256 executionFee) external;
+    function deposit(
+        address token,
+        uint256 amount,
+        uint256 executionFee,
+        bytes calldata signature
+    ) external;
     function deposit(
         address token,
         uint256 amount,
         uint8 v,
         bytes32 r,
         bytes32 s,
-        uint256 executionFee
+        uint256 executionFee,
+        bytes calldata signature
     ) external;
-    function withdraw(address token, uint256 amount, uint256 executionFee) external;
+    function withdraw(
+        address token,
+        uint256 amount,
+        uint256 executionFee,
+        bytes calldata signature
+    ) external;
     function swap(
         address tokenIn,
         address tokenOut,
         uint256 amountIn,
-        uint256 executionFee
+        uint256 executionFee,
+        bytes calldata signature
     ) external returns (uint256 amountOut);
 
     function increasePosition(
@@ -44,7 +61,8 @@ interface IAccount {
         uint256 size,
         bool isLong,
         uint256 acceptablePrice,
-        uint256 executionFee
+        uint256 executionFee,
+        bytes calldata signature
     ) external payable;
     function increasePositionMulti(
         address[] calldata adapters,
@@ -55,6 +73,7 @@ interface IAccount {
         bool isLong,
         uint256 acceptablePrice,
         uint256[] calldata executionFees
+        // bytes calldata signature (todo: stack too deep)
     ) external payable;
     function decreasePosition(
         address adapter,
@@ -62,7 +81,8 @@ interface IAccount {
         address index,
         bool isLong,
         uint256 size,
-        uint256 executionFee
+        uint256 executionFee,
+        bytes calldata signature
     ) external payable;
     function increaseCollateral(
         address adapter,
@@ -71,7 +91,8 @@ interface IAccount {
         bool isLong,
         address tokenIn,
         uint256 amountIn,
-        uint256 executionFee
+        uint256 executionFee,
+        bytes calldata signature
     ) external payable;
     function decreaseCollateral(
         address adapter,
@@ -79,7 +100,8 @@ interface IAccount {
         address index,
         bool isLong,
         uint256 collateralAmount,
-        uint256 executionFee
+        uint256 executionFee,
+        bytes calldata signature
     ) external payable;
 
     function addAcmmMargin(
@@ -107,11 +129,13 @@ interface IAccount {
         bool isLong,
         uint256 triggerPrice,
         uint256 acceptablePrice,
-        uint256 executionFee
+        uint256 executionFee,
+        bytes calldata signature
     ) external payable;
     function cancelLimitOrder(
         uint256 limitOrderId,
-        uint256 executionFee
+        uint256 executionFee,
+        bytes calldata signature
     ) external payable;
     function executeLimitOrder(
         uint256 limitOrderId,
