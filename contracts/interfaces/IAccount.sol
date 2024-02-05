@@ -64,17 +64,6 @@ interface IAccount {
         uint256 executionFee,
         bytes calldata signature
     ) external payable;
-    function increasePositionMulti(
-        address[] calldata adapters,
-        address collateral,
-        address index,
-        uint256[] calldata collateralAmounts,
-        uint256[] calldata sizes,
-        bool isLong,
-        uint256 acceptablePrice,
-        uint256[] calldata executionFees
-        // bytes calldata signature (todo: stack too deep)
-    ) external payable;
     function decreasePosition(
         address adapter,
         address collateral,
