@@ -25,6 +25,7 @@ interface IExchange {
 
     event FeeCollectorSet(address indexed feeCollector);
     event OrderKeeperSet(address indexed orderKeeper, bool isActive);
+    event RelayerSet(address indexed relayer, bool isActive);
 
     event PositionFeeRateSet(uint256 indexed feeRate);
     event SwapFeeRateSet(uint256 indexed feeRate);
@@ -49,6 +50,7 @@ interface IExchange {
 
     function feeCollector() external returns (address);
     function isOrderKeeper(address account) external view returns (bool);
+    function isRelayer(address account) external view returns (bool);
 
     function positionFeeRate() external view returns (uint256);
     function swapFeeRate() external view returns (uint256);
@@ -70,6 +72,7 @@ interface IExchange {
 
     function setFeeCollector(address _feeCollector) external;
     function setOrderKeeper(address account, bool isActive) external;
+    function setRelayer(address relayer, bool isActive) external;
 
     function setPositionFeeRate(uint256 feeRate) external;
     function setSwapFeeRate(uint256 feeRate) external;

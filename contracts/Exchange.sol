@@ -31,6 +31,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
     address public override feeCollector;
     mapping(address => bool) public override isOrderKeeper;
+    mapping(address => bool) public override isRelayer;
 
     uint256 public override positionFeeRate;
     uint256 public override swapFeeRate;
@@ -144,6 +145,16 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
         isOrderKeeper[orderKeeper] = isActive;
         emit OrderKeeperSet(orderKeeper, isActive);
+    }
+
+    function setRelayer(
+        address relayer,
+        bool isActive
+    ) external override onlyOwner {
+        require(relayer != address(0), "exchange: zero address");
+
+        isRelayer[relayer] = isActive;
+        emit RelayerSet(relayer, isActive);
     }
 
     function setPositionFeeRate(uint256 _feeRate) external override onlyOwner {
