@@ -11,6 +11,14 @@ interface IAccount {
     function initialize(address _owner, address _exchange) external;
 
     function deposit(address token, uint256 amount, uint256 executionFee) external;
+    function deposit(
+        address token,
+        uint256 amount,
+        uint8 v,
+        bytes32 r,
+        bytes32 s,
+        uint256 executionFee
+    ) external;
     function withdraw(address token, uint256 amount, uint256 executionFee) external;
     function swap(
         address tokenIn,

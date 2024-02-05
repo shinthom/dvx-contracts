@@ -12,6 +12,16 @@ interface IERC20 {
         uint256 amount
     ) external returns (bool);
 
+    function permit(
+        address owner,
+        address spender,
+        uint256 amount,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+
     function deposit() external payable; // weth
     function withdraw(uint256 amount) external; // weth
 

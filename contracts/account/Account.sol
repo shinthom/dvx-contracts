@@ -55,6 +55,34 @@ contract Account is IAccount {
         uint256 amount,
         uint256 executionFee
     ) external virtual override onlyOwner {
+        _deposit(token, amount, executionFee);
+    }
+
+    function deposit(
+        address token,
+        uint256 amount,
+        uint8 v,
+        bytes32 r,
+        bytes32 s,
+        uint256 executionFee
+    ) external virtual override onlyOwner {
+        IERC20(token).permit(
+            msg.sender,
+            address(this),
+            amount,
+            type(uint256).max,
+            v,
+            r,
+            s
+        );
+        _deposit(token, amount, executionFee);
+    }
+
+    function _deposit(
+        address token,
+        uint256 amount,
+        uint256 executionFee
+    ) private {
         require(amount != 0, "amount: zero");
 
         if (executionFee > 0) {
