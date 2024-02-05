@@ -311,6 +311,7 @@ stable:
     index,
     collateralAmount,
     size,
+    acceptablePrice,
     isLong
   ) => {
     const adapterFee = await adapter.getMinExecutionFee();
@@ -323,6 +324,7 @@ stable:
         collateralAmount,
         size,
         isLong,
+        acceptablePrice,
         0,
         { value: adapterFee }
       );

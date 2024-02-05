@@ -52,30 +52,30 @@ async function main() {
   const usdcDepositAmount = ethers.parseUnits("1000", 6);
 
   await weth.connect(owner).approve(account.target, wethDepositAmount);
-  await account.connect(owner).deposit(WETH, wethDepositAmount);
+  await account.connect(owner).deposit(WETH, wethDepositAmount, 0);
 
   await wbtc.connect(owner).approve(account.target, wbtcDepositAmount);
-  await account.connect(owner).deposit(WBTC, wbtcDepositAmount);
+  await account.connect(owner).deposit(WBTC, wbtcDepositAmount, 0);
 
   await usdc.connect(owner).approve(account.target, usdcDepositAmount);
-  await account.connect(owner).deposit(USDC, usdcDepositAmount);
+  await account.connect(owner).deposit(USDC, usdcDepositAmount, 0);
 
   console.log("`deposit`");
   console.log("-  eth: " + (await account.getBalance(WETH)));
   console.log("- wbtc: " + (await account.getBalance(WBTC)));
   console.log("- usdc: " + (await account.getBalance(USDC)));
 
-  await account.connect(owner).withdraw(WETH, wethDepositAmount / 2n);
-  await account.connect(owner).withdraw(WBTC, wbtcDepositAmount / 2n);
-  await account.connect(owner).withdraw(USDC, usdcDepositAmount / 2n);
+  await account.connect(owner).withdraw(WETH, wethDepositAmount / 2n, 0);
+  await account.connect(owner).withdraw(WBTC, wbtcDepositAmount / 2n, 0);
+  await account.connect(owner).withdraw(USDC, usdcDepositAmount / 2n, 0);
 
   console.log("\n`withdraw`");
   console.log("-  eth: " + (await account.getBalance(WETH)));
   console.log("- wbtc: " + (await account.getBalance(WBTC)));
   console.log("- usdc: " + (await account.getBalance(USDC)));
 
-  await account.connect(owner).swap(WETH, USDC, wethDepositAmount / 2n);
-  await account.connect(owner).swap(WBTC, USDC, wbtcDepositAmount / 2n);
+  await account.connect(owner).swap(WETH, USDC, wethDepositAmount / 2n, 0);
+  await account.connect(owner).swap(WBTC, USDC, wbtcDepositAmount / 2n, 0);
   console.log("\n`swap`");
   console.log("-  eth: " + (await account.getBalance(WETH)));
   console.log("- wbtc: " + (await account.getBalance(WBTC)));

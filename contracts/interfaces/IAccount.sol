@@ -24,6 +24,7 @@ interface IAccount {
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
+        uint256 acceptablePrice,
         uint256 executionFee
     ) external payable;
     function increasePositionMulti(
@@ -33,6 +34,7 @@ interface IAccount {
         uint256[] calldata collateralAmounts,
         uint256[] calldata sizes,
         bool isLong,
+        uint256 acceptablePrice,
         uint256[] calldata executionFees
     ) external payable;
     function decreasePosition(

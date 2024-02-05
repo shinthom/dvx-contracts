@@ -131,6 +131,7 @@ contract Account is IAccount {
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
+        uint256 acceptablePrice,
         uint256 executionFee
     ) external payable virtual override onlyOwner {
         require(
@@ -158,6 +159,7 @@ contract Account is IAccount {
             collateralAmount,
             size,
             isLong,
+            acceptablePrice,
             executionFee
         );
     }
@@ -169,6 +171,7 @@ contract Account is IAccount {
         uint256[] memory collateralAmounts,
         uint256[] calldata sizes,
         bool isLong,
+        uint256 acceptablePrice,
         uint256[] calldata executionFees
     ) external payable virtual override onlyOwner {
         require(
@@ -204,6 +207,7 @@ contract Account is IAccount {
                 collateralAmounts[i],
                 sizes[i],
                 isLong,
+                acceptablePrice,
                 executionFees[i]
             );
         }
@@ -469,6 +473,7 @@ contract Account is IAccount {
             limitOrder.collateralAmount,
             limitOrder.size,
             limitOrder.isLong,
+            limitOrder.acceptablePrice,
             0 // executionFee
         );
     }
@@ -515,6 +520,7 @@ contract Account is IAccount {
                 collateralAmounts[i],
                 sizes[i],
                 limitOrder.isLong,
+                limitOrder.acceptablePrice,
                 0 // executionFee
             );
         }
@@ -611,6 +617,7 @@ contract Account is IAccount {
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
+        uint256 acceptablePrice,
         uint256 executionFee
     ) private {
         require(
@@ -632,12 +639,13 @@ contract Account is IAccount {
 
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
-                "increasePosition(uint256,address,address,uint256,uint256,bool)",
+                "increasePosition(uint256,address,address,uint256,uint256,uint256,bool)",
                 marketOrderId,
                 collateral,
                 index,
                 collateralAmount,
                 size,
+                acceptablePrice,
                 isLong
             )
         );

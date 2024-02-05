@@ -56,86 +56,86 @@ async function main() {
   const ethSize = ethers.parseEther("10");
   const wbtcSize = ethers.parseUnits("1", 8);
 
-  await increasePosition(muxAdapter, WETH, WETH, ethCollateralAmount, ethSize, true); // prettier-ignore
+  await increasePosition(muxAdapter, WETH, WETH, ethCollateralAmount, ethSize, 0, true); // prettier-ignore
   console.log(await muxAdapter.getPosition(account.target, WETH, WETH, true)); // prettier-ignore
 
-  await increasePosition(muxAdapter, WBTC, WETH, wbtcCollateralAmount, ethSize, true); // prettier-ignore
+  await increasePosition(muxAdapter, WBTC, WETH, wbtcCollateralAmount, ethSize, 0, true); // prettier-ignore
   console.log(await muxAdapter.getPosition(account.target, WBTC, WETH, true)); // prettier-ignore
 
-  await increasePosition(muxAdapter, USDC, WETH, usdcCollateralAmount, ethSize, true); // prettier-ignore
+  await increasePosition(muxAdapter, USDC, WETH, usdcCollateralAmount, ethSize, 0, true); // prettier-ignore
   console.log(await muxAdapter.getPosition(account.target, USDC, WETH, true)); // prettier-ignore
 
-  await increasePosition(muxAdapter, WETH, WBTC, ethCollateralAmount, wbtcSize, true); // prettier-ignore
+  await increasePosition(muxAdapter, WETH, WBTC, ethCollateralAmount, wbtcSize, 0, true); // prettier-ignore
   console.log(await muxAdapter.getPosition(account.target, WETH, WBTC, true)); // prettier-ignore
 
-  await increasePosition(muxAdapter, WBTC, WBTC, wbtcCollateralAmount, wbtcSize, true); // prettier-ignore
+  await increasePosition(muxAdapter, WBTC, WBTC, wbtcCollateralAmount, wbtcSize, 0, true); // prettier-ignore
   console.log(await muxAdapter.getPosition(account.target, WBTC, WBTC, true)); // prettier-ignore
 
-  await increasePosition(muxAdapter, USDC, WBTC, usdcCollateralAmount, wbtcSize, true); // prettier-ignore
+  await increasePosition(muxAdapter, USDC, WBTC, usdcCollateralAmount, wbtcSize, 0, true); // prettier-ignore
   console.log(await muxAdapter.getPosition(account.target, USDC, WBTC, true)); // prettier-ignore
 
-  await increasePosition(muxAdapter, WETH, WETH, ethCollateralAmount, ethSize, false); // prettier-ignore
+  await increasePosition(muxAdapter, WETH, WETH, ethCollateralAmount, ethSize, 0, false); // prettier-ignore
   console.log(await muxAdapter.getPosition(account.target, WETH, WETH, false)); // prettier-ignore
 
-  await increasePosition(muxAdapter, WBTC, WETH, wbtcCollateralAmount, ethSize, false); // prettier-ignore
+  await increasePosition(muxAdapter, WBTC, WETH, wbtcCollateralAmount, ethSize, 0, false); // prettier-ignore
   console.log(await muxAdapter.getPosition(account.target, WBTC, WETH, false)); // prettier-ignore
 
-  await increasePosition(muxAdapter, USDC, WETH, usdcCollateralAmount, ethSize, false); // prettier-ignore
+  await increasePosition(muxAdapter, USDC, WETH, usdcCollateralAmount, ethSize, 0, false); // prettier-ignore
   console.log(await muxAdapter.getPosition(account.target, USDC, WETH, false)); // prettier-ignore
 
-  await increasePosition(muxAdapter, WETH, WBTC, ethCollateralAmount, wbtcSize, false); // prettier-ignore
+  await increasePosition(muxAdapter, WETH, WBTC, ethCollateralAmount, wbtcSize, 0, false); // prettier-ignore
   console.log(await muxAdapter.getPosition(account.target, WETH, WBTC, false)); // prettier-ignore
 
-  await increasePosition(muxAdapter, WBTC, WBTC, wbtcCollateralAmount, wbtcSize, false); // prettier-ignore
+  await increasePosition(muxAdapter, WBTC, WBTC, wbtcCollateralAmount, wbtcSize, 0, false); // prettier-ignore
   console.log(await muxAdapter.getPosition(account.target, WBTC, WBTC, false)); // prettier-ignore
 
-  await increasePosition(muxAdapter, USDC, WBTC, usdcCollateralAmount, wbtcSize, false); // prettier-ignore
+  await increasePosition(muxAdapter, USDC, WBTC, usdcCollateralAmount, wbtcSize, 0, false); // prettier-ignore
   console.log(await muxAdapter.getPosition(account.target, USDC, WBTC, false)); // prettier-ignore
 
-  await increasePosition(gmxV1Adapter, WETH, WETH, ethCollateralAmount, ethSize, true); // prettier-ignore
+  await increasePosition(gmxV1Adapter, WETH, WETH, ethCollateralAmount, ethSize, 0, true); // prettier-ignore
   console.log(await gmxV1Adapter.getPosition(account.target, WETH, WETH, true)); // prettier-ignore
 
-  await increasePosition(gmxV1Adapter, WBTC, WETH, wbtcCollateralAmount, ethSize, true); // prettier-ignore
+  await increasePosition(gmxV1Adapter, WBTC, WETH, wbtcCollateralAmount, ethSize, 0, true); // prettier-ignore
   console.log(await gmxV1Adapter.getPosition(account.target, WETH, WETH, true));
 
-  await increasePosition(gmxV1Adapter, USDC, WETH, usdcCollateralAmount, ethSize, true); // prettier-ignore
+  await increasePosition(gmxV1Adapter, USDC, WETH, usdcCollateralAmount, ethSize, 0, true); // prettier-ignore
   console.log(await gmxV1Adapter.getPosition(account.target, WETH, WETH, true));
 
-  await increasePosition(gmxV1Adapter, WETH, WBTC, ethCollateralAmount, wbtcSize, true); // prettier-ignore
+  await increasePosition(gmxV1Adapter, WETH, WBTC, ethCollateralAmount, wbtcSize, 0, true); // prettier-ignore
   console.log(await gmxV1Adapter.getPosition(account.target, WBTC, WBTC, true));
 
-  await increasePosition(gmxV1Adapter, WBTC, WBTC, wbtcCollateralAmount, wbtcSize, true); // prettier-ignore
+  await increasePosition(gmxV1Adapter, WBTC, WBTC, wbtcCollateralAmount, wbtcSize, 0, true); // prettier-ignore
   console.log(await gmxV1Adapter.getPosition(account.target, WBTC, WBTC, true));
 
-  await increasePosition(gmxV1Adapter, USDC, WBTC, usdcCollateralAmount, wbtcSize, true); // prettier-ignore
+  await increasePosition(gmxV1Adapter, USDC, WBTC, usdcCollateralAmount, wbtcSize, 0, true); // prettier-ignore
   console.log(await gmxV1Adapter.getPosition(account.target, WBTC, WBTC, true));
 
-  await increasePosition(gmxV1Adapter, WETH, WETH, ethCollateralAmount, ethSize, false); // prettier-ignore
+  await increasePosition(gmxV1Adapter, WETH, WETH, ethCollateralAmount, ethSize, 0, false); // prettier-ignore
   console.log(
     await gmxV1Adapter.getPosition(account.target, USDCe, WETH, false)
   );
 
-  await increasePosition(gmxV1Adapter, WBTC, WETH, wbtcCollateralAmount, ethSize, false); // prettier-ignore
+  await increasePosition(gmxV1Adapter, WBTC, WETH, wbtcCollateralAmount, ethSize, 0, false); // prettier-ignore
   console.log(
     await gmxV1Adapter.getPosition(account.target, USDCe, WETH, false)
   );
 
-  await increasePosition(gmxV1Adapter, USDC, WETH, usdcCollateralAmount, ethSize, false); // prettier-ignore
+  await increasePosition(gmxV1Adapter, USDC, WETH, usdcCollateralAmount, ethSize, 0, false); // prettier-ignore
   console.log(
     await gmxV1Adapter.getPosition(account.target, USDC, WETH, false)
   );
 
-  await increasePosition(gmxV1Adapter, WETH, WBTC, ethCollateralAmount, wbtcSize, false); // prettier-ignore
+  await increasePosition(gmxV1Adapter, WETH, WBTC, ethCollateralAmount, wbtcSize, 0, false); // prettier-ignore
   console.log(
     await gmxV1Adapter.getPosition(account.target, USDCe, WBTC, false)
   );
 
-  await increasePosition(gmxV1Adapter, WBTC, WBTC, wbtcCollateralAmount, wbtcSize, false); // prettier-ignore
+  await increasePosition(gmxV1Adapter, WBTC, WBTC, wbtcCollateralAmount, wbtcSize, 0, false); // prettier-ignore
   console.log(
     await gmxV1Adapter.getPosition(account.target, USDCe, WBTC, false)
   );
 
-  await increasePosition(gmxV1Adapter, USDC, WBTC, usdcCollateralAmount, wbtcSize, false); // prettier-ignore
+  await increasePosition(gmxV1Adapter, USDC, WBTC, usdcCollateralAmount, wbtcSize, 0, false); // prettier-ignore
   console.log(
     await gmxV1Adapter.getPosition(account.target, USDC, WBTC, false)
   );
