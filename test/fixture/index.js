@@ -69,6 +69,10 @@ let deployer;
 let owner;
 let other;
 let feeCollector; // todo: deploy feeCollector contract
+// va
+let vaPk;
+let va;
+let vaAddress;
 // gmx accounts
 let impersonatedAdmin;
 let impersonatedGov;
@@ -106,6 +110,10 @@ let swapper;
 let account;
 
 const deploy = async (noAccount) => {
+  vaPk = ethers.Wallet.createRandom().privateKey;
+  va = wallet = new ethers.Wallet(vaPk);
+  vaAddress = va.address;
+
   [deployer, owner, other, orderKeeper, feeCollector] =
     await ethers.getSigners();
   // gmx accounts
@@ -220,7 +228,7 @@ const deploy = async (noAccount) => {
   await warehouse.setExchange(exchange.target);
 
   if (!noAccount) {
-    await exchange.connect(owner).createAccount();
+    await exchange.connect(owner).createAccount(vaAddress, ethers.MaxUint256);
 
     account = await ethers.getContractAt(
       "Account",
