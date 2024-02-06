@@ -660,16 +660,21 @@ contract GmxV1Adapter is BaseAdapter {
             index,
             isLong
         );
+        if (position.size == 0) {
+            return 0;
+        }
 
         uint256 fundingFee = getFundingFee(collateral, index, position.size, position.fundingRate, isLong);
         uint256 totalFees = _calculateTotalFees(position.size, fundingFee);
 
         uint256 liquidationPriceForFees = _getLiquidationPriceFromDelta(
-            totalFees, position.size, position.collateralAmount, position.price, isLong);
+            totalFees, position.size, position.collateralAmount, position.price, isLong
+        );
 
         uint256 maxLeverage = IVault(_vault).maxLeverage();
         uint256 liquidationPriceForMaxLevearge = _getLiquidationPriceFromDelta(
-            position.size * BASIS_POINTS_DIVISOR / maxLeverage, position.size, position.collateralAmount, position.price, isLong);
+            position.size * BASIS_POINTS_DIVISOR / maxLeverage, position.size, position.collateralAmount, position.price, isLong
+        );
 
         uint256 p;
         if (isLong) {

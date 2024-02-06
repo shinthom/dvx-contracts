@@ -649,10 +649,11 @@ contract MuxAdapter is BaseAdapter {
             index,
             isLong
         );
+        if (position.size == 0) {
+            return 0;
+        }
 
-        int256 maintenanceMarginRate = int256(
-            _getMaintenanceMarginRate(index)
-        );
+        int256 maintenanceMarginRate = int256(_getMaintenanceMarginRate(index));
 
         int256 longFactor = isLong ? int256(1e5) : int256(-1e5);
         int256 t = (longFactor - maintenanceMarginRate) * int256(position.size) / 1e5;
