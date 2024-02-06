@@ -656,28 +656,49 @@ contract MuxAdapter is BaseAdapter {
         int256 maintenanceMarginRate = int256(_getMaintenanceMarginRate(index));
 
         int256 longFactor = isLong ? int256(1e5) : int256(-1e5);
-        int256 t = (longFactor - maintenanceMarginRate) * int256(position.size) / 1e5;
+        int256 t = ((longFactor - maintenanceMarginRate) *
+            int256(position.size)) / 1e5;
 
         if (collateral == index) {
-            p = longFactor * int256(position.price) * int256(position.size) / 1e18 / 1e5;
+            p =
+                (longFactor * int256(position.price) * int256(position.size)) /
+                1e18 /
+                1e5;
 
-            int256 fundingFee
-                = int256(getFundingFee(collateral, index, position.size, position.fundingRate, isLong));
+            int256 fundingFee = int256(
+                getFundingFee(
+                    collateral,
+                    index,
+                    position.size,
+                    position.fundingRate,
+                    isLong
+                )
+            );
             p += fundingFee;
 
             p *= 1e18;
             p /= t + int256(position.collateralAmount);
         } else {
-            p = longFactor * int256(position.price) * int256(position.size) / 1e18 / 1e5;
+            p =
+                (longFactor * int256(position.price) * int256(position.size)) /
+                1e18 /
+                1e5;
 
-            int256 fundingFee
-                = int256(getFundingFee(collateral, index, position.size, position.fundingRate, isLong));
+            int256 fundingFee = int256(
+                getFundingFee(
+                    collateral,
+                    index,
+                    position.size,
+                    position.fundingRate,
+                    isLong
+                )
+            );
             p += fundingFee;
 
             int256 collateralPrice = int256(getPrice(collateral, isLong));
-            p -= collateralPrice * int256(position.collateralAmount) / 1e18; // https://github.com/mux-world/mux-protocol/blob/21103d644d4c4c3d4a18dd51182ee981efc94453/contracts/core/Account.sol#L51
+            p -= (collateralPrice * int256(position.collateralAmount)) / 1e18; // https://github.com/mux-world/mux-protocol/blob/21103d644d4c4c3d4a18dd51182ee981efc94453/contracts/core/Account.sol#L51
 
-            p = p * 1e18 / t;
+            p = (p * 1e18) / t;
         }
     }
 

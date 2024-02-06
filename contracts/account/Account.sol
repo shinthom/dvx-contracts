@@ -61,7 +61,10 @@ contract Account is IAccount {
 
         require(_owner != address(0), "owner: zero address");
         require(_exchange != address(0), "exchange: zero address");
-        require(_delegatedWallet != address(0), "delegatedWallet: zero address");
+        require(
+            _delegatedWallet != address(0),
+            "delegatedWallet: zero address"
+        );
         require(_expiration > block.timestamp, "expiration: before now");
 
         owner = _owner;
@@ -74,7 +77,10 @@ contract Account is IAccount {
         address _delegatedWallet,
         uint256 _expiration
     ) external override onlyOwner {
-        require(_delegatedWallet != address(0), "delegatedWallet: zero address");
+        require(
+            _delegatedWallet != address(0),
+            "delegatedWallet: zero address"
+        );
         require(_expiration > block.timestamp, "expiration: before now");
 
         delegatedAccount.wallet = _delegatedWallet;
@@ -100,12 +106,7 @@ contract Account is IAccount {
             require(
                 _verifySignature(
                     delegatedAccount.wallet,
-                    keccak256(
-                        abi.encodePacked(
-                            token,
-                            amount,
-                            executionFee
-                        )),
+                    keccak256(abi.encodePacked(token, amount, executionFee)),
                     signature
                 ),
                 "signature: invalid"
@@ -129,14 +130,8 @@ contract Account is IAccount {
                 _verifySignature(
                     delegatedAccount.wallet,
                     keccak256(
-                        abi.encodePacked(
-                            token,
-                            amount,
-                            v,
-                            r,
-                            s,
-                            executionFee
-                        )),
+                        abi.encodePacked(token, amount, v, r, s, executionFee)
+                    ),
                     signature
                 ),
                 "signature: invalid"
@@ -185,12 +180,7 @@ contract Account is IAccount {
             require(
                 _verifySignature(
                     delegatedAccount.wallet,
-                    keccak256(
-                        abi.encodePacked(
-                            token,
-                            amount,
-                            executionFee
-                        )),
+                    keccak256(abi.encodePacked(token, amount, executionFee)),
                     signature
                 ),
                 "signature: invalid"
@@ -238,7 +228,8 @@ contract Account is IAccount {
                             tokenOut,
                             amountIn,
                             executionFee
-                        )),
+                        )
+                    ),
                     signature
                 ),
                 "signature: invalid"
@@ -295,7 +286,8 @@ contract Account is IAccount {
                             isLong,
                             acceptablePrice,
                             executionFee
-                        )),
+                        )
+                    ),
                     signature
                 ),
                 "signature: invalid"
@@ -353,7 +345,8 @@ contract Account is IAccount {
                             isLong,
                             size,
                             executionFee
-                        )),
+                        )
+                    ),
                     signature
                 ),
                 "signature: invalid"
@@ -397,7 +390,8 @@ contract Account is IAccount {
                             tokenIn,
                             amountIn,
                             executionFee
-                        )),
+                        )
+                    ),
                     signature
                 ),
                 "signature: invalid"
@@ -461,7 +455,8 @@ contract Account is IAccount {
                             isLong,
                             collateralAmount,
                             executionFee
-                        )),
+                        )
+                    ),
                     signature
                 ),
                 "signature: invalid"
@@ -612,7 +607,8 @@ contract Account is IAccount {
                             triggerPrice,
                             acceptablePrice,
                             executionFee
-                        )),
+                        )
+                    ),
                     signature
                 ),
                 "signature: invalid"
@@ -652,11 +648,7 @@ contract Account is IAccount {
             require(
                 _verifySignature(
                     delegatedAccount.wallet,
-                    keccak256(
-                        abi.encodePacked(
-                            limitOrderId,
-                            executionFee
-                        )),
+                    keccak256(abi.encodePacked(limitOrderId, executionFee)),
                     signature
                 ),
                 "signature: invalid"
@@ -968,7 +960,9 @@ contract Account is IAccount {
             delegatedAccount.expiration > block.timestamp,
             "delegatedAccount: expired"
         );
-        return _recoverSigner(_getEthSignedMessageHash(messageHash), signature) == signer;
+        return
+            _recoverSigner(_getEthSignedMessageHash(messageHash), signature) ==
+            signer;
     }
 
     function _getEthSignedMessageHash(
@@ -976,7 +970,10 @@ contract Account is IAccount {
     ) private pure returns (bytes32) {
         return
             keccak256(
-                abi.encodePacked("\x19Ethereum Signed Message:\n32", _messageHash)
+                abi.encodePacked(
+                    "\x19Ethereum Signed Message:\n32",
+                    _messageHash
+                )
             );
     }
 

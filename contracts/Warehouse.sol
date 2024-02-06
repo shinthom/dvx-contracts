@@ -211,7 +211,11 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         address account,
         bytes32 positionKey,
         uint256 triggerOrderId
-    ) external override onlyExchange returns (TriggerOrder memory triggerOrder)
+    )
+        external
+        override
+        onlyExchange
+        returns (TriggerOrder memory triggerOrder)
     {
         TriggerOrder memory triggerOrder = _triggerOrders[positionKey][
             triggerOrderId

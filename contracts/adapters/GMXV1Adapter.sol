@@ -246,7 +246,14 @@ contract GmxV1Adapter is BaseAdapter {
         uint256 sizeUsd = (size * indexPrice) / (10 ** indexDecimal);
 
         acceptablePrice *= 1e12; // 1e30
-        _increase(collateral, index, collateralAmount, sizeUsd, acceptablePrice, isLong);
+        _increase(
+            collateral,
+            index,
+            collateralAmount,
+            sizeUsd,
+            acceptablePrice,
+            isLong
+        );
 
         uint256 entryPrice = indexPrice / 1e12; // 1e18
         logIncreasePosition(
@@ -664,34 +671,59 @@ contract GmxV1Adapter is BaseAdapter {
             return 0;
         }
 
-        uint256 fundingFee = getFundingFee(collateral, index, position.size, position.fundingRate, isLong);
+        uint256 fundingFee = getFundingFee(
+            collateral,
+            index,
+            position.size,
+            position.fundingRate,
+            isLong
+        );
         uint256 totalFees = _calculateTotalFees(position.size, fundingFee);
 
         uint256 liquidationPriceForFees = _getLiquidationPriceFromDelta(
-            totalFees, position.size, position.collateralAmount, position.price, isLong
+            totalFees,
+            position.size,
+            position.collateralAmount,
+            position.price,
+            isLong
         );
 
         uint256 maxLeverage = IVault(_vault).maxLeverage();
         uint256 liquidationPriceForMaxLevearge = _getLiquidationPriceFromDelta(
-            position.size * BASIS_POINTS_DIVISOR / maxLeverage, position.size, position.collateralAmount, position.price, isLong
+            (position.size * BASIS_POINTS_DIVISOR) / maxLeverage,
+            position.size,
+            position.collateralAmount,
+            position.price,
+            isLong
         );
 
         uint256 p;
         if (isLong) {
-            p = liquidationPriceForFees > liquidationPriceForMaxLevearge ? liquidationPriceForFees : liquidationPriceForMaxLevearge;
+            p = liquidationPriceForFees > liquidationPriceForMaxLevearge
+                ? liquidationPriceForFees
+                : liquidationPriceForMaxLevearge;
         } else {
-            p = liquidationPriceForFees < liquidationPriceForMaxLevearge ? liquidationPriceForFees : liquidationPriceForMaxLevearge;
+            p = liquidationPriceForFees < liquidationPriceForMaxLevearge
+                ? liquidationPriceForFees
+                : liquidationPriceForMaxLevearge;
         }
 
         // 1e30 -> 1e18
         return int256(p / 1e12);
     }
 
-    function _calculateTotalFees(uint256 size, uint256 fundingFee) private view returns (uint256) {
+    function _calculateTotalFees(
+        uint256 size,
+        uint256 fundingFee
+    ) private view returns (uint256) {
         uint256 marginFeeBasisPoints = IVault(_vault).marginFeeBasisPoints();
         uint256 liquidationFeeUsd = IVault(_vault).liquidationFeeUsd();
 
-        return (size * marginFeeBasisPoints) / BASIS_POINTS_DIVISOR + fundingFee + liquidationFeeUsd;
+        return
+            (size * marginFeeBasisPoints) /
+            BASIS_POINTS_DIVISOR +
+            fundingFee +
+            liquidationFeeUsd;
     }
 
     function _getLiquidationPriceFromDelta(
@@ -703,13 +735,14 @@ contract GmxV1Adapter is BaseAdapter {
     ) private view returns (uint256) {
         if (liquidationAmount > collateralAmount) {
             uint256 liquidationDelta = liquidationAmount - collateralAmount;
-            uint256 priceDelta = liquidationDelta * averagePrice / size;
+            uint256 priceDelta = (liquidationDelta * averagePrice) / size;
 
-            return isLong ? averagePrice + priceDelta : averagePrice - priceDelta;
+            return
+                isLong ? averagePrice + priceDelta : averagePrice - priceDelta;
         }
 
         uint256 liquidationDelta = collateralAmount - liquidationAmount;
-        uint256 priceDelta = liquidationDelta * averagePrice / size;
+        uint256 priceDelta = (liquidationDelta * averagePrice) / size;
 
         return isLong ? averagePrice - priceDelta : averagePrice + priceDelta;
     }

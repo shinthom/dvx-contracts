@@ -10,8 +10,8 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 contract AccountFactory is
     IAccountFactory,
     OwnableUpgradeable,
-    UUPSUpgradeable {
-
+    UUPSUpgradeable
+{
     mapping(address => address) public override accounts;
 
     address public override account; // targetContract
@@ -22,7 +22,10 @@ contract AccountFactory is
         _;
     }
 
-    function initialize(address _account, address _exchange) external virtual initializer {
+    function initialize(
+        address _account,
+        address _exchange
+    ) external virtual initializer {
         require(_account != address(0), "account: zero address");
         require(_exchange != address(0), "exchange: zero address");
 

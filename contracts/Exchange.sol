@@ -213,7 +213,11 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         uint256 expiration
     ) public override returns (address) {
         return
-            IAccountFactory(accountFactory).createAccount(msg.sender, delegatedWallet, expiration);
+            IAccountFactory(accountFactory).createAccount(
+                msg.sender,
+                delegatedWallet,
+                expiration
+            );
     }
 
     function createAccountAndDeposit(
