@@ -1,109 +1,319 @@
 const { ethers } = require("hardhat");
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
+const { expect } = require("chai");
 const { deploy } = require("../fixture");
-const { signTypedData_v4 } = require("eth-sig-util");
-const { fromRpcSig } = require("ethereumjs-util");
-
-const buildPermitParams = (
-  chainId,
-  token,
-  revision,
-  tokenName,
-  owner,
-  spender,
-  nonce,
-  deadline,
-  value
-) => ({
-  types: {
-    EIP712Domain: [
-      { name: "name", type: "string" },
-      { name: "version", type: "string" },
-      { name: "chainId", type: "uint256" },
-      { name: "verifyingContract", type: "address" },
-    ],
-    Permit: [
-      { name: "owner", type: "address" },
-      { name: "spender", type: "address" },
-      { name: "value", type: "uint256" },
-      { name: "nonce", type: "uint256" },
-      { name: "deadline", type: "uint256" },
-    ],
-  },
-  primaryType: "Permit",
-  domain: {
-    name: tokenName,
-    version: revision,
-    chainId: chainId,
-    verifyingContract: token,
-  },
-  message: {
-    owner,
-    spender,
-    value,
-    nonce,
-    deadline,
-  },
-});
-
-const getSignatureFromTypedData = (privateKey, typedData) => {
-  // https://docs.metamask.io/wallet/how-to/sign-data/#use-eth_signtypeddata_v4
-  const signature = signTypedData_v4(
-    Buffer.from(privateKey.substring(2, 66), "hex"),
-    {
-      data: typedData,
-    }
-  );
-  return fromRpcSig(signature);
-};
-
-// Reference
-// https://github.com/aave/aave-v3-core/blob/master/helpers/contracts-helpers.ts#L61
-// https://github.com/aave/aave-v3-core/blob/master/test-suites/atoken-permit.spec.ts#L5
 
 describe("depositPermit", () => {
-  const arbitrumChainId = 42161;
+  const depositAmount = ethers.parseUnits("100", 6);
 
-  it("e2e", async () => {
-    // prettier-ignore
-    const { owner, ownerPk, account, USDC, usdc, deposit, executeIncreasePosition } =
-      await loadFixture(deploy);
+  let chainId;
 
-    const depositToken = USDC;
-    const depositAmount = ethers.parseUnits("1000", 6);
+  before(async () => {
+    chainId = (await ethers.provider.getNetwork()).chainId;
+  });
 
-    const nonce = await usdc.nonces(owner.address);
+  it("weth", async () => {
+    const { owner, account, weth, faucet } = await loadFixture(deploy);
 
-    // note: BigInt is not allowed in typed data (Error: Argument is not a number)
-    const permitParams = buildPermitParams(
-      arbitrumChainId,
-      depositToken,
-      1, // version,
-      await usdc.name(),
-      owner.address,
-      account.target, // spender
-      nonce.toString(),
-      ethers.MaxInt256.toString(), // deadline
-      depositAmount.toString()
-    );
-    var allowance = await usdc.allowance(owner.address, account.target);
-    console.log(allowance);
+    const domain = {
+      name: await weth.name(),
+      version: "1",
+      chainId: chainId,
+      verifyingContract: weth.target,
+    };
 
-    const { v, r, s } = getSignatureFromTypedData(ownerPk, permitParams);
-    console.log(v, r, s);
+    const types = {
+      Permit: [
+        {
+          name: "owner",
+          type: "address",
+        },
+        {
+          name: "spender",
+          type: "address",
+        },
+        {
+          name: "value",
+          type: "uint256",
+        },
+        {
+          name: "nonce",
+          type: "uint256",
+        },
+        {
+          name: "deadline",
+          type: "uint256",
+        },
+      ],
+    };
 
-    await usdc
+    const values = {
+      owner: owner.address,
+      spender: account.target,
+      value: depositAmount,
+      nonce: await weth.nonces(owner.address),
+      deadline: ethers.MaxUint256,
+    };
+
+    const signature = await owner.signTypedData(domain, types, values);
+    const splitSig = ethers.Signature.from(signature);
+
+    await faucet(weth.target, depositAmount);
+    await account
       .connect(owner)
-      .permit(
-        owner.address,
-        account.target,
+      .deposit(
+        weth.target,
         depositAmount,
-        ethers.MaxInt256,
-        v,
-        r,
-        s
+        splitSig.v,
+        splitSig.r,
+        splitSig.s,
+        0,
+        "0x"
       );
-    var allowance = await usdc.allowance(owner.address, account.target);
-    console.log(allowance);
+    expect(await weth.balanceOf(account.target)).to.be.equal(depositAmount);
+  });
+
+  it("wbtc", async () => {
+    const { owner, account, wbtc, faucet } = await loadFixture(deploy);
+
+    const domain = {
+      name: await wbtc.name(),
+      version: "1",
+      chainId: chainId,
+      verifyingContract: wbtc.target,
+    };
+
+    const types = {
+      Permit: [
+        {
+          name: "owner",
+          type: "address",
+        },
+        {
+          name: "spender",
+          type: "address",
+        },
+        {
+          name: "value",
+          type: "uint256",
+        },
+        {
+          name: "nonce",
+          type: "uint256",
+        },
+        {
+          name: "deadline",
+          type: "uint256",
+        },
+      ],
+    };
+
+    const values = {
+      owner: owner.address,
+      spender: account.target,
+      value: depositAmount,
+      nonce: await wbtc.nonces(owner.address),
+      deadline: ethers.MaxUint256,
+    };
+
+    const signature = await owner.signTypedData(domain, types, values);
+    const splitSig = ethers.Signature.from(signature);
+
+    await faucet(wbtc.target, depositAmount);
+    await account
+      .connect(owner)
+      .deposit(
+        wbtc.target,
+        depositAmount,
+        splitSig.v,
+        splitSig.r,
+        splitSig.s,
+        0,
+        "0x"
+      );
+    expect(await wbtc.balanceOf(account.target)).to.be.equal(depositAmount);
+  });
+
+  it("usdt", async () => {
+    const { owner, account, usdt, faucet } = await loadFixture(deploy);
+
+    const domain = {
+      name: await usdt.name(),
+      version: "1",
+      chainId: chainId,
+      verifyingContract: usdt.target,
+    };
+
+    const types = {
+      Permit: [
+        {
+          name: "owner",
+          type: "address",
+        },
+        {
+          name: "spender",
+          type: "address",
+        },
+        {
+          name: "value",
+          type: "uint256",
+        },
+        {
+          name: "nonce",
+          type: "uint256",
+        },
+        {
+          name: "deadline",
+          type: "uint256",
+        },
+      ],
+    };
+
+    const values = {
+      owner: owner.address,
+      spender: account.target,
+      value: depositAmount,
+      nonce: await usdt.nonces(owner.address),
+      deadline: ethers.MaxUint256,
+    };
+
+    const signature = await owner.signTypedData(domain, types, values);
+    const splitSig = ethers.Signature.from(signature);
+
+    await faucet(usdt.target, depositAmount);
+    await account
+      .connect(owner)
+      .deposit(
+        usdt.target,
+        depositAmount,
+        splitSig.v,
+        splitSig.r,
+        splitSig.s,
+        0,
+        "0x"
+      );
+    expect(await usdt.balanceOf(account.target)).to.be.equal(depositAmount);
+  });
+
+  it("usdc", async () => {
+    const { owner, account, usdc, faucet } = await loadFixture(deploy);
+
+    const domain = {
+      name: await usdc.name(),
+      version: "2",
+      chainId: chainId,
+      verifyingContract: usdc.target,
+    };
+
+    const types = {
+      Permit: [
+        {
+          name: "owner",
+          type: "address",
+        },
+        {
+          name: "spender",
+          type: "address",
+        },
+        {
+          name: "value",
+          type: "uint256",
+        },
+        {
+          name: "nonce",
+          type: "uint256",
+        },
+        {
+          name: "deadline",
+          type: "uint256",
+        },
+      ],
+    };
+
+    const values = {
+      owner: owner.address,
+      spender: account.target,
+      value: depositAmount,
+      nonce: await usdc.nonces(owner.address),
+      deadline: ethers.MaxUint256,
+    };
+
+    const signature = await owner.signTypedData(domain, types, values);
+    const splitSig = ethers.Signature.from(signature);
+
+    await faucet(usdc.target, depositAmount);
+    await account
+      .connect(owner)
+      .deposit(
+        usdc.target,
+        depositAmount,
+        splitSig.v,
+        splitSig.r,
+        splitSig.s,
+        0,
+        "0x"
+      );
+    expect(await usdc.balanceOf(account.target)).to.be.equal(depositAmount);
+  });
+
+  it("usdc.e", async () => {
+    const { owner, account, usdce, faucet } = await loadFixture(deploy);
+
+    const domain = {
+      name: await usdce.name(),
+      version: "1",
+      chainId: chainId,
+      verifyingContract: usdce.target,
+    };
+
+    const types = {
+      Permit: [
+        {
+          name: "owner",
+          type: "address",
+        },
+        {
+          name: "spender",
+          type: "address",
+        },
+        {
+          name: "value",
+          type: "uint256",
+        },
+        {
+          name: "nonce",
+          type: "uint256",
+        },
+        {
+          name: "deadline",
+          type: "uint256",
+        },
+      ],
+    };
+
+    const values = {
+      owner: owner.address,
+      spender: account.target,
+      value: depositAmount,
+      nonce: await usdce.nonces(owner.address),
+      deadline: ethers.MaxUint256,
+    };
+
+    const signature = await owner.signTypedData(domain, types, values);
+    const splitSig = ethers.Signature.from(signature);
+
+    await faucet(usdce.target, depositAmount);
+    await account
+      .connect(owner)
+      .deposit(
+        usdce.target,
+        depositAmount,
+        splitSig.v,
+        splitSig.r,
+        splitSig.s,
+        0,
+        "0x"
+      );
+    expect(await usdce.balanceOf(account.target)).to.be.equal(depositAmount);
   });
 });

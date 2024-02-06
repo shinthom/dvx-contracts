@@ -61,8 +61,6 @@
     "hardhat": "^2.19.2",
     "hardhat-contract-sizer": "^2.10.0",
     "hardhat-gas-reporter": "^1.0.8",
-    "eth-sig-util": "2.5.3",
-    "ethereumjs-util": "7.0.2",
     "solhint": "^4.0.0",
     "solidity-coverage": "^0.8.0",
     "truffle": "^5.11.5",
