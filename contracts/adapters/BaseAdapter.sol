@@ -20,7 +20,7 @@ abstract contract BaseAdapter is IAdapter {
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
-        uint256 entryPrice,
+        uint256 price,
         uint256 acceptablePrice
     ) internal {
         ILogger(_logger).logIncreasePosition(
@@ -32,7 +32,7 @@ abstract contract BaseAdapter is IAdapter {
             collateralAmount,
             size,
             isLong,
-            entryPrice,
+            price,
             acceptablePrice
         );
     }
@@ -43,7 +43,9 @@ abstract contract BaseAdapter is IAdapter {
         address collateral,
         address index,
         uint256 size,
-        bool isLong
+        bool isLong,
+        uint256 price,
+        uint256 acceptablePrice
     ) internal {
         ILogger(_logger).logDecreasePosition(
             account,
@@ -51,7 +53,9 @@ abstract contract BaseAdapter is IAdapter {
             collateral,
             index,
             size,
-            isLong
+            isLong,
+            price,
+            acceptablePrice
         );
     }
 

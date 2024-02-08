@@ -82,7 +82,7 @@ interface ILiquidityPool {
             uint96 collateral,
             uint96 size,
             uint32 lastIncreasedTime,
-            uint96 entryPrice,
+            uint96 price,
             uint128 entryFunding
         );
 
@@ -235,7 +235,7 @@ contract MuxAdapter is BaseAdapter {
             );
         }
 
-        uint256 entryPrice = getWrapPrice(index, isLong);
+        uint256 price = getWrapPrice(index, isLong);
         logIncreasePosition(
             marketOrderId,
             address(this),
@@ -245,7 +245,7 @@ contract MuxAdapter is BaseAdapter {
             collateralAmount,
             size,
             isLong,
-            entryPrice,
+            price,
             acceptablePrice
         );
     }
@@ -254,7 +254,8 @@ contract MuxAdapter is BaseAdapter {
         address collateral,
         address index,
         uint256 size,
-        bool isLong
+        bool isLong,
+        uint256 acceptablePrice
     ) external payable override {
         uint8 collateralId = _getIdFromTokenAddress(collateral);
         uint8 indexId = _getIdFromTokenAddress(index);
@@ -284,13 +285,16 @@ contract MuxAdapter is BaseAdapter {
             IOrderBook.PositionOrderExtra(0, 0, 0, 0)
         );
 
+        uint256 price = getWrapPrice(index, isLong);
         logDecreasePosition(
             address(this),
             _this,
             collateral,
             index,
             size,
-            isLong
+            isLong,
+            price,
+            acceptablePrice
         );
     }
 

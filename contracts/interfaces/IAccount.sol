@@ -70,6 +70,7 @@ interface IAccount {
         address index,
         bool isLong,
         uint256 size,
+        uint256 acceptablePrice,
         uint256 executionFee,
         bytes calldata signature
     ) external payable;

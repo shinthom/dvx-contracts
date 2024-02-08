@@ -47,7 +47,7 @@ contract Logger is ILogger {
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
-        uint256 entryPrice,
+        uint256 price,
         uint256 acceptablePrice
     ) external override {
         emit PositionIncreased(
@@ -59,7 +59,7 @@ contract Logger is ILogger {
             collateralAmount,
             size,
             isLong,
-            entryPrice,
+            price,
             acceptablePrice
         );
     }
@@ -70,7 +70,9 @@ contract Logger is ILogger {
         address collateral,
         address index,
         uint256 size,
-        bool isLong
+        bool isLong,
+        uint256 price,
+        uint256 acceptablePrice
     ) external override {
         emit PositionDecreased(
             account,
@@ -78,7 +80,9 @@ contract Logger is ILogger {
             collateral,
             index,
             size,
-            isLong
+            isLong,
+            price,
+            acceptablePrice
         );
     }
 

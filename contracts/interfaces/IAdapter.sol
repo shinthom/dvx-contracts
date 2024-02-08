@@ -28,7 +28,8 @@ interface IAdapter {
         address collateral,
         address index,
         uint256 size,
-        bool isLong
+        bool isLong,
+        uint256 acceptablePrice
     ) external payable;
     function increaseCollateral(
         address collateral,

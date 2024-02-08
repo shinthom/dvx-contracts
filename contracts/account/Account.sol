@@ -330,6 +330,7 @@ contract Account is IAccount {
         address index,
         bool isLong,
         uint256 size,
+        uint256 acceptablePrice,
         uint256 executionFee,
         bytes calldata signature
     ) external payable virtual override onlyOwnerOrRelayer {
@@ -344,6 +345,7 @@ contract Account is IAccount {
                             index,
                             isLong,
                             size,
+                            acceptablePrice,
                             executionFee
                         )
                     ),
@@ -363,6 +365,7 @@ contract Account is IAccount {
             index,
             isLong,
             size,
+            acceptablePrice,
             executionFee
         );
     }
@@ -791,6 +794,7 @@ contract Account is IAccount {
             triggerOrder.index,
             triggerOrder.isLong,
             triggerOrder.size,
+            0, // todo
             triggerOrder.executionFee
         );
     }
@@ -868,16 +872,18 @@ contract Account is IAccount {
         address index,
         bool isLong,
         uint256 size,
+        uint256 acceptablePrice,
         uint256 executionFee
     ) private {
         // slither-disable-next-line controlled-delegatecall,low-level-calls
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
-                "decreasePosition(address,address,uint256,bool)",
+                "decreasePosition(address,address,uint256,bool,uint256)",
                 collateral,
                 index,
                 size,
-                isLong
+                isLong,
+                acceptablePrice
             )
         );
         require(success, string(data));

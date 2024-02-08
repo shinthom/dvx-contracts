@@ -255,17 +255,16 @@ contract GmxV1Adapter is BaseAdapter {
 
         uint256 sizeUsd = (size * indexPrice) / (10 ** indexDecimal);
 
-        acceptablePrice *= 1e12; // 1e30
         _increase(
             collateral,
             index,
             collateralAmount,
             sizeUsd,
-            acceptablePrice,
+            acceptablePrice * 1e12, // 1e30
             isLong
         );
 
-        uint256 entryPrice = indexPrice / 1e12; // 1e18
+        uint256 price = indexPrice / 1e12; // 1e18
         logIncreasePosition(
             marketOrderId,
             address(this),
@@ -275,7 +274,7 @@ contract GmxV1Adapter is BaseAdapter {
             collateralAmount,
             size,
             isLong,
-            entryPrice,
+            price,
             acceptablePrice
         );
     }
@@ -284,7 +283,8 @@ contract GmxV1Adapter is BaseAdapter {
         address collateral,
         address index,
         uint256 size,
-        bool isLong
+        bool isLong,
+        uint256 acceptablePrice
     ) public payable override {
         Position memory position = getPosition(
             address(this),
@@ -299,15 +299,18 @@ contract GmxV1Adapter is BaseAdapter {
             sizeUsd = position.size;
         }
 
-        _decrease(collateral, index, 0, sizeUsd, isLong);
+        _decrease(collateral, index, 0, sizeUsd, isLong, acceptablePrice * 1e12);
 
+        uint256 price = getWrapPrice(index, isLong);
         logDecreasePosition(
             address(this),
             _this,
             collateral,
             index,
             size,
-            isLong
+            isLong,
+            price,
+            acceptablePrice
         );
     }
 
@@ -353,7 +356,7 @@ contract GmxV1Adapter is BaseAdapter {
             collateralAmountUsd = collateralAmount * (10 ** 24);
         }
 
-        _decrease(collateral, index, collateralAmountUsd, 0, isLong);
+        _decrease(collateral, index, collateralAmountUsd, 0, isLong, 0);
 
         logDecreaseCollateral(
             address(this),
@@ -399,7 +402,7 @@ contract GmxV1Adapter is BaseAdapter {
             marginAmountUsd = marginAmount * (10 ** 24);
         }
 
-        _decrease(collateral, index, marginAmountUsd, 0, isLong);
+        _decrease(collateral, index, marginAmountUsd, 0, isLong, 0);
 
         logSubAcmmMargin(address(this), _this, collateral, index, marginAmount);
     }
@@ -790,7 +793,7 @@ contract GmxV1Adapter is BaseAdapter {
     function getWrapPrice(
         address token,
         bool isLong
-    ) external view override returns (uint256) {
+    ) public view override returns (uint256) {
         uint256 price = getPrice(token, isLong);
         return price / (10 ** 12); // 1e18
     }
@@ -970,9 +973,12 @@ contract GmxV1Adapter is BaseAdapter {
         address index,
         uint256 collateralAmount,
         uint256 size,
-        bool isLong
+        bool isLong,
+        uint256 acceptablePrice
     ) private {
-        uint256 price = isLong ? 0 : type(uint256).max;
+        if (acceptablePrice == 0) {
+            acceptablePrice = isLong ? 0 : type(uint256).max;
+        }
         uint256 executionFee = IPositionRouter(_positionRouter)
             .minExecutionFee();
 
@@ -988,7 +994,7 @@ contract GmxV1Adapter is BaseAdapter {
             size,
             isLong,
             address(this),
-            price,
+            acceptablePrice,
             0,
             executionFee,
             false, // withdrawETH,
