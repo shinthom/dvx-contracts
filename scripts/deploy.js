@@ -3,6 +3,7 @@ const { ethers } = require("hardhat");
 const PositionRouter = "0xb87a436b93ffe9d75c5cfa7bacfff96430b09868";
 const Router = "0xabbc5f99639c9b6bcb58544ddf04efa6802f4064";
 const Vault = "0x489ee077994b6658eafa855c308275ead8097c4a";
+const Timelock = "0xe7E740Fa40CA16b15B621B49de8E9F0D69CF4858";
 
 const OrderBook = "0xa19fD5aB6C8DCffa2A295F78a5Bb4aC543AAF5e3";
 const LiquidityPool = "0x3e0199792ce69dc29a0a36146bfa68bd7c8d6633";
@@ -98,6 +99,7 @@ async function main() {
     PositionRouter,
     Router,
     Vault,
+    Timelock,
     exchange.target,
     logger.target
   );
@@ -129,6 +131,11 @@ async function main() {
   await waitAndLogAccumulatedGasUsed(swapper.deploymentTransaction());
   console.log("Swapper deployed at:", swapper.target, "\n");
 
+  const FeeCollector = await ethers.getContractFactory("FeeCollector");
+  const feeCollector = await FeeCollector.deploy();
+  await waitAndLogAccumulatedGasUsed(feeCollector.deploymentTransaction());
+  console.log("FeeCollector deployed at:", feeCollector.target, "\n");
+
   await waitAndLogAccumulatedGasUsed(
     await exchange.setAccountFactory(accountFactory.target)
   );
@@ -145,9 +152,8 @@ async function main() {
   await waitAndLogAccumulatedGasUsed(await exchange.setSwapper(swapper.target));
   console.log("Exchange: setSwapper\n");
 
-  // todo: feeCollector
-  // await waitAndLogAccumulatedGasUsed(await exchange.setFeeCollector(feeCollector.target));
-  // console.log("Exchange: setFeeCollector\n");
+  await waitAndLogAccumulatedGasUsed(await exchange.setFeeCollector(feeCollector.target));
+  console.log("Exchange: setFeeCollector\n");
 
   await waitAndLogAccumulatedGasUsed(
     await exchange.registerAdapter(gmxV1Adapter.target)

@@ -71,7 +71,6 @@ let owner;
 let other;
 let orderKeeper;
 let relayer;
-let feeCollector; // todo: deploy feeCollector contract
 let ownerPk;
 // va
 let vaPk;
@@ -100,6 +99,7 @@ let fastPriceFeed;
 let vaultPriceFeed;
 let secondaryPriceFeedMock;
 // dvx contracts
+let feeCollector; // todo: deploy feeCollector contract
 let accountFactory;
 let exchange;
 let warehouse;
@@ -116,8 +116,7 @@ const deploy = async (noAccount) => {
   vaPk = ethers.Wallet.createRandom().privateKey;
   va = new ethers.Wallet(vaPk);
 
-  [deployer, owner, other, orderKeeper, relayer, feeCollector] =
-    await ethers.getSigners();
+  [deployer, owner, other, orderKeeper, relayer] = await ethers.getSigners();
   ownerPk =
     "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"; // todo: fix
 
@@ -166,6 +165,7 @@ const deploy = async (noAccount) => {
   orderBook = await ethers.getContractAt("IOrderBook", OrderBook);
   liquidityPool = await ethers.getContractAt("ILiquidityPool", LiquidityPool);
 
+  // deploy
   const exchangeImpl = await ethers.deployContract("Exchange", []);
   const exchangeProxy = await ethers.deployContract("ERC1967Proxy", [
     exchangeImpl.target,
@@ -217,22 +217,23 @@ const deploy = async (noAccount) => {
   quoter = await ethers.deployContract("Quoter");
   reader = await ethers.deployContract("Reader", [warehouse.target]);
   swapper = await ethers.deployContract("Swapper");
+  feeCollector = await ethers.deployContract("FeeCollector");
 
   await exchange.setAccountFactory(accountFactory.target);
   await exchange.setWarehouse(warehouse.target);
   await exchange.setLogger(logger.target);
   await exchange.setSwapper(swapper.target);
-  await exchange.setFeeCollector(feeCollector.address);
-  await exchange.setOrderKeeper(orderKeeper.address, true);
-  await exchange.setRelayer(relayer.address, true);
+  await exchange.setFeeCollector(feeCollector.target);
   await exchange.registerAdapter(gmxV1Adapter.target);
   await exchange.registerAdapter(muxAdapter.target);
   await exchange.setStableToken(USDC, true);
   await exchange.setStableToken(USDT, true);
   await exchange.setStableToken(USDCe, true);
   await exchange.setDefaultStableToken(USDCe);
-
   await warehouse.setExchange(exchange.target);
+
+  await exchange.setOrderKeeper(orderKeeper.address, true);
+  await exchange.setRelayer(relayer.address, true);
 
   if (!noAccount) {
     await exchange.connect(owner).createAccount(va.address, ethers.MaxUint256);
