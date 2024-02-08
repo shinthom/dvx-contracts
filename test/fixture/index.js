@@ -336,6 +336,9 @@ stable:
     isLong
   ) => {
     const adapterFee = await adapter.getMinExecutionFee();
+    if (!acceptablePrice) {
+      acceptablePrice = await adapter.getWrapPrice(index, isLong);
+    }
     await account
       .connect(owner)
       .increasePosition(
@@ -346,6 +349,7 @@ stable:
         size,
         isLong,
         acceptablePrice,
+        0,
         0,
         "0x",
         { value: adapterFee }
@@ -458,6 +462,7 @@ stable:
         isLong,
         triggerPrice,
         acceptablePrice,
+        0,
         0,
         "0x"
       );

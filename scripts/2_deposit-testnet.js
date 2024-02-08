@@ -52,13 +52,13 @@ async function main() {
   const usdcDepositAmount = ethers.parseUnits("1000", 6);
 
   await weth.connect(owner).approve(account.target, wethDepositAmount);
-  await account.connect(owner).deposit(WETH, wethDepositAmount, 0, "0x");
+  await account.connect(owner).deposit(WETH, wethDepositAmount, 0, 0, "0x");
 
   await wbtc.connect(owner).approve(account.target, wbtcDepositAmount);
-  await account.connect(owner).deposit(WBTC, wbtcDepositAmount, 0, "0x");
+  await account.connect(owner).deposit(WBTC, wbtcDepositAmount, 0, 0, "0x");
 
   await usdc.connect(owner).approve(account.target, usdcDepositAmount);
-  await account.connect(owner).deposit(USDC, usdcDepositAmount, 0, "0x");
+  await account.connect(owner).deposit(USDC, usdcDepositAmount, 0, 0, "0x");
 
   console.log("`deposit`");
   console.log("-  eth: " + (await account.getBalance(WETH)));
