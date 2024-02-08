@@ -94,6 +94,24 @@ interface IAdapter {
         address index,
         bool isLong
     ) external view returns (bool, uint256);
+    function getPositionNetValueUsd(
+        address account,
+        address collateral,
+        address index,
+        bool isLong
+    ) external view returns (address, uint256, address, uint256);
+    function getPositionWrapNetValueUsd(
+        address account,
+        address collateral,
+        address index,
+        bool isLong
+    ) external view returns (address, uint256, address, uint256);
+    function getPositionNetValueToken(
+        address account,
+        address collateral,
+        address index,
+        bool isLong
+    ) external view returns (address, uint256, address, uint256);
 
     function getMinExecutionFee() external view returns (uint256);
     function getPositionFee(
@@ -105,12 +123,17 @@ interface IAdapter {
         IExchange.MarketOrder memory marketOrder
     ) external view returns (uint256);
     function getFundingFee(
+        address account,
         address collateral,
         address index,
-        uint256 size,
-        uint256 fundingRate,
         bool isLong
     ) external view returns (uint256);
+    function getCloseFee(
+        address account,
+        address collateral,
+        address index,
+        bool isLong
+    ) external view returns (uint256, uint256);
 
     function getPriceDecimals() external view returns (uint256);
     function getPrice(

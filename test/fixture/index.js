@@ -674,6 +674,7 @@ stable:
     });
   };
 
+  // gmx
   const updateCumulativeFundingRate = async (collateral) => {
     const seconds = 60 * 60 * 8; // 8 hours
     await increaseTime(seconds);
@@ -684,6 +685,7 @@ stable:
     // console.log(`\nfundingRate is updated: ${beforeFundingRate} -> ${afterFundingRate}\n`) // prettier-ignore
   };
 
+  // mux
   const updateFundingState = async () => {
     const seconds = 60 * 60; // 1 hour
     await increaseTime(seconds);
@@ -762,6 +764,8 @@ stable:
     createTriggerOrder,
     executeTriggerOrder,
     subAcmmMargin,
+    updateCumulativeFundingRate,
+    updateFundingState,
   };
 };
 
