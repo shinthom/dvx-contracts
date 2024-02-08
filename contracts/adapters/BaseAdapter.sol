@@ -100,14 +100,16 @@ abstract contract BaseAdapter is IAdapter {
         address adapter,
         address collateral,
         address index,
-        uint256 marginAmount
+        uint256 marginAmount,
+        bool isLong
     ) internal {
         ILogger(_logger).logAddAcmmMargin(
             account,
             adapter,
             collateral,
             index,
-            marginAmount
+            marginAmount,
+            isLong
         );
     }
 
@@ -116,14 +118,16 @@ abstract contract BaseAdapter is IAdapter {
         address adapter,
         address collateral,
         address index,
-        uint256 marginAmount
+        uint256 marginAmount,
+        bool isLong
     ) internal {
         ILogger(_logger).logSubAcmmMargin(
             account,
             adapter,
             collateral,
             index,
-            marginAmount
+            marginAmount,
+            isLong
         );
     }
 }

@@ -379,7 +379,7 @@ contract GmxV1Adapter is BaseAdapter {
 
         _increase(collateral, index, marginAmount, 0, 0, isLong);
 
-        logAddAcmmMargin(address(this), _this, collateral, index, marginAmount);
+        logAddAcmmMargin(address(this), _this, collateral, index, marginAmount, isLong);
     }
 
     function subAcmmMargin(
@@ -404,7 +404,7 @@ contract GmxV1Adapter is BaseAdapter {
 
         _decrease(collateral, index, marginAmountUsd, 0, isLong, 0);
 
-        logSubAcmmMargin(address(this), _this, collateral, index, marginAmount);
+        logSubAcmmMargin(address(this), _this, collateral, index, marginAmount, isLong);
     }
 
     function makeMarketOrder(

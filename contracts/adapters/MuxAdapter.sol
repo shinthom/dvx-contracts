@@ -407,7 +407,7 @@ contract MuxAdapter is BaseAdapter {
             );
         }
 
-        logAddAcmmMargin(address(this), _this, collateral, index, marginAmount);
+        logAddAcmmMargin(address(this), _this, collateral, index, marginAmount, isLong);
     }
 
     function subAcmmMargin(
@@ -436,7 +436,7 @@ contract MuxAdapter is BaseAdapter {
             true // isProfit
         );
 
-        logSubAcmmMargin(address(this), _this, collateral, index, profitAmount);
+        logSubAcmmMargin(address(this), _this, collateral, index, profitAmount, isLong);
     }
 
     function makeMarketOrder(
