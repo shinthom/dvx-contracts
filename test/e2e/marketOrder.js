@@ -3,6 +3,8 @@ const { expect } = require("chai");
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 const { deploy } = require("../fixture");
 
+const deadline = Math.ceil(Date.now() / 1000) + 60 * 60 * 3;
+
 describe("marketOrder", () => {
   describe("gmxV1 - long", () => {
     it("directly from EOA", async () => {
@@ -29,7 +31,7 @@ describe("marketOrder", () => {
       const adapterFee = await gmxV1Adapter.getMinExecutionFee();
 
       // deposit
-      await deposit(collateral, collateralAmount, "0x");
+      await deposit(collateral, collateralAmount);
 
       // increasePosition
       await account
@@ -43,6 +45,7 @@ describe("marketOrder", () => {
           isLong,
           acceptablePrice,
           executionFee,
+          0,
           "0x",
           { value: adapterFee }
         );
@@ -60,10 +63,9 @@ describe("marketOrder", () => {
         index,
         isLong
       );
-      console.log(position);
 
       // deposit to add collateral
-      await deposit(collateral, collateralAmount, "0x");
+      await deposit(collateral, collateralAmount);
 
       // increaseCollateral
       await account.connect(owner).increaseCollateral(
@@ -74,6 +76,7 @@ describe("marketOrder", () => {
         collateral, // tokenIn
         collateralAmount, // amountIn
         executionFee,
+        0,
         "0x",
         { value: adapterFee }
       );
@@ -103,6 +106,7 @@ describe("marketOrder", () => {
           isLong,
           collateralAmount,
           executionFee,
+          0,
           "0x",
           { value: adapterFee }
         );
@@ -133,6 +137,7 @@ describe("marketOrder", () => {
           size,
           acceptablePrice,
           executionFee,
+          0,
           "0x",
           { value: adapterFee }
         );
@@ -178,7 +183,7 @@ describe("marketOrder", () => {
       const adapterFee = await gmxV1Adapter.getMinExecutionFee();
 
       // deposit
-      await deposit(collateral, collateralAmount, "0x");
+      await deposit(collateral, collateralAmount);
 
       // make signature from relayer
       var messageHash = ethers.solidityPackedKeccak256(
@@ -217,6 +222,7 @@ describe("marketOrder", () => {
           isLong,
           acceptablePrice,
           executionFee,
+          deadline,
           signature,
           { value: adapterFee }
         );
@@ -237,7 +243,7 @@ describe("marketOrder", () => {
       console.log(position);
 
       // deposit to add collateral
-      await deposit(collateral, collateralAmount, "0x");
+      await deposit(collateral, collateralAmount);
 
       // make signature from relayer
       var messageHash = ethers.solidityPackedKeccak256(
@@ -271,6 +277,7 @@ describe("marketOrder", () => {
         collateral, // tokenIn
         collateralAmount, // amountIn
         executionFee,
+        deadline,
         signature,
         { value: adapterFee }
       );
@@ -321,6 +328,7 @@ describe("marketOrder", () => {
           isLong,
           collateralAmount,
           executionFee,
+          deadline,
           signature,
           { value: adapterFee }
         );
@@ -374,6 +382,7 @@ describe("marketOrder", () => {
           size,
           acceptablePrice,
           executionFee,
+          deadline,
           signature,
           { value: adapterFee }
         );
@@ -420,7 +429,7 @@ describe("marketOrder", () => {
       const adapterFee = await muxAdapter.getMinExecutionFee();
 
       // deposit
-      await deposit(collateral, collateralAmount, "0x");
+      await deposit(collateral, collateralAmount);
 
       // increasePosition
       await account
@@ -434,6 +443,7 @@ describe("marketOrder", () => {
           isLong,
           acceptablePrice,
           executionFee,
+          0,
           "0x",
           { value: adapterFee }
         );
@@ -454,7 +464,7 @@ describe("marketOrder", () => {
       console.log(position);
 
       // deposit to add collateral
-      await deposit(collateral, collateralAmount, "0x");
+      await deposit(collateral, collateralAmount);
 
       // increaseCollateral
       await account.connect(owner).increaseCollateral(
@@ -465,6 +475,7 @@ describe("marketOrder", () => {
         collateral, // tokenIn
         collateralAmount, // amountIn
         executionFee,
+        0,
         "0x",
         { value: adapterFee }
       );
@@ -493,6 +504,7 @@ describe("marketOrder", () => {
           isLong,
           collateralAmount,
           executionFee,
+          0,
           "0x",
           { value: adapterFee }
         );
@@ -523,6 +535,7 @@ describe("marketOrder", () => {
           size,
           acceptablePrice,
           executionFee,
+          0,
           "0x",
           { value: adapterFee }
         );
@@ -568,7 +581,7 @@ describe("marketOrder", () => {
       const adapterFee = await muxAdapter.getMinExecutionFee();
 
       // deposit
-      await deposit(collateral, collateralAmount, "0x");
+      await deposit(collateral, collateralAmount);
 
       // make signature from relayer
       var messageHash = ethers.solidityPackedKeccak256(
@@ -607,6 +620,7 @@ describe("marketOrder", () => {
           isLong,
           acceptablePrice,
           executionFee,
+          deadline,
           signature,
           { value: adapterFee }
         );
@@ -627,7 +641,7 @@ describe("marketOrder", () => {
       console.log(position);
 
       // deposit to add collateral
-      await deposit(collateral, collateralAmount, "0x");
+      await deposit(collateral, collateralAmount);
 
       // make signature from relayer
       var messageHash = ethers.solidityPackedKeccak256(
@@ -661,6 +675,7 @@ describe("marketOrder", () => {
         collateral, // tokenIn
         collateralAmount, // amountIn
         executionFee,
+        deadline,
         signature,
         { value: adapterFee }
       );
@@ -710,6 +725,7 @@ describe("marketOrder", () => {
           isLong,
           collateralAmount,
           executionFee,
+          deadline,
           signature,
           { value: adapterFee }
         );
@@ -763,6 +779,7 @@ describe("marketOrder", () => {
           size,
           acceptablePrice,
           executionFee,
+          deadline,
           signature,
           { value: adapterFee }
         );

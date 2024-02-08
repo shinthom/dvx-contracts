@@ -28,6 +28,7 @@ interface IAccount {
         address token,
         uint256 amount,
         uint256 executionFee,
+        uint256 deadline,
         bytes calldata signature
     ) external;
     function deposit(
@@ -37,12 +38,14 @@ interface IAccount {
         bytes32 r,
         bytes32 s,
         uint256 executionFee,
+        uint256 deadline,
         bytes calldata signature
     ) external;
     function withdraw(
         address token,
         uint256 amount,
         uint256 executionFee,
+        uint256 deadline,
         bytes calldata signature
     ) external;
     function swap(
@@ -50,6 +53,7 @@ interface IAccount {
         address tokenOut,
         uint256 amountIn,
         uint256 executionFee,
+        uint256 deadline,
         bytes calldata signature
     ) external returns (uint256 amountOut);
 
@@ -62,6 +66,7 @@ interface IAccount {
         bool isLong,
         uint256 acceptablePrice,
         uint256 executionFee,
+        uint256 deadline,
         bytes calldata signature
     ) external payable;
     function decreasePosition(
@@ -72,6 +77,7 @@ interface IAccount {
         uint256 size,
         uint256 acceptablePrice,
         uint256 executionFee,
+        uint256 deadline,
         bytes calldata signature
     ) external payable;
     function increaseCollateral(
@@ -82,6 +88,7 @@ interface IAccount {
         address tokenIn,
         uint256 amountIn,
         uint256 executionFee,
+        uint256 deadline,
         bytes calldata signature
     ) external payable;
     function decreaseCollateral(
@@ -91,6 +98,7 @@ interface IAccount {
         bool isLong,
         uint256 collateralAmount,
         uint256 executionFee,
+        uint256 deadline,
         bytes calldata signature
     ) external payable;
 
@@ -120,11 +128,13 @@ interface IAccount {
         uint256 triggerPrice,
         uint256 acceptablePrice,
         uint256 executionFee,
+        uint256 deadline,
         bytes calldata signature
     ) external payable;
     function cancelLimitOrder(
         uint256 limitOrderId,
         uint256 executionFee,
+        uint256 deadline,
         bytes calldata signature
     ) external payable;
     function executeLimitOrder(

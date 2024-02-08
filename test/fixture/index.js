@@ -318,11 +318,11 @@ stable:
     }
   };
 
-  const deposit = async (token, tokenAmount, signature) => {
+  const deposit = async (token, tokenAmount) => {
     await faucet(token, tokenAmount);
     const erc20 = await ethers.getContractAt("IERC20", token);
     await erc20.connect(owner).approve(account.target, tokenAmount);
-    await account.connect(owner).deposit(token, tokenAmount, 0, "0x");
+    await account.connect(owner).deposit(token, tokenAmount, 0, 0, "0x");
   };
 
   const increasePosition = async (

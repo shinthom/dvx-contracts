@@ -100,11 +100,13 @@ contract Account is IAccount {
         address token,
         uint256 amount,
         uint256 executionFee,
+        uint256 deadline,
         bytes calldata signature
     ) external virtual override onlyOwnerOrRelayer {
         if (msg.sender != owner) {
             require(
                 _verifySignature(
+                    deadline,
                     delegatedAccount.wallet,
                     keccak256(abi.encodePacked(token, amount, executionFee)),
                     signature
@@ -123,11 +125,13 @@ contract Account is IAccount {
         bytes32 r,
         bytes32 s,
         uint256 executionFee,
+        uint256 deadline,
         bytes calldata signature
     ) external virtual override onlyOwnerOrRelayer {
         if (msg.sender != owner) {
             require(
                 _verifySignature(
+                    deadline,
                     delegatedAccount.wallet,
                     keccak256(
                         abi.encodePacked(token, amount, v, r, s, executionFee)
@@ -174,11 +178,13 @@ contract Account is IAccount {
         address token,
         uint256 amount,
         uint256 executionFee,
+        uint256 deadline,
         bytes calldata signature
     ) external virtual override onlyOwnerOrRelayer {
         if (msg.sender != owner) {
             require(
                 _verifySignature(
+                    deadline,
                     delegatedAccount.wallet,
                     keccak256(abi.encodePacked(token, amount, executionFee)),
                     signature
@@ -216,11 +222,13 @@ contract Account is IAccount {
         address tokenOut,
         uint256 amountIn,
         uint256 executionFee,
+        uint256 deadline,
         bytes calldata signature
     ) external virtual override onlyOwnerOrRelayer returns (uint256 amountOut) {
         if (msg.sender != owner) {
             require(
                 _verifySignature(
+                    deadline,
                     delegatedAccount.wallet,
                     keccak256(
                         abi.encodePacked(
@@ -270,11 +278,13 @@ contract Account is IAccount {
         bool isLong,
         uint256 acceptablePrice,
         uint256 executionFee,
+        uint256 deadline,
         bytes calldata signature
     ) external payable virtual override onlyOwnerOrRelayer {
         if (msg.sender != owner) {
             require(
                 _verifySignature(
+                    deadline,
                     delegatedAccount.wallet,
                     keccak256(
                         abi.encodePacked(
@@ -332,11 +342,13 @@ contract Account is IAccount {
         uint256 size,
         uint256 acceptablePrice,
         uint256 executionFee,
+        uint256 deadline,
         bytes calldata signature
     ) external payable virtual override onlyOwnerOrRelayer {
         if (msg.sender != owner) {
             require(
                 _verifySignature(
+                    deadline,
                     delegatedAccount.wallet,
                     keccak256(
                         abi.encodePacked(
@@ -378,11 +390,13 @@ contract Account is IAccount {
         address tokenIn,
         uint256 amountIn,
         uint256 executionFee,
+        uint256 deadline,
         bytes calldata signature
     ) external payable virtual override onlyOwnerOrRelayer {
         if (msg.sender != owner) {
             require(
                 _verifySignature(
+                    deadline,
                     delegatedAccount.wallet,
                     keccak256(
                         abi.encodePacked(
@@ -444,11 +458,13 @@ contract Account is IAccount {
         bool isLong,
         uint256 collateralAmount,
         uint256 executionFee,
+        uint256 deadline,
         bytes calldata signature
     ) external payable virtual override onlyOwnerOrRelayer {
         if (msg.sender != owner) {
             require(
                 _verifySignature(
+                    deadline,
                     delegatedAccount.wallet,
                     keccak256(
                         abi.encodePacked(
@@ -594,11 +610,13 @@ contract Account is IAccount {
         uint256 triggerPrice,
         uint256 acceptablePrice,
         uint256 executionFee,
+        uint256 deadline,
         bytes calldata signature
     ) external payable virtual override onlyOwnerOrRelayer {
         if (msg.sender != owner) {
             require(
                 _verifySignature(
+                    deadline,
                     delegatedAccount.wallet,
                     keccak256(
                         abi.encodePacked(
@@ -644,11 +662,13 @@ contract Account is IAccount {
     function cancelLimitOrder(
         uint256 limitOrderId,
         uint256 executionFee,
+        uint256 deadline,
         bytes calldata signature
     ) external payable virtual override onlyOwnerOrRelayer {
         if (msg.sender != owner) {
             require(
                 _verifySignature(
+                    deadline,
                     delegatedAccount.wallet,
                     keccak256(abi.encodePacked(limitOrderId, executionFee)),
                     signature
@@ -944,10 +964,15 @@ contract Account is IAccount {
     }
 
     function _verifySignature(
+        uint256 deadline,
         address signer,
         bytes32 messageHash,
         bytes memory signature
     ) private view returns (bool) {
+        require(
+            deadline >= block.timestamp,
+            "deadline: expired"
+        );
         require(
             delegatedAccount.expiration > block.timestamp,
             "delegatedAccount: expired"

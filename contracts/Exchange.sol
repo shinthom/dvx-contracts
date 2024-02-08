@@ -230,7 +230,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
         IERC20(token).transferFrom(msg.sender, address(this), amount);
         IERC20(token).approve(account, amount);
-        IAccount(account).deposit(token, amount, 0, "");
+        IAccount(account).deposit(token, amount, 0, 0, "");
     }
 
     function swap(
