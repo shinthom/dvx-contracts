@@ -58,53 +58,49 @@ async function main() {
   const ethSize = ethers.parseEther("10");
   const wbtcSize = ethers.parseUnits("1", 8);
 
-  const executionFee = await exchange.minExecutionFee();
-  const gmxV1AdapterExecutionFee = await gmxV1Adapter.getMinExecutionFee();
-  const muxAdapterExecutionFee = await muxAdapter.getMinExecutionFee();
-
   var triggerPrice = ethers.parseUnits("2000", 18);
-  var acceptablePrice = ethers.parseUnits("2020", 18);
+  var acceptablePrice = ethers.parseUnits("2000", 18);
   await setDummyPrice();
 
   var orderId = 0;
-  await createLimitOrder(WETH, WETH, ethCollateralAmount, ethSize, true, triggerPrice, acceptablePrice, executionFee); // prettier-ignore
+  await createLimitOrder(WETH, WETH, ethCollateralAmount, ethSize, true, triggerPrice, acceptablePrice, 0); // prettier-ignore
   // await executeLimitOrder(orderId++, gmxV1Adapter, 0);
   // console.log(await gmxV1Adapter.getPosition(account.target, WETH, WETH, true));
-  await createLimitOrder(WETH, WETH, ethCollateralAmount, ethSize, true, triggerPrice, acceptablePrice, executionFee); // prettier-ignore
+  await createLimitOrder(WETH, WETH, ethCollateralAmount, ethSize, true, triggerPrice, acceptablePrice, 0); // prettier-ignore
   // await executeLimitOrder(orderId++, muxAdapter, 0);
   // console.log(await muxAdapter.getPosition(account.target, WETH, WETH, true));
 
-  await createLimitOrder(WBTC, WETH, wbtcCollateralAmount, ethSize, true, triggerPrice, acceptablePrice, executionFee); // prettier-ignore
+  await createLimitOrder(WBTC, WETH, wbtcCollateralAmount, ethSize, true, triggerPrice, acceptablePrice, 0); // prettier-ignore
   // await executeLimitOrder(orderId++, gmxV1Adapter, 0);
   // console.log(await gmxV1Adapter.getPosition(account.target, WETH, WETH, true));
-  await createLimitOrder(WBTC, WETH, wbtcCollateralAmount, ethSize, true, triggerPrice, acceptablePrice, executionFee); // prettier-ignore
+  await createLimitOrder(WBTC, WETH, wbtcCollateralAmount, ethSize, true, triggerPrice, acceptablePrice, 0); // prettier-ignore
   // await executeLimitOrder(orderId++, muxAdapter, 0);
   // console.log(await muxAdapter.getPosition(account.target, WBTC, WETH, true));
 
-  await createLimitOrder(USDC, WETH, usdcCollateralAmount, ethSize, true, triggerPrice, acceptablePrice, executionFee); // prettier-ignore
+  await createLimitOrder(USDC, WETH, usdcCollateralAmount, ethSize, true, triggerPrice, acceptablePrice, 0); // prettier-ignore
   // await executeLimitOrder(orderId++, gmxV1Adapter, 0);
   // console.log(await gmxV1Adapter.getPosition(account.target, WETH, WETH, true));
-  await createLimitOrder(USDC, WETH, usdcCollateralAmount, ethSize, true, triggerPrice, acceptablePrice, executionFee); // prettier-ignore
+  await createLimitOrder(USDC, WETH, usdcCollateralAmount, ethSize, true, triggerPrice, acceptablePrice, 0); // prettier-ignore
   // await executeLimitOrder(orderId++, muxAdapter, 0);
   // console.log(await muxAdapter.getPosition(account.target, USDC, WETH, true));
 
   var triggerPrice = ethers.parseUnits("2000", 18);
   var acceptablePrice = ethers.parseUnits("1980", 18);
-  await createLimitOrder(WETH, WETH, ethCollateralAmount, ethSize, false, triggerPrice, acceptablePrice, executionFee); // prettier-ignore
-  await createLimitOrder(WBTC, WETH, wbtcCollateralAmount, ethSize, false, triggerPrice, acceptablePrice, executionFee); // prettier-ignore
-  await createLimitOrder(USDC, WETH, usdcCollateralAmount, ethSize, false, triggerPrice, acceptablePrice, executionFee); // prettier-ignore
+  await createLimitOrder(WETH, WETH, ethCollateralAmount, ethSize, false, triggerPrice, acceptablePrice, 0); // prettier-ignore
+  await createLimitOrder(WBTC, WETH, wbtcCollateralAmount, ethSize, false, triggerPrice, acceptablePrice, 0); // prettier-ignore
+  await createLimitOrder(USDC, WETH, usdcCollateralAmount, ethSize, false, triggerPrice, acceptablePrice, 0); // prettier-ignore
 
   var triggerPrice = ethers.parseUnits("40000", 18);
   var acceptablePrice = ethers.parseUnits("40400", 18);
-  await createLimitOrder(WETH, WBTC, ethCollateralAmount, wbtcSize, true, triggerPrice, acceptablePrice, executionFee); // prettier-ignore
-  await createLimitOrder(WBTC, WBTC, wbtcCollateralAmount, wbtcSize, true, triggerPrice, acceptablePrice, executionFee); // prettier-ignore
-  await createLimitOrder(USDC, WBTC, usdcCollateralAmount, wbtcSize, true, triggerPrice, acceptablePrice, executionFee); // prettier-ignore
+  await createLimitOrder(WETH, WBTC, ethCollateralAmount, wbtcSize, true, triggerPrice, acceptablePrice, 0); // prettier-ignore
+  await createLimitOrder(WBTC, WBTC, wbtcCollateralAmount, wbtcSize, true, triggerPrice, acceptablePrice, 0); // prettier-ignore
+  await createLimitOrder(USDC, WBTC, usdcCollateralAmount, wbtcSize, true, triggerPrice, acceptablePrice, 0); // prettier-ignore
 
   var triggerPrice = ethers.parseUnits("40000", 18);
   var acceptablePrice = ethers.parseUnits("39600", 18);
-  await createLimitOrder(WETH, WBTC, ethCollateralAmount, wbtcSize, false, triggerPrice, acceptablePrice, executionFee); // prettier-ignore
-  await createLimitOrder(WBTC, WBTC, wbtcCollateralAmount, wbtcSize, false, triggerPrice, acceptablePrice, executionFee); // prettier-ignore
-  await createLimitOrder(USDC, WBTC, usdcCollateralAmount, wbtcSize, false, triggerPrice, acceptablePrice, executionFee); // prettier-ignore
+  await createLimitOrder(WETH, WBTC, ethCollateralAmount, wbtcSize, false, triggerPrice, acceptablePrice, 0); // prettier-ignore
+  await createLimitOrder(WBTC, WBTC, wbtcCollateralAmount, wbtcSize, false, triggerPrice, acceptablePrice, 0); // prettier-ignore
+  await createLimitOrder(USDC, WBTC, usdcCollateralAmount, wbtcSize, false, triggerPrice, acceptablePrice, 0); // prettier-ignore
 
   console.log(await warehouse.getLimitOrders(account.target));
 }

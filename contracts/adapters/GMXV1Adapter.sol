@@ -5,6 +5,11 @@ import {IAdapter} from "../interfaces/IAdapter.sol";
 import {IExchange} from "../interfaces/IExchange.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
 import {BaseAdapter} from "./BaseAdapter.sol";
+import "hardhat/console.sol";
+
+interface ITimelock {
+    function marginFeeBasisPoints() external view returns (uint256);
+}
 
 interface IVault {
     struct Position {
@@ -201,25 +206,28 @@ contract GmxV1Adapter is BaseAdapter {
     address private immutable _positionRouter;
     address private immutable _router;
     address private immutable _vault;
+    address private immutable _timelock;
     address private immutable _exchange;
-
     address private immutable _this;
 
     constructor(
         address positionRouter,
         address router,
         address vault,
+        address timelock,
         address exchange,
         address logger
     ) BaseAdapter(logger) {
         require(positionRouter != address(0), "positionRouter: zero address");
         require(router != address(0), "router: zero address");
         require(vault != address(0), "vault: zero address");
+        require(timelock != address(0), "timelock: zero address");
         require(exchange != address(0), "exchange: zero address");
 
         _positionRouter = positionRouter;
         _router = router;
         _vault = vault;
+        _timelock = timelock;
         _exchange = exchange;
 
         _this = address(this);
@@ -560,8 +568,9 @@ contract GmxV1Adapter is BaseAdapter {
     function getPositionFee(
         address /* index */,
         uint256 size
-    ) external pure override returns (uint256) {
-        return (size * 10) / BASIS_POINTS_DIVISOR;
+    ) public view override returns (uint256) {
+        uint256 marginFeeBasisPoints = ITimelock(_timelock).marginFeeBasisPoints();
+        return (size * marginFeeBasisPoints) / BASIS_POINTS_DIVISOR;
     }
 
     function getDepositFee(
@@ -716,7 +725,7 @@ contract GmxV1Adapter is BaseAdapter {
         uint256 size,
         uint256 fundingFee
     ) private view returns (uint256) {
-        uint256 marginFeeBasisPoints = IVault(_vault).marginFeeBasisPoints();
+        uint256 marginFeeBasisPoints = ITimelock(_timelock).marginFeeBasisPoints();
         uint256 liquidationFeeUsd = IVault(_vault).liquidationFeeUsd();
 
         return

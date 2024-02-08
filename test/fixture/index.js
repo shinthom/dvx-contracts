@@ -3,6 +3,7 @@ const { ethers } = require("hardhat");
 const PositionRouter = "0xb87a436b93ffe9d75c5cfa7bacfff96430b09868";
 const Router = "0xabbc5f99639c9b6bcb58544ddf04efa6802f4064";
 const Vault = "0x489ee077994b6658eafa855c308275ead8097c4a";
+const Timelock = "0xe7E740Fa40CA16b15B621B49de8E9F0D69CF4858";
 const VaultPriceFeed = "0x2d68011bcA022ed0E474264145F46CC4de96a002";
 const FastPriceFeed = "0x11D62807dAE812a0F1571243460Bf94325F43BB7";
 
@@ -203,6 +204,7 @@ const deploy = async (noAccount) => {
     PositionRouter,
     Router,
     Vault,
+    Timelock,
     exchange.target,
     logger.target,
   ]);
@@ -373,8 +375,10 @@ stable:
         isLong,
         size,
         executionFee,
+        "0x",
         { value: adapterFee }
       );
+    console.log("decrease position");
 
     if (adapter.target == gmxV1Adapter.target) {
       await executeDecreasePosition(account.target);
@@ -451,9 +455,10 @@ stable:
         collateralAmount,
         size,
         isLong,
-        executionFee,
         triggerPrice,
-        acceptablePrice
+        acceptablePrice,
+        0,
+        "0x"
       );
   };
 
