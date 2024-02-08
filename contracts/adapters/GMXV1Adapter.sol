@@ -871,7 +871,7 @@ contract GmxV1Adapter is BaseAdapter {
         uint256 collateralAmount,
         uint256 averagePrice,
         bool isLong
-    ) private view returns (uint256) {
+    ) private pure returns (uint256) {
         if (liquidationAmount > collateralAmount) {
             uint256 liquidationDelta = liquidationAmount - collateralAmount;
             uint256 priceDelta = (liquidationDelta * averagePrice) / size;
