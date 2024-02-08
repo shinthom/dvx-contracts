@@ -38,15 +38,14 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
-        uint256 fee,
         uint256 triggerPrice,
         uint256 acceptablePrice
     ) external payable override onlyExchange {
-        // require(
-        //     (isLong && triggerPrice <= acceptablePrice) ||
-        //         (!isLong && triggerPrice >= acceptablePrice),
-        //     "triggerPrice: invalid"
-        // );
+        require(
+            (isLong && triggerPrice <= acceptablePrice) ||
+                (!isLong && triggerPrice >= acceptablePrice),
+            "triggerPrice: invalid"
+        );
 
         LimitOrder memory limitOrder = LimitOrder({
             limitOrderId: _limitOrders[account].length,
@@ -62,7 +61,7 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
             createdAt: block.timestamp
         });
         _limitOrders[account].push(limitOrder);
-        emit LimitOrderCreated(account, limitOrder.limitOrderId, fee);
+        emit LimitOrderCreated(account, limitOrder.limitOrderId);
     }
 
     function cancelLimitOrder(

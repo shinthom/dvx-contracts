@@ -637,8 +637,7 @@ contract Account is IAccount {
             size,
             isLong,
             triggerPrice,
-            acceptablePrice,
-            executionFee
+            acceptablePrice
         );
     }
 
