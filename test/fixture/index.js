@@ -680,7 +680,7 @@ stable:
     await increaseTime(seconds);
 
     // const beforeFundingRate = await vault.cumulativeFundingRates(collateral);
-    await vault.updateCumulativeFundingRate(collateral);
+    await vault.updateCumulativeFundingRate(collateral, ethers.ZeroAddress);
     // const afterFundingRate = await vault.cumulativeFundingRates(collateral);
     // console.log(`\nfundingRate is updated: ${beforeFundingRate} -> ${afterFundingRate}\n`) // prettier-ignore
   };

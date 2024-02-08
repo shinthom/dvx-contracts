@@ -767,19 +767,6 @@ contract Account is IAccount {
         );
     }
 
-    function cancelTriggerOrder(
-        bytes32 positionKey,
-        uint256 triggerOrderId,
-        uint256 executionFee
-    ) external virtual override onlyOwnerOrRelayer {
-        IWarehouse.TriggerOrder memory triggerOrder = IExchange(exchange)
-            .cancelTriggerOrder(address(this), positionKey, triggerOrderId);
-
-        if (executionFee > 0) {
-            _feeDebts[triggerOrder.collateral] += executionFee;
-        }
-    }
-
     function executeTriggerOrder(
         bytes32 positionKey,
         uint256 triggerOrderId

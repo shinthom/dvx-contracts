@@ -149,11 +149,6 @@ interface IAccount {
         uint256 acceptablePrice,
         uint256 executionFee
     ) external payable;
-    function cancelTriggerOrder(
-        bytes32 positionKey,
-        uint256 triggerOrderId,
-        uint256 executionFee
-    ) external;
     function executeTriggerOrder(
         bytes32 positionKey,
         uint256 triggerOrderId
