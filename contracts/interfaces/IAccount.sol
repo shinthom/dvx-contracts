@@ -161,5 +161,5 @@ interface IAccount {
     function getWithdrawableBalance(
         address token
     ) external view returns (uint256);
-    function getDebt(address token) external view returns (uint256);
+    function getFeeDebt(address token) external view returns (uint256);
 }

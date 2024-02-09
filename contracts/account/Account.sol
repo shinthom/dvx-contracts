@@ -918,7 +918,7 @@ contract Account is IAccount, PayableMulticall {
         return getBalance(token) - getLockedBalance(token);
     }
 
-    function getDebt(
+    function getFeeDebt(
         address token
     ) public view virtual override returns (uint256) {
         return _feeDebts[token];
