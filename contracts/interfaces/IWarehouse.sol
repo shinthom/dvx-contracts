@@ -25,6 +25,7 @@ interface IWarehouse {
         bool isLong;
         uint256 triggerPrice;
         uint256 acceptablePrice;
+        uint256 executionFee;
         uint256 createdAt;
     }
 
@@ -66,7 +67,8 @@ interface IWarehouse {
         uint256 size,
         bool isLong,
         uint256 triggerPrice,
-        uint256 acceptablePrice
+        uint256 acceptablePrice,
+        uint256 executionFee
     ) external payable;
     function cancelLimitOrder(
         address account,

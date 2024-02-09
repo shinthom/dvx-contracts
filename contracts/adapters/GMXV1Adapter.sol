@@ -119,7 +119,7 @@ interface IPositionRouter {
         uint256 _size,
         bool _isLong,
         uint256 _acceptablePrice,
-        uint256 _executionFee,
+        uint256 _networkFee,
         bytes32 _referralCode,
         address _callbackTarget
     ) external payable returns (bytes32);
@@ -131,7 +131,7 @@ interface IPositionRouter {
         uint256 _size,
         bool _isLong,
         uint256 _acceptablePrice,
-        uint256 _executionFee,
+        uint256 _networkFee,
         bytes32 _referralCode,
         address _callbackTarget
     ) external payable returns (bytes32);
@@ -145,7 +145,7 @@ interface IPositionRouter {
         address _receiver,
         uint256 _acceptablePrice,
         uint256 _minOut,
-        uint256 _executionFee,
+        uint256 _networkFee,
         bool _withdrawETH,
         address _callbackTarget
     ) external payable returns (bytes32);
@@ -158,7 +158,7 @@ interface IPositionRouter {
 
     function executeDecreasePosition(
         bytes32 _key,
-        address payable _executionFeeReceiver
+        address payable _networkFeeReceiver
     ) external returns (bool);
 
     function increasePositionsIndex(
@@ -957,7 +957,7 @@ contract GmxV1Adapter is BaseAdapter {
             collateral = defaultStableToken;
         }
 
-        uint256 executionFee = IPositionRouter(_positionRouter)
+        uint256 networkFee = IPositionRouter(_positionRouter)
             .minExecutionFee();
 
         address[] memory path = new address[](1);
@@ -969,7 +969,7 @@ contract GmxV1Adapter is BaseAdapter {
 
         IERC20(collateral).approve(_router, collateralAmount);
         IPositionRouter(_positionRouter).createIncreasePosition{
-            value: executionFee
+            value: networkFee
         }(
             path,
             index,
@@ -978,7 +978,7 @@ contract GmxV1Adapter is BaseAdapter {
             size,
             isLong,
             acceptablePrice,
-            executionFee,
+            networkFee,
             0x0,
             address(0)
         );
@@ -995,14 +995,14 @@ contract GmxV1Adapter is BaseAdapter {
         if (acceptablePrice == 0) {
             acceptablePrice = isLong ? 0 : type(uint256).max;
         }
-        uint256 executionFee = IPositionRouter(_positionRouter)
+        uint256 networkFee = IPositionRouter(_positionRouter)
             .minExecutionFee();
 
         address[] memory path = new address[](1);
         path[0] = collateral;
 
         IPositionRouter(_positionRouter).createDecreasePosition{
-            value: executionFee
+            value: networkFee
         }(
             path,
             index,
@@ -1012,7 +1012,7 @@ contract GmxV1Adapter is BaseAdapter {
             address(this),
             acceptablePrice,
             0,
-            executionFee,
+            networkFee,
             false, // withdrawETH,
             address(0)
         );

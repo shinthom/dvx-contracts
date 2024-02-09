@@ -24,7 +24,7 @@ describe("increasePosition", () => {
 
     await setDummyPrice();
     var acceptablePrice = ethers.parseUnits("2000", 18);
-    var executionFee = 0;
+    var networkFee = 0;
     var deadline = 0;
 
     await deposit(collateral, collateralAmount);
@@ -38,7 +38,7 @@ describe("increasePosition", () => {
         size,
         isLong,
         acceptablePrice,
-        executionFee,
+        networkFee,
         deadline,
         "0x",
         { value: await gmxV1Adapter.getMinExecutionFee() }
@@ -67,7 +67,7 @@ describe("increasePosition", () => {
 
     await setDummyPrice();
     var acceptablePrice = ethers.parseUnits("2000", 18);
-    var executionFee = ethers.parseEther("0.1");
+    var networkFee = ethers.parseEther("0.1");
     var deadline = 0;
 
     await deposit(collateral, collateralAmount);
@@ -81,7 +81,7 @@ describe("increasePosition", () => {
         size,
         isLong,
         acceptablePrice,
-        executionFee,
+        networkFee,
         deadline,
         "0x",
         { value: await gmxV1Adapter.getMinExecutionFee() }
@@ -111,7 +111,7 @@ describe("increasePosition", () => {
 
     await setDummyPrice();
     var acceptablePrice = ethers.parseUnits("2000", 18);
-    var executionFee = ethers.parseEther("0.1");
+    var networkFee = ethers.parseEther("0.1");
     var deadline = 0;
     var positionFeeRate = ethers.parseUnits("0.01", 8); // 1%
     await exchange.setPositionFeeRate(positionFeeRate);
@@ -127,7 +127,7 @@ describe("increasePosition", () => {
         size,
         isLong,
         acceptablePrice,
-        executionFee,
+        networkFee,
         deadline,
         "0x",
         { value: await gmxV1Adapter.getMinExecutionFee() }
@@ -158,7 +158,7 @@ describe("increasePosition", () => {
 
     await setDummyPrice();
     var acceptablePrice = ethers.parseUnits("2000", 18);
-    var executionFee = ethers.parseUnits("200", 6);
+    var networkFee = ethers.parseUnits("200", 6);
     var deadline = 0;
     var positionFeeRate = ethers.parseUnits("0.01", 8); // 1%
     await exchange.setPositionFeeRate(positionFeeRate);
@@ -176,7 +176,7 @@ describe("increasePosition", () => {
         size,
         isLong,
         acceptablePrice,
-        executionFee,
+        networkFee,
         deadline,
         "0x",
         { value: await gmxV1Adapter.getMinExecutionFee() }

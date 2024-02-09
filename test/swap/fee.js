@@ -39,19 +39,19 @@ describe("swap", () => {
     var tokenOut = WETH;
     var amountIn = ethers.parseUnits("2000", 6);
 
-    var executionFee = ethers.parseUnits("200", 6);
+    var networkFee = ethers.parseUnits("200", 6);
 
     var expectedAmountOut = await quoter.quoteExactInputSingle.staticCall(
       tokenIn,
       tokenOut,
-      amountIn - executionFee
+      amountIn - networkFee
     );
     await deposit(tokenIn, amountIn);
     await account
       .connect(owner)
-      .swap(tokenIn, tokenOut, amountIn, executionFee, 0, "0x");
+      .swap(tokenIn, tokenOut, amountIn, networkFee, 0, "0x");
     expect(await weth.balanceOf(account.target)).to.equal(expectedAmountOut);
-    expect(await usdc.balanceOf(feeCollector.target)).to.equal(executionFee);
+    expect(await usdc.balanceOf(feeCollector.target)).to.equal(networkFee);
   });
 
   it("execution fee + swap fee", async () => {
@@ -72,27 +72,26 @@ describe("swap", () => {
     var tokenOut = WETH;
     var amountIn = ethers.parseUnits("2000", 6);
 
-    var executionFee = ethers.parseUnits("200", 6);
+    var networkFee = ethers.parseUnits("200", 6);
     var swapFeeRate = ethers.parseUnits("0.1", 8); // 10%
     await exchange.setSwapFeeRate(swapFeeRate);
-    var swapFee = await exchange.getSwapFee(amountIn - executionFee);
+    var swapFee = await exchange.getSwapFee(amountIn - networkFee);
     expect(swapFee).to.equal(
-      ((amountIn - executionFee) * swapFeeRate) /
-        (await exchange.BASIS_POINTS())
+      ((amountIn - networkFee) * swapFeeRate) / (await exchange.BASIS_POINTS())
     );
 
     var expectedAmountOut = await quoter.quoteExactInputSingle.staticCall(
       tokenIn,
       tokenOut,
-      amountIn - executionFee - swapFee
+      amountIn - networkFee - swapFee
     );
     await deposit(tokenIn, amountIn);
     await account
       .connect(owner)
-      .swap(tokenIn, tokenOut, amountIn, executionFee, 0, "0x");
+      .swap(tokenIn, tokenOut, amountIn, networkFee, 0, "0x");
     expect(await weth.balanceOf(account.target)).to.equal(expectedAmountOut);
     expect(await usdc.balanceOf(feeCollector.target)).to.equal(
-      executionFee + swapFee
+      networkFee + swapFee
     );
   });
 });

@@ -38,7 +38,8 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         uint256 size,
         bool isLong,
         uint256 triggerPrice,
-        uint256 acceptablePrice
+        uint256 acceptablePrice,
+        uint256 executionFee
     ) external payable override onlyExchange {
         require(
             (isLong && triggerPrice <= acceptablePrice) ||
@@ -57,6 +58,7 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
             isLong: isLong,
             triggerPrice: triggerPrice,
             acceptablePrice: acceptablePrice,
+            executionFee: executionFee,
             createdAt: block.timestamp
         });
         _limitOrders[account].push(limitOrder);

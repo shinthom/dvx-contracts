@@ -34,7 +34,7 @@ describe("executeTriggerOrder", () => {
     await increasePosition(gmxV1Adapter, collateral, index, collateralAmount, size, acceptablePrice, isLong); // prettier-ignore
     await checkPosition(gmxV1Adapter, account, collateral, index, isLong);
 
-    var executionFee = 0;
+    var networkFee = 0;
     var triggerPrice = ethers.parseUnits("2000", 18);
     var acceptablePrice = ethers.parseUnits("2000", 18);
 
@@ -48,7 +48,7 @@ describe("executeTriggerOrder", () => {
         "uint8", // orderType
         "uint256", // triggerPrice
         "uint256", // acceptablePrice
-        "uint256", // executionFee
+        "uint256", // networkFee
         "uint256", // deadline
       ],
       [
@@ -60,7 +60,7 @@ describe("executeTriggerOrder", () => {
         orderType.tp,
         triggerPrice,
         acceptablePrice,
-        executionFee,
+        networkFee,
         deadline,
       ]
     );
@@ -77,7 +77,7 @@ describe("executeTriggerOrder", () => {
         orderType.tp,
         triggerPrice,
         acceptablePrice,
-        executionFee,
+        networkFee,
         deadline,
         signature,
         { value: adapterFee }
@@ -110,7 +110,7 @@ describe("executeTriggerOrder", () => {
     await increasePosition(muxAdapter, collateral, index, collateralAmount, size, acceptablePrice, isLong); // prettier-ignore
     await checkPosition(muxAdapter, account, collateral, index, isLong);
 
-    var executionFee = 0;
+    var networkFee = 0;
     var triggerPrice = ethers.parseUnits("2000", 18);
     var acceptablePrice = ethers.parseUnits("2000", 18);
 
@@ -124,7 +124,7 @@ describe("executeTriggerOrder", () => {
         "uint8", // orderType
         "uint256", // triggerPrice
         "uint256", // acceptablePrice
-        "uint256", // executionFee
+        "uint256", // networkFee
         "uint256", // deadline
       ],
       [
@@ -136,7 +136,7 @@ describe("executeTriggerOrder", () => {
         orderType.tp,
         triggerPrice,
         acceptablePrice,
-        executionFee,
+        networkFee,
         deadline,
       ]
     );
@@ -153,7 +153,7 @@ describe("executeTriggerOrder", () => {
         orderType.tp,
         triggerPrice,
         acceptablePrice,
-        executionFee,
+        networkFee,
         deadline,
         signature,
         { value: adapterFee }

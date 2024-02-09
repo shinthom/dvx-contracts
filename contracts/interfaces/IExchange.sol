@@ -37,9 +37,10 @@ interface IExchange {
     event TierSet(uint8 indexed tierId, uint256 discount);
     event ReferralTierSet(address indexed referral, uint8 indexed tierId);
 
+    event FeeDebtCollected(address indexed account, address indexed token, uint256 amount);
+    event NetworkFeeCollected(address indexed account, address indexed token, uint256 amount);
     event ExecutionFeeCollected(address indexed account, address indexed token, uint256 amount);
     event ProtocolFeeCollected(address indexed account, address indexed token, uint256 amount);
-    event DebtCollected(address indexed account, address indexed token, uint256 amount, uint256 debt);
 
     function accountFactory() external returns (address);
     function warehouse() external returns (address);
@@ -111,7 +112,8 @@ interface IExchange {
         uint256 size,
         bool isLong,
         uint256 triggerPrice,
-        uint256 acceptablePrice
+        uint256 acceptablePrice,
+        uint256 executionFee
     ) external;
     function cancelLimitOrder(
         address account,
@@ -139,6 +141,16 @@ interface IExchange {
         uint256 acceptablePrice
     ) external;
 
+    function collectFeeDebt(
+        address account,
+        address token,
+        uint256 amount
+    ) external;
+    function collectNetworkFee(
+        address account,
+        address token,
+        uint256 amount
+    ) external;
     function collectExecutionFee(
         address account,
         address token,

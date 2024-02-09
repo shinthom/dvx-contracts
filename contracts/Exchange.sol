@@ -270,7 +270,8 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         uint256 size,
         bool isLong,
         uint256 triggerPrice,
-        uint256 acceptablePrice
+        uint256 acceptablePrice,
+        uint256 executionFee
     ) external override {
         IWarehouse(warehouse).createLimitOrder(
             msg.sender,
@@ -280,7 +281,8 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             size,
             isLong,
             triggerPrice,
-            acceptablePrice
+            acceptablePrice,
+            executionFee
         );
     }
 
@@ -356,6 +358,25 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             triggerPrice,
             acceptablePrice
         );
+    }
+
+    // todo: only account?
+    function collectFeeDebt(
+        address account,
+        address token,
+        uint256 amount
+    ) external override {
+        IERC20(token).transfer(feeCollector, amount);
+        emit FeeDebtCollected(account, token, amount);
+    }
+
+    function collectNetworkFee(
+        address account,
+        address token,
+        uint256 amount
+    ) external override {
+        IERC20(token).transfer(feeCollector, amount);
+        emit NetworkFeeCollected(account, token, amount);
     }
 
     function collectExecutionFee(

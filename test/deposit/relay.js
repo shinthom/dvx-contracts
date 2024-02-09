@@ -20,7 +20,7 @@ describe("relay", () => {
       [
         "address", // token
         "uint256", // amount
-        "uint256", // executionFee
+        "uint256", // networkFee
         "uint256", // deadline
       ],
       [depositToken, depositAmount, 0, deadline]
@@ -94,7 +94,7 @@ describe("relay", () => {
         "uint8", // v
         "bytes32", // r
         "bytes32", // s
-        "uint256", // executionFee
+        "uint256", // networkFee
         "uint256", // deadline
       ],
       [

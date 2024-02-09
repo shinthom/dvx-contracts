@@ -98,7 +98,7 @@ contract Account is IAccount, PayableMulticall {
     function deposit(
         address token,
         uint256 amount,
-        uint256 executionFee,
+        uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
     ) external virtual override onlyOwnerOrRelayer {
@@ -107,14 +107,14 @@ contract Account is IAccount, PayableMulticall {
                 _verifySignature(
                     deadline,
                     delegatedAccount.wallet,
-                    keccak256(abi.encodePacked(token, amount, executionFee, deadline)),
+                    keccak256(abi.encodePacked(token, amount, networkFee, deadline)),
                     signature
                 ),
                 "signature: invalid"
             );
         }
 
-        _deposit(token, amount, executionFee, signature);
+        _deposit(token, amount, networkFee, signature);
     }
 
     function depositPermit(
@@ -123,7 +123,7 @@ contract Account is IAccount, PayableMulticall {
         uint8 v,
         bytes32 r,
         bytes32 s,
-        uint256 executionFee,
+        uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
     ) external virtual override onlyOwnerOrRelayer {
@@ -133,7 +133,7 @@ contract Account is IAccount, PayableMulticall {
                     deadline,
                     delegatedAccount.wallet,
                     keccak256(
-                        abi.encodePacked(token, amount, v, r, s, executionFee, deadline)
+                        abi.encodePacked(token, amount, v, r, s, networkFee, deadline)
                     ),
                     signature
                 ),
@@ -150,38 +150,38 @@ contract Account is IAccount, PayableMulticall {
             r,
             s
         );
-        _deposit(token, amount, executionFee, signature);
+        _deposit(token, amount, networkFee, signature);
     }
 
     function _deposit(
         address token,
         uint256 amount,
-        uint256 executionFee,
+        uint256 networkFee,
         bytes calldata signature
     ) private {
         require(amount != 0, "amount: zero");
 
         IERC20(token).transferFrom(owner, address(this), amount);
 
-        if (executionFee > 0) {
+        if (networkFee > 0) {
             require(
-                amount >= executionFee,
+                amount >= networkFee,
                 "amount: less than execution fee"
             );
-            _collectExecutionFee(token, executionFee);
-            amount -= executionFee;
+            _collectNetworkFee(token, networkFee);
+            amount -= networkFee;
         }
 
         address logger = IExchange(exchange).logger();
         if (logger != address(0)) {
-            ILogger(logger).logDeposit(address(this), token, amount, executionFee);
+            ILogger(logger).logDeposit(address(this), token, amount, networkFee);
         }
     }
 
     function withdraw(
         address token,
         uint256 amount,
-        uint256 executionFee,
+        uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
     ) external virtual override onlyOwnerOrRelayer {
@@ -190,7 +190,7 @@ contract Account is IAccount, PayableMulticall {
                 _verifySignature(
                     deadline,
                     delegatedAccount.wallet,
-                    keccak256(abi.encodePacked(token, amount, executionFee, deadline)),
+                    keccak256(abi.encodePacked(token, amount, networkFee, deadline)),
                     signature
                 ),
                 "signature: invalid"
@@ -201,7 +201,7 @@ contract Account is IAccount, PayableMulticall {
 
         uint256 feeDebt = _feeDebts[token];
         require(
-            amount >= executionFee + feeDebt,
+            amount >= networkFee + feeDebt,
             "amount: less than fee + debt"
         );
         require(
@@ -209,9 +209,9 @@ contract Account is IAccount, PayableMulticall {
             "amount: greater than withdrawable balance"
         );
 
-        if (executionFee > 0) {
-            _collectExecutionFee(token, executionFee);
-            amount -= executionFee;
+        if (networkFee > 0) {
+            _collectNetworkFee(token, networkFee);
+            amount -= networkFee;
         }
 
         if (feeDebt > 0) {
@@ -223,7 +223,7 @@ contract Account is IAccount, PayableMulticall {
 
         address logger = IExchange(exchange).logger();
         if (logger != address(0)) {
-            ILogger(logger).logWithdraw(address(this), token, amount, executionFee);
+            ILogger(logger).logWithdraw(address(this), token, amount, networkFee);
         }
     }
 
@@ -231,7 +231,7 @@ contract Account is IAccount, PayableMulticall {
         address tokenIn,
         address tokenOut,
         uint256 amountIn,
-        uint256 executionFee,
+        uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
     ) external virtual override onlyOwnerOrRelayer {
@@ -245,7 +245,7 @@ contract Account is IAccount, PayableMulticall {
                             tokenIn,
                             tokenOut,
                             amountIn,
-                            executionFee,
+                            networkFee,
                             deadline
                         )
                     ),
@@ -260,24 +260,24 @@ contract Account is IAccount, PayableMulticall {
             "amountIn: greater than withdrawable balance"
         );
 
-        if (executionFee > 0) {
+        if (networkFee > 0) {
             require(
-                amountIn >= executionFee,
+                amountIn >= networkFee,
                 "amount: less than execution fee"
             );
-            _collectExecutionFee(tokenIn, executionFee);
-            amountIn -= executionFee;
+            _collectNetworkFee(tokenIn, networkFee);
+            amountIn -= networkFee;
         }
 
         (uint256 amountOut, uint256 swapFee)
-            = _swap(tokenIn, tokenOut, amountIn, executionFee);
+            = _swap(tokenIn, tokenOut, amountIn, networkFee);
     }
 
     function _swap(
         address tokenIn,
         address tokenOut,
         uint256 amountIn,
-        uint256 executionFee
+        uint256 networkFee
     ) private returns (uint256 amountOut, uint256 swapFee) {
         IERC20(tokenIn).transfer(exchange, amountIn);
 
@@ -297,7 +297,7 @@ contract Account is IAccount, PayableMulticall {
                 tokenOut,
                 amountIn,
                 amountOut,
-                executionFee,
+                networkFee,
                 swapFee
             );
         }
@@ -311,7 +311,7 @@ contract Account is IAccount, PayableMulticall {
         uint256 size,
         bool isLong,
         uint256 acceptablePrice,
-        uint256 executionFee,
+        uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
     ) external payable virtual override onlyOwnerOrRelayer {
@@ -329,7 +329,7 @@ contract Account is IAccount, PayableMulticall {
                             size,
                             isLong,
                             acceptablePrice,
-                            executionFee,
+                            networkFee,
                             deadline
                         )
                     ),
@@ -344,9 +344,9 @@ contract Account is IAccount, PayableMulticall {
             "collateralAmount: greater than withdrawable balance"
         );
 
-        if (executionFee > 0) {
-            collateralAmount -= executionFee;
-            _collectExecutionFee(collateral, executionFee);
+        if (networkFee > 0) {
+            collateralAmount -= networkFee;
+            _collectNetworkFee(collateral, networkFee);
         }
 
         uint256 feeDebt = _feeDebts[collateral];
@@ -365,7 +365,7 @@ contract Account is IAccount, PayableMulticall {
             size,
             isLong,
             acceptablePrice,
-            executionFee
+            networkFee
         );
     }
 
@@ -377,7 +377,7 @@ contract Account is IAccount, PayableMulticall {
         uint256 size,
         bool isLong,
         uint256 acceptablePrice,
-        uint256 executionFee,
+        uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
     ) external payable onlyOwnerOrRelayer {
@@ -398,7 +398,7 @@ contract Account is IAccount, PayableMulticall {
                             size,
                             isLong,
                             acceptablePrice,
-                            executionFee,
+                            networkFee,
                             deadline
                         )
                     ),
@@ -414,9 +414,9 @@ contract Account is IAccount, PayableMulticall {
             "collateralAmount: greater than withdrawable balance"
         );
 
-        if (executionFee > 0) {
-            collateralAmount -= executionFee;
-            _collectExecutionFee(collateral, executionFee);
+        if (networkFee > 0) {
+            collateralAmount -= networkFee;
+            _collectNetworkFee(collateral, networkFee);
         }
 
         uint256 feeDebt = _feeDebts[collateral];
@@ -426,7 +426,7 @@ contract Account is IAccount, PayableMulticall {
         }
 
         (collateralAmount, )
-            = _swap(collateral, path[1], collateralAmount, executionFee);
+            = _swap(collateral, path[1], collateralAmount, networkFee);
 
         collateral = path[1]; // stack too deep
 
@@ -446,7 +446,7 @@ contract Account is IAccount, PayableMulticall {
             size,
             isLong,
             acceptablePrice,
-            0 // executionFee is already logged in `_swap`
+            0 // networkFee is already logged in `_swap`
         );
     }
 
@@ -457,7 +457,7 @@ contract Account is IAccount, PayableMulticall {
         bool isLong,
         uint256 size,
         uint256 acceptablePrice,
-        uint256 executionFee,
+        uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
     ) external payable virtual override onlyOwnerOrRelayer {
@@ -474,7 +474,7 @@ contract Account is IAccount, PayableMulticall {
                             isLong,
                             size,
                             acceptablePrice,
-                            executionFee,
+                            networkFee,
                             deadline
                         )
                     ),
@@ -484,8 +484,8 @@ contract Account is IAccount, PayableMulticall {
             );
         }
 
-        if (executionFee > 0) {
-            _feeDebts[collateral] += executionFee;
+        if (networkFee > 0) {
+            _feeDebts[collateral] += networkFee;
         }
 
         _decreasePosition(
@@ -505,7 +505,7 @@ contract Account is IAccount, PayableMulticall {
         bool isLong,
         address tokenIn,
         uint256 amountIn,
-        uint256 executionFee,
+        uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
     ) external payable virtual override onlyOwnerOrRelayer {
@@ -522,7 +522,7 @@ contract Account is IAccount, PayableMulticall {
                             isLong,
                             tokenIn,
                             amountIn,
-                            executionFee,
+                            networkFee,
                             deadline
                         )
                     ),
@@ -548,9 +548,9 @@ contract Account is IAccount, PayableMulticall {
             );
         }
 
-        if (executionFee > 0) {
-            collateralAmount -= executionFee;
-            _collectExecutionFee(collateral, executionFee);
+        if (networkFee > 0) {
+            collateralAmount -= networkFee;
+            _collectNetworkFee(collateral, networkFee);
         }
 
         uint256 feeDebt = _feeDebts[collateral];
@@ -565,7 +565,7 @@ contract Account is IAccount, PayableMulticall {
             index,
             isLong,
             collateralAmount,
-            executionFee
+            networkFee
         );
     }
 
@@ -575,7 +575,7 @@ contract Account is IAccount, PayableMulticall {
         address index,
         bool isLong,
         uint256 collateralAmount,
-        uint256 executionFee,
+        uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
     ) external payable virtual override onlyOwnerOrRelayer {
@@ -591,7 +591,7 @@ contract Account is IAccount, PayableMulticall {
                             index,
                             isLong,
                             collateralAmount,
-                            executionFee,
+                            networkFee,
                             deadline
                         )
                     ),
@@ -601,8 +601,8 @@ contract Account is IAccount, PayableMulticall {
             );
         }
 
-        if (executionFee > 0) {
-            _feeDebts[collateral] += executionFee;
+        if (networkFee > 0) {
+            _feeDebts[collateral] += networkFee;
         }
 
         // slither-disable-next-line controlled-delegatecall,low-level-calls
@@ -729,6 +729,7 @@ contract Account is IAccount, PayableMulticall {
         bool isLong,
         uint256 triggerPrice,
         uint256 acceptablePrice,
+        uint256 networkFee,
         uint256 executionFee,
         uint256 deadline,
         bytes calldata signature
@@ -747,6 +748,7 @@ contract Account is IAccount, PayableMulticall {
                             isLong,
                             triggerPrice,
                             acceptablePrice,
+                            networkFee,
                             executionFee,
                             deadline
                         )
@@ -762,9 +764,9 @@ contract Account is IAccount, PayableMulticall {
             "collateralAmount: greater than withdrawable balance"
         );
 
-        if (executionFee > 0) {
-            _collectExecutionFee(collateral, executionFee);
-            collateralAmount -= executionFee;
+        if (networkFee > 0) {
+            _collectNetworkFee(collateral, networkFee);
+            collateralAmount -= networkFee;
         }
 
         _lockedBalances[collateral] += collateralAmount;
@@ -776,13 +778,14 @@ contract Account is IAccount, PayableMulticall {
             size,
             isLong,
             triggerPrice,
-            acceptablePrice
+            acceptablePrice,
+            executionFee
         );
     }
 
     function cancelLimitOrder(
         uint256 limitOrderId,
-        uint256 executionFee,
+        uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
     ) external payable virtual override onlyOwnerOrRelayer {
@@ -791,7 +794,7 @@ contract Account is IAccount, PayableMulticall {
                 _verifySignature(
                     deadline,
                     delegatedAccount.wallet,
-                    keccak256(abi.encodePacked(limitOrderId, executionFee, deadline)),
+                    keccak256(abi.encodePacked(limitOrderId, networkFee, deadline)),
                     signature
                 ),
                 "signature: invalid"
@@ -803,15 +806,14 @@ contract Account is IAccount, PayableMulticall {
 
         _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
 
-        if (executionFee > 0) {
-            _feeDebts[limitOrder.collateral] += executionFee;
+        if (networkFee > 0) {
+            _feeDebts[limitOrder.collateral] += networkFee;
         }
     }
 
     function executeLimitOrder(
         uint256 limitOrderId,
-        address adapter,
-        uint256 executionFee
+        address adapter
     ) external payable virtual override onlyOrderKeeper {
         IWarehouse.LimitOrder memory limitOrder
             = IExchange(exchange).executeLimitOrder(address(this), adapter, limitOrderId); // prettier-ignore
@@ -819,9 +821,9 @@ contract Account is IAccount, PayableMulticall {
         _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
 
         uint256 collateralAmount = limitOrder.collateralAmount;
-        if (executionFee > 0) {
-            _collectExecutionFee(limitOrder.collateral, executionFee);
-            collateralAmount -= executionFee;
+        if (limitOrder.executionFee > 0) {
+            _collectExecutionFee(limitOrder.collateral, limitOrder.executionFee);
+            collateralAmount -= limitOrder.executionFee;
         }
 
         _marketOrderId++;
@@ -834,7 +836,7 @@ contract Account is IAccount, PayableMulticall {
             limitOrder.size,
             limitOrder.isLong,
             limitOrder.acceptablePrice,
-            executionFee
+            limitOrder.executionFee
         );
     }
 
@@ -908,7 +910,7 @@ contract Account is IAccount, PayableMulticall {
         uint256 size,
         bool isLong,
         uint256 acceptablePrice,
-        uint256 executionFee
+        uint256 networkFee
     ) private {
         require(
             IExchange(exchange).isRegisteredAdapter(adapter),
@@ -953,7 +955,7 @@ contract Account is IAccount, PayableMulticall {
                 size,
                 isLong,
                 acceptablePrice,
-                executionFee,
+                networkFee,
                 positionFee
             );
         }
@@ -987,7 +989,7 @@ contract Account is IAccount, PayableMulticall {
         address index,
         bool isLong,
         uint256 collateralAmount,
-        uint256 executionFee
+        uint256 networkFee
     ) private {
         require(
             IExchange(exchange).isRegisteredAdapter(adapter),
@@ -1036,7 +1038,12 @@ contract Account is IAccount, PayableMulticall {
         _feeDebts[token] -= amount;
 
         IERC20(token).transfer(exchange, amount);
-        IExchange(exchange).collectExecutionFee(address(this), token, amount);
+        IExchange(exchange).collectFeeDebt(address(this), token, amount);
+    }
+
+    function _collectNetworkFee(address token, uint256 amount) private {
+        IERC20(token).transfer(exchange, amount);
+        IExchange(exchange).collectNetworkFee(address(this), token, amount);
     }
 
     function _collectExecutionFee(address token, uint256 amount) private {

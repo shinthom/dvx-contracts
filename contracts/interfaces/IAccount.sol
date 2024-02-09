@@ -27,7 +27,7 @@ interface IAccount {
     function deposit(
         address token,
         uint256 amount,
-        uint256 executionFee,
+        uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
     ) external;
@@ -37,14 +37,14 @@ interface IAccount {
         uint8 v,
         bytes32 r,
         bytes32 s,
-        uint256 executionFee,
+        uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
     ) external;
     function withdraw(
         address token,
         uint256 amount,
-        uint256 executionFee,
+        uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
     ) external;
@@ -52,7 +52,7 @@ interface IAccount {
         address tokenIn,
         address tokenOut,
         uint256 amountIn,
-        uint256 executionFee,
+        uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
     ) external;
@@ -65,7 +65,7 @@ interface IAccount {
         uint256 size,
         bool isLong,
         uint256 acceptablePrice,
-        uint256 executionFee,
+        uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
     ) external payable;
@@ -76,7 +76,7 @@ interface IAccount {
         bool isLong,
         uint256 size,
         uint256 acceptablePrice,
-        uint256 executionFee,
+        uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
     ) external payable;
@@ -87,7 +87,7 @@ interface IAccount {
         bool isLong,
         address tokenIn,
         uint256 amountIn,
-        uint256 executionFee,
+        uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
     ) external payable;
@@ -97,7 +97,7 @@ interface IAccount {
         address index,
         bool isLong,
         uint256 collateralAmount,
-        uint256 executionFee,
+        uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
     ) external payable;
@@ -127,20 +127,20 @@ interface IAccount {
         bool isLong,
         uint256 triggerPrice,
         uint256 acceptablePrice,
+        uint256 networkFee,
         uint256 executionFee,
         uint256 deadline,
         bytes calldata signature
     ) external payable;
     function cancelLimitOrder(
         uint256 limitOrderId,
-        uint256 executionFee,
+        uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
     ) external payable;
     function executeLimitOrder(
         uint256 limitOrderId,
-        address adapter,
-        uint256 executionFee
+        address adapter
     ) external payable;
     function executeTriggerOrder(
         address adapter,
@@ -151,7 +151,7 @@ interface IAccount {
         IWarehouse.TriggerOrderType orderType,
         uint256 triggerPrice,
         uint256 acceptablePrice,
-        uint256 executionFee
+        uint256 networkFee
     ) external payable;
 
     function getBalance(address token) external view returns (uint256);

@@ -27,7 +27,7 @@ describe("marketOrder", () => {
       const isLong = true;
 
       const acceptablePrice = ethers.parseUnits("2000", 18);
-      const executionFee = 0;
+      const networkFee = 0;
       const adapterFee = await gmxV1Adapter.getMinExecutionFee();
 
       // deposit
@@ -44,7 +44,7 @@ describe("marketOrder", () => {
           size,
           isLong,
           acceptablePrice,
-          executionFee,
+          networkFee,
           0,
           "0x",
           { value: adapterFee }
@@ -75,7 +75,7 @@ describe("marketOrder", () => {
         isLong,
         collateral, // tokenIn
         collateralAmount, // amountIn
-        executionFee,
+        networkFee,
         0,
         "0x",
         { value: adapterFee }
@@ -105,7 +105,7 @@ describe("marketOrder", () => {
           index,
           isLong,
           collateralAmount,
-          executionFee,
+          networkFee,
           0,
           "0x",
           { value: adapterFee }
@@ -136,7 +136,7 @@ describe("marketOrder", () => {
           isLong,
           size,
           acceptablePrice,
-          executionFee,
+          networkFee,
           0,
           "0x",
           { value: adapterFee }
@@ -179,7 +179,7 @@ describe("marketOrder", () => {
       const isLong = true;
 
       const acceptablePrice = ethers.parseUnits("2000", 18);
-      const executionFee = 0;
+      const networkFee = 0;
       const adapterFee = await gmxV1Adapter.getMinExecutionFee();
 
       // deposit
@@ -195,7 +195,7 @@ describe("marketOrder", () => {
           "uint256", // size
           "bool", // isLong
           "uint256", // acceptablePrice
-          "uint256", // executionFee
+          "uint256", // networkFee
         ],
         [
           gmxV1Adapter.target,
@@ -205,7 +205,7 @@ describe("marketOrder", () => {
           size,
           isLong,
           acceptablePrice,
-          executionFee,
+          networkFee,
         ]
       );
       var signature = await va.signMessage(ethers.getBytes(messageHash));
@@ -221,7 +221,7 @@ describe("marketOrder", () => {
           size,
           isLong,
           acceptablePrice,
-          executionFee,
+          networkFee,
           deadline,
           signature,
           { value: adapterFee }
@@ -254,7 +254,7 @@ describe("marketOrder", () => {
           "bool", // isLong
           "address", // tokenIn
           "uint256", // amountIn
-          "uint256", // executionFee
+          "uint256", // networkFee
         ],
         [
           gmxV1Adapter.target,
@@ -263,7 +263,7 @@ describe("marketOrder", () => {
           isLong,
           collateral, // tokenIn
           collateralAmount, // amountIn
-          executionFee,
+          networkFee,
         ]
       );
       var signature = await va.signMessage(ethers.getBytes(messageHash));
@@ -276,7 +276,7 @@ describe("marketOrder", () => {
         isLong,
         collateral, // tokenIn
         collateralAmount, // amountIn
-        executionFee,
+        networkFee,
         deadline,
         signature,
         { value: adapterFee }
@@ -305,7 +305,7 @@ describe("marketOrder", () => {
           "address", // index
           "bool", // isLong
           "uint256", // collateralAmount
-          "uint256", // executionFee
+          "uint256", // networkFee
         ],
         [
           gmxV1Adapter.target,
@@ -313,7 +313,7 @@ describe("marketOrder", () => {
           index,
           isLong,
           collateralAmount,
-          executionFee,
+          networkFee,
         ]
       );
       var signature = await va.signMessage(ethers.getBytes(messageHash));
@@ -327,7 +327,7 @@ describe("marketOrder", () => {
           index,
           isLong,
           collateralAmount,
-          executionFee,
+          networkFee,
           deadline,
           signature,
           { value: adapterFee }
@@ -357,7 +357,7 @@ describe("marketOrder", () => {
           "bool", // isLong
           "uint256", // size
           "uint256", // acceptablePrice
-          "uint256", // executionFee
+          "uint256", // networkFee
         ],
         [
           gmxV1Adapter.target,
@@ -366,7 +366,7 @@ describe("marketOrder", () => {
           isLong,
           size,
           acceptablePrice,
-          executionFee,
+          networkFee,
         ]
       );
       var signature = await va.signMessage(ethers.getBytes(messageHash));
@@ -381,7 +381,7 @@ describe("marketOrder", () => {
           isLong,
           size,
           acceptablePrice,
-          executionFee,
+          networkFee,
           deadline,
           signature,
           { value: adapterFee }
@@ -425,7 +425,7 @@ describe("marketOrder", () => {
       const isLong = true;
 
       const acceptablePrice = ethers.parseUnits("2000", 18);
-      const executionFee = 0;
+      const networkFee = 0;
       const adapterFee = await muxAdapter.getMinExecutionFee();
 
       // deposit
@@ -442,7 +442,7 @@ describe("marketOrder", () => {
           size,
           isLong,
           acceptablePrice,
-          executionFee,
+          networkFee,
           0,
           "0x",
           { value: adapterFee }
@@ -474,7 +474,7 @@ describe("marketOrder", () => {
         isLong,
         collateral, // tokenIn
         collateralAmount, // amountIn
-        executionFee,
+        networkFee,
         0,
         "0x",
         { value: adapterFee }
@@ -503,7 +503,7 @@ describe("marketOrder", () => {
           index,
           isLong,
           collateralAmount,
-          executionFee,
+          networkFee,
           0,
           "0x",
           { value: adapterFee }
@@ -534,7 +534,7 @@ describe("marketOrder", () => {
           isLong,
           size,
           acceptablePrice,
-          executionFee,
+          networkFee,
           0,
           "0x",
           { value: adapterFee }
@@ -577,7 +577,7 @@ describe("marketOrder", () => {
       const isLong = true;
 
       const acceptablePrice = ethers.parseUnits("2000", 18);
-      const executionFee = 0;
+      const networkFee = 0;
       const adapterFee = await muxAdapter.getMinExecutionFee();
 
       // deposit
@@ -593,7 +593,7 @@ describe("marketOrder", () => {
           "uint256", // size
           "bool", // isLong
           "uint256", // acceptablePrice
-          "uint256", // executionFee
+          "uint256", // networkFee
         ],
         [
           muxAdapter.target,
@@ -603,7 +603,7 @@ describe("marketOrder", () => {
           size,
           isLong,
           acceptablePrice,
-          executionFee,
+          networkFee,
         ]
       );
       var signature = await va.signMessage(ethers.getBytes(messageHash));
@@ -619,7 +619,7 @@ describe("marketOrder", () => {
           size,
           isLong,
           acceptablePrice,
-          executionFee,
+          networkFee,
           deadline,
           signature,
           { value: adapterFee }
@@ -652,7 +652,7 @@ describe("marketOrder", () => {
           "bool", // isLong
           "address", // tokenIn
           "uint256", // amountIn
-          "uint256", // executionFee
+          "uint256", // networkFee
         ],
         [
           muxAdapter.target,
@@ -661,7 +661,7 @@ describe("marketOrder", () => {
           isLong,
           collateral, // tokenIn
           collateralAmount, // amountIn
-          executionFee,
+          networkFee,
         ]
       );
       var signature = await va.signMessage(ethers.getBytes(messageHash));
@@ -674,7 +674,7 @@ describe("marketOrder", () => {
         isLong,
         collateral, // tokenIn
         collateralAmount, // amountIn
-        executionFee,
+        networkFee,
         deadline,
         signature,
         { value: adapterFee }
@@ -702,7 +702,7 @@ describe("marketOrder", () => {
           "address", // index
           "bool", // isLong
           "uint256", // collateralAmount
-          "uint256", // executionFee
+          "uint256", // networkFee
         ],
         [
           muxAdapter.target,
@@ -710,7 +710,7 @@ describe("marketOrder", () => {
           index,
           isLong,
           collateralAmount,
-          executionFee,
+          networkFee,
         ]
       );
       var signature = await va.signMessage(ethers.getBytes(messageHash));
@@ -724,7 +724,7 @@ describe("marketOrder", () => {
           index,
           isLong,
           collateralAmount,
-          executionFee,
+          networkFee,
           deadline,
           signature,
           { value: adapterFee }
@@ -754,7 +754,7 @@ describe("marketOrder", () => {
           "bool", // isLong
           "uint256", // size
           "uint256", // acceptablePrice
-          "uint256", // executionFee
+          "uint256", // networkFee
         ],
         [
           muxAdapter.target,
@@ -763,7 +763,7 @@ describe("marketOrder", () => {
           isLong,
           size,
           acceptablePrice,
-          executionFee,
+          networkFee,
         ]
       );
       var signature = await va.signMessage(ethers.getBytes(messageHash));
@@ -778,7 +778,7 @@ describe("marketOrder", () => {
           isLong,
           size,
           acceptablePrice,
-          executionFee,
+          networkFee,
           deadline,
           signature,
           { value: adapterFee }

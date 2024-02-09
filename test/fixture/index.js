@@ -371,7 +371,7 @@ stable:
     index,
     isLong,
     size,
-    executionFee
+    networkFee
   ) => {
     const adapterFee = await adapter.getMinExecutionFee();
     await account
@@ -382,7 +382,7 @@ stable:
         index,
         isLong,
         size,
-        executionFee,
+        networkFee,
         "0x",
         { value: adapterFee }
       );
@@ -401,7 +401,7 @@ stable:
     index,
     isLong,
     marginAmount,
-    executionFee
+    networkFee
   ) => {
     const adapterFee = await adapter.getMinExecutionFee();
     await account
@@ -423,7 +423,7 @@ stable:
     index,
     isLong,
     collateralAmount,
-    executionFee
+    networkFee
   ) => {
     const adapterFee = await adapter.getMinExecutionFee();
     await account
@@ -434,7 +434,7 @@ stable:
         index,
         isLong,
         collateralAmount,
-        executionFee,
+        networkFee,
         { value: adapterFee }
       );
 
@@ -453,7 +453,7 @@ stable:
     isLong,
     triggerPrice,
     acceptablePrice,
-    executionFee
+    networkFee
   ) => {
     await account
       .connect(owner)
@@ -471,12 +471,12 @@ stable:
       );
   };
 
-  const executeLimitOrder = async (orderId, adapter, executionFee) => {
+  const executeLimitOrder = async (orderId, adapter, networkFee) => {
     const adapterExecutionFee = await adapter.getMinExecutionFee();
 
     await account
       .connect(orderKeeper)
-      .executeLimitOrder(orderId, adapter.target, executionFee, {
+      .executeLimitOrder(orderId, adapter.target, networkFee, {
         value: adapterExecutionFee,
       });
 

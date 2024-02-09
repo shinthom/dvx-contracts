@@ -14,13 +14,13 @@ interface ILogger {
         address indexed account,
         address indexed token,
         uint256 amount,
-        uint256 executionFee
+        uint256 networkFee
     );
     event Withdrawn(
         address indexed account,
         address indexed token,
         uint256 amount,
-        uint256 executionFee
+        uint256 networkFee
     );
     event Swapped(
         address indexed account,
@@ -28,7 +28,7 @@ interface ILogger {
         address indexed tokenOut,
         uint256 amountIn,
         uint256 amountOut,
-        uint256 executionFee,
+        uint256 networkFee,
         uint256 protocolFee
     );
 
@@ -42,7 +42,7 @@ interface ILogger {
         uint256 size,
         bool isLong,
         uint256 acceptablePrice,
-        uint256 executionFee,
+        uint256 networkFee,
         uint256 positionFee
     );
     event PositionDecreased(
@@ -99,13 +99,13 @@ interface ILogger {
         address account,
         address token,
         uint256 amount,
-        uint256 executionFee
+        uint256 networkFee
     ) external;
     function logWithdraw(
         address account,
         address token,
         uint256 amount,
-        uint256 executionFee
+        uint256 networkFee
     ) external;
     function logSwap(
         address account,
@@ -113,7 +113,7 @@ interface ILogger {
         address tokenOut,
         uint256 amountIn,
         uint256 amountOut,
-        uint256 executionFee,
+        uint256 networkFee,
         uint256 protocolFee
     ) external;
 
@@ -127,7 +127,7 @@ interface ILogger {
         uint256 size,
         bool isLong,
         uint256 acceptablePrice,
-        uint256 executionFee,
+        uint256 networkFee,
         uint256 positionFee
     ) external;
     function logDecreasePosition(
