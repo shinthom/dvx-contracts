@@ -28,6 +28,7 @@ describe("createTriggerOrder, executeTriggerOrder", () => {
     var acceptablePrice = ethers.parseUnits("2000", 18);
     var triggerPrice = ethers.parseUnits("2000", 18);
     var executionFee = 0;
+    var networkFee = 0;
     var deadline = 0;
 
     await deposit(collateral, collateralAmount);
@@ -59,6 +60,7 @@ describe("createTriggerOrder, executeTriggerOrder", () => {
         size,
         0,
         triggerPrice,
+        networkFee,
         acceptablePrice,
         executionFee,
         { value: await gmxV1Adapter.getMinExecutionFee() }
@@ -90,6 +92,7 @@ describe("createTriggerOrder, executeTriggerOrder", () => {
     await setDummyPrice();
     var acceptablePrice = ethers.parseUnits("2000", 18);
     var triggerPrice = ethers.parseUnits("2000", 18);
+    var networkFee = 0;
     var executionFee = 0;
     var deadline = 0;
 
@@ -104,7 +107,7 @@ describe("createTriggerOrder, executeTriggerOrder", () => {
         size,
         isLong,
         acceptablePrice,
-        executionFee,
+        networkFee,
         deadline,
         "0x",
         { value: await gmxV1Adapter.getMinExecutionFee() }
@@ -123,6 +126,7 @@ describe("createTriggerOrder, executeTriggerOrder", () => {
         0,
         triggerPrice,
         acceptablePrice,
+        networkFee,
         executionFee,
         { value: await gmxV1Adapter.getMinExecutionFee() }
       );

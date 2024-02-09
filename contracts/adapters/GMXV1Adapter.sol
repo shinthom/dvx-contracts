@@ -294,18 +294,6 @@ contract GmxV1Adapter is BaseAdapter {
             isLong,
             acceptablePrice * 1e12
         );
-
-        uint256 price = getWrapPrice(index, isLong);
-        logDecreasePosition(
-            address(this),
-            _this,
-            collateral,
-            index,
-            size,
-            isLong,
-            price,
-            acceptablePrice
-        );
     }
 
     function increaseCollateral(
@@ -318,15 +306,6 @@ contract GmxV1Adapter is BaseAdapter {
         require(index != address(0), "index: zero address");
 
         _increase(collateral, index, collateralAmount, 0, 0, isLong);
-
-        logIncreaseCollateral(
-            address(this),
-            _this,
-            collateral,
-            index,
-            collateralAmount,
-            isLong
-        );
     }
 
     function decreaseCollateral(
@@ -351,15 +330,6 @@ contract GmxV1Adapter is BaseAdapter {
         }
 
         _decrease(collateral, index, collateralAmountUsd, 0, isLong, 0);
-
-        logDecreaseCollateral(
-            address(this),
-            _this,
-            collateral,
-            index,
-            collateralAmount,
-            isLong
-        );
     }
 
     function addAcmmMargin(

@@ -270,18 +270,6 @@ contract MuxAdapter is BaseAdapter {
             0x0,
             IOrderBook.PositionOrderExtra(0, 0, 0, 0)
         );
-
-        uint256 price = getWrapPrice(index, isLong);
-        logDecreasePosition(
-            address(this),
-            _this,
-            collateral,
-            index,
-            size,
-            isLong,
-            price,
-            acceptablePrice
-        );
     }
 
     function increaseCollateral(
@@ -315,15 +303,6 @@ contract MuxAdapter is BaseAdapter {
                 collateralAmount
             );
         }
-
-        logIncreaseCollateral(
-            address(this),
-            _this,
-            collateral,
-            index,
-            collateralAmount,
-            isLong
-        );
     }
 
     function decreaseCollateral(
@@ -350,15 +329,6 @@ contract MuxAdapter is BaseAdapter {
             uint96(collateralAmount),
             profitTokenId,
             false // isProfit
-        );
-
-        logDecreaseCollateral(
-            address(this),
-            _this,
-            collateral,
-            index,
-            collateralAmount,
-            isLong
         );
     }
 

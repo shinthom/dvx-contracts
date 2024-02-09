@@ -29,7 +29,7 @@ interface ILogger {
         uint256 amountIn,
         uint256 amountOut,
         uint256 networkFee,
-        uint256 protocolFee
+        uint256 swapFee
     );
 
     event PositionIncreased(
@@ -52,8 +52,8 @@ interface ILogger {
         address index,
         uint256 size,
         bool isLong,
-        uint256 price,
-        uint256 acceptablePrice
+        uint256 acceptablePrice,
+        uint256 networkFee
     );
     event CollateralIncreased(
         address indexed account,
@@ -61,7 +61,8 @@ interface ILogger {
         address collateral,
         address index,
         uint256 collateralAmount,
-        bool isLong
+        bool isLong,
+        uint256 networkFee
     );
     event CollateralDecreased(
         address indexed account,
@@ -69,7 +70,8 @@ interface ILogger {
         address collateral,
         address index,
         uint256 collateralAmount,
-        bool isLong
+        bool isLong,
+        uint256 networkFee
     );
 
     event AcmmMarginAdded(
@@ -114,7 +116,7 @@ interface ILogger {
         uint256 amountIn,
         uint256 amountOut,
         uint256 networkFee,
-        uint256 protocolFee
+        uint256 swapFee
     ) external;
 
     function logIncreasePosition(
@@ -137,8 +139,8 @@ interface ILogger {
         address index,
         uint256 size,
         bool isLong,
-        uint256 price,
-        uint256 acceptablePrice
+        uint256 acceptablePrice,
+        uint256 networkFee
     ) external;
     function logIncreaseCollateral(
         address account,
@@ -146,7 +148,8 @@ interface ILogger {
         address collateral,
         address index,
         uint256 collateralAmount,
-        bool isLong
+        bool isLong,
+        uint256 networkFee
     ) external;
     function logDecreaseCollateral(
         address account,
@@ -154,7 +157,8 @@ interface ILogger {
         address collateral,
         address index,
         uint256 collateralAmount,
-        bool isLong
+        bool isLong,
+        uint256 networkFee
     ) external;
 
     function logAddAcmmMargin(

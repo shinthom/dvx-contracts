@@ -11,64 +11,6 @@ abstract contract BaseAdapter is IAdapter {
         _logger = logger;
     }
 
-    function logDecreasePosition(
-        address account,
-        address adapter,
-        address collateral,
-        address index,
-        uint256 size,
-        bool isLong,
-        uint256 price,
-        uint256 acceptablePrice
-    ) internal {
-        ILogger(_logger).logDecreasePosition(
-            account,
-            adapter,
-            collateral,
-            index,
-            size,
-            isLong,
-            price,
-            acceptablePrice
-        );
-    }
-
-    function logIncreaseCollateral(
-        address account,
-        address adapter,
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        bool isLong
-    ) internal {
-        ILogger(_logger).logIncreaseCollateral(
-            account,
-            adapter,
-            collateral,
-            index,
-            collateralAmount,
-            isLong
-        );
-    }
-
-    function logDecreaseCollateral(
-        address account,
-        address adapter,
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        bool isLong
-    ) internal {
-        ILogger(_logger).logDecreaseCollateral(
-            account,
-            adapter,
-            collateral,
-            index,
-            collateralAmount,
-            isLong
-        );
-    }
-
     function logAddAcmmMargin(
         address account,
         address adapter,

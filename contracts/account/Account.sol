@@ -494,7 +494,8 @@ contract Account is IAccount, PayableMulticall {
             index,
             isLong,
             size,
-            acceptablePrice
+            acceptablePrice,
+            networkFee
         );
     }
 
@@ -616,6 +617,19 @@ contract Account is IAccount, PayableMulticall {
             )
         );
         require(success, string(data));
+
+        address logger = IExchange(exchange).logger();
+        if (logger != address(0)) {
+            ILogger(logger).logDecreaseCollateral(
+                address(this),
+                adapter,
+                collateral,
+                index,
+                collateralAmount,
+                isLong,
+                networkFee
+            );
+        }
     }
 
     function addAcmmMargin(
@@ -849,6 +863,7 @@ contract Account is IAccount, PayableMulticall {
         IWarehouse.TriggerOrderType orderType,
         uint256 triggerPrice,
         uint256 acceptablePrice,
+        uint256 networkFee,
         uint256 executionFee
     ) external payable override virtual onlyOrderKeeper {
         IExchange(exchange).executeTriggerOrder(
@@ -863,8 +878,13 @@ contract Account is IAccount, PayableMulticall {
             acceptablePrice
         );
 
+        // todo: gmx adapter fee
         if (executionFee > 0) {
             _feeDebts[collateral] += executionFee;
+        }
+
+        if (networkFee > 0) {
+            _feeDebts[collateral] += networkFee;
         }
 
         _decreasePosition(
@@ -873,7 +893,8 @@ contract Account is IAccount, PayableMulticall {
             index,
             isLong,
             size,
-            acceptablePrice
+            acceptablePrice,
+            0
         );
     }
 
@@ -967,7 +988,8 @@ contract Account is IAccount, PayableMulticall {
         address index,
         bool isLong,
         uint256 size,
-        uint256 acceptablePrice
+        uint256 acceptablePrice,
+        uint256 networkFee
     ) private {
         // slither-disable-next-line controlled-delegatecall,low-level-calls
         (bool success, bytes memory data) = adapter.delegatecall(
@@ -981,6 +1003,20 @@ contract Account is IAccount, PayableMulticall {
             )
         );
         require(success, string(data));
+
+        address logger = IExchange(exchange).logger();
+        if (logger != address(0)) {
+            ILogger(logger).logDecreasePosition(
+                address(this),
+                adapter,
+                collateral,
+                index,
+                size,
+                isLong,
+                acceptablePrice,
+                networkFee
+            );
+        }
     }
 
     function _increaseCollateral(
@@ -1007,6 +1043,19 @@ contract Account is IAccount, PayableMulticall {
             )
         );
         require(success, string(data));
+
+        address logger = IExchange(exchange).logger();
+        if (logger != address(0)) {
+            ILogger(logger).logIncreaseCollateral(
+                address(this),
+                adapter,
+                collateral,
+                index,
+                collateralAmount,
+                isLong,
+                networkFee
+            );
+        }
     }
 
     function _addAcmmMargin(
