@@ -384,6 +384,30 @@ contract Account is IAccount, PayableMulticall {
         require(path.length == 2, "path: invalid length");
         require(path[0] != path[1], "path: same token");
 
+        if (msg.sender != owner) {
+            require(
+                _verifySignature(
+                    deadline,
+                    delegatedAccount.wallet,
+                    keccak256(
+                        abi.encodePacked(
+                            adapter,
+                            path,
+                            index,
+                            collateralAmount,
+                            size,
+                            isLong,
+                            acceptablePrice,
+                            executionFee,
+                            deadline
+                        )
+                    ),
+                    signature
+                ),
+                "signature: invalid"
+            );
+        }
+
         address collateral = path[0];
         require(
             collateralAmount <= getWithdrawableBalance(collateral),
