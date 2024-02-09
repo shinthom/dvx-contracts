@@ -16,6 +16,8 @@ interface IExchange {
 
     event AccountFactorySet(address indexed accountFactory);
     event WarehouseSet(address indexed warehouse);
+    event SwapperSet(address indexed swapper);
+    event MarginManagerSet(address indexed marginManager);
     event LoggerSet(address indexed logger);
 
     event AdapterRegistered(address indexed adapter);
@@ -42,6 +44,7 @@ interface IExchange {
     function accountFactory() external returns (address);
     function warehouse() external returns (address);
     function swapper() external returns (address);
+    function marginManager() external returns (address);
     function logger() external returns (address);
 
     function isRegisteredAdapter(address adapter) external view returns (bool);
@@ -63,6 +66,7 @@ interface IExchange {
     function setAccountFactory(address _accountFactory) external;
     function setWarehouse(address _warehouse) external;
     function setSwapper(address _swapper) external;
+    function setMarginManager(address _manager) external;
     function setLogger(address _logger) external;
 
     function registerAdapter(address adapter) external;

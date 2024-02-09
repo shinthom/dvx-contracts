@@ -1,18 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.7;
 
-import {IMarginManager} from "../interfaces/IMarginManager.sol";
-
-contract MarginManager is IMarginManager {
+interface IMarginManager {
     function validateAddAcmmMargin(
         address adapter,
         address collateral,
         address index,
         bool isLong,
         uint256 marginAmount
-    ) external override view returns (bool) {
-        return true;
-    }
+    ) external view returns (bool);
 
     function validateSubAcmmMargin(
         address adapter,
@@ -20,7 +16,5 @@ contract MarginManager is IMarginManager {
         address index,
         bool isLong,
         uint256 marginAmount
-    ) external override view returns (bool) {
-        return true;
-    }
+    ) external view returns (bool);
 }

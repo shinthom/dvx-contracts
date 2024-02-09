@@ -688,7 +688,7 @@ contract Account is IAccount {
         _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
 
         if (executionFee > 0) {
-            _feeDebts[collateral] += executionFee;
+            _feeDebts[limitOrder.collateral] += executionFee;
         }
     }
 

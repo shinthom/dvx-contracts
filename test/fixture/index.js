@@ -109,6 +109,7 @@ let quoter;
 let reader;
 let logger;
 let swapper;
+let marginManager;
 
 let account;
 
@@ -218,11 +219,13 @@ const deploy = async (noAccount) => {
   reader = await ethers.deployContract("Reader", [warehouse.target]);
   swapper = await ethers.deployContract("Swapper");
   feeCollector = await ethers.deployContract("FeeCollector");
+  marginManager = await ethers.deployContract("MarginManager");
 
   await exchange.setAccountFactory(accountFactory.target);
   await exchange.setWarehouse(warehouse.target);
   await exchange.setLogger(logger.target);
   await exchange.setSwapper(swapper.target);
+  await exchange.setMarginManager(marginManager.target);
   await exchange.setFeeCollector(feeCollector.target);
   await exchange.registerAdapter(gmxV1Adapter.target);
   await exchange.registerAdapter(muxAdapter.target);

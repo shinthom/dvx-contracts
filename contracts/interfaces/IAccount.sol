@@ -139,7 +139,8 @@ interface IAccount {
     ) external payable;
     function executeLimitOrder(
         uint256 limitOrderId,
-        address adapter
+        address adapter,
+        uint256 executionFee
     ) external payable;
     function executeTriggerOrder(
         address adapter,

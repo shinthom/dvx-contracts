@@ -8,6 +8,7 @@ import {IAccountFactory} from "./interfaces/IAccountFactory.sol";
 import {IExchange} from "./interfaces/IExchange.sol";
 import {IWarehouse} from "./interfaces/IWarehouse.sol";
 import {ISwapper} from "./interfaces/ISwapper.sol";
+import {IMarginManager} from "./interfaces/IMarginManager.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
@@ -20,6 +21,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
     address public override accountFactory;
     address public override warehouse;
+    address public override marginManager;
     address public override swapper;
     address public override logger;
 
@@ -74,7 +76,14 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         require(_swapper != address(0), "warehouse: zero address");
 
         swapper = _swapper;
-        emit WarehouseSet(_swapper);
+        emit SwapperSet(_swapper);
+    }
+
+    function setMarginManager(address _marginManager) public virtual override onlyOwner {
+        require(_marginManager != address(0), "manager: zero address");
+
+        marginManager = _marginManager;
+        emit MarginManagerSet(_marginManager);
     }
 
     function setLogger(address _logger) external override onlyOwner {
@@ -396,7 +405,13 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         bool isLong,
         uint256 marginAmount
     ) external view override returns (bool) {
-        return true;
+        return IMarginManager(marginManager).validateAddAcmmMargin(
+            adapter,
+            collateral,
+            index,
+            isLong,
+            marginAmount
+        );
     }
 
     function validateSubAcmmMargin(
@@ -404,9 +419,15 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address collateral,
         address index,
         bool isLong,
-        uint256 profitAmount
+        uint256 marginAmount
     ) external view override returns (bool) {
-        return true;
+        return IMarginManager(marginManager).validateSubAcmmMargin(
+            adapter,
+            collateral,
+            index,
+            isLong,
+            marginAmount
+        );
     }
 
     function getAllRegisteredAdapters()
