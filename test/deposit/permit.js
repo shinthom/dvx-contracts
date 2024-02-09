@@ -55,12 +55,13 @@ describe("depositPermit", () => {
     await faucet(weth.target, depositAmount);
     await account
       .connect(owner)
-      .deposit(
+      .depositPermit(
         weth.target,
         depositAmount,
         splitSig.v,
         splitSig.r,
         splitSig.s,
+        0,
         0,
         "0x"
       );
@@ -116,12 +117,13 @@ describe("depositPermit", () => {
     await faucet(wbtc.target, depositAmount);
     await account
       .connect(owner)
-      .deposit(
+      .depositPermit(
         wbtc.target,
         depositAmount,
         splitSig.v,
         splitSig.r,
         splitSig.s,
+        0,
         0,
         "0x"
       );
@@ -177,12 +179,13 @@ describe("depositPermit", () => {
     await faucet(usdt.target, depositAmount);
     await account
       .connect(owner)
-      .deposit(
+      .depositPermit(
         usdt.target,
         depositAmount,
         splitSig.v,
         splitSig.r,
         splitSig.s,
+        0,
         0,
         "0x"
       );
@@ -238,12 +241,13 @@ describe("depositPermit", () => {
     await faucet(usdc.target, depositAmount);
     await account
       .connect(owner)
-      .deposit(
+      .depositPermit(
         usdc.target,
         depositAmount,
         splitSig.v,
         splitSig.r,
         splitSig.s,
+        0,
         0,
         "0x"
       );
@@ -299,12 +303,13 @@ describe("depositPermit", () => {
     await faucet(usdce.target, depositAmount);
     await account
       .connect(owner)
-      .deposit(
+      .depositPermit(
         usdce.target,
         depositAmount,
         splitSig.v,
         splitSig.r,
         splitSig.s,
+        0,
         0,
         "0x"
       );
