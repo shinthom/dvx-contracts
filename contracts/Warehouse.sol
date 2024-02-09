@@ -9,7 +9,6 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
     address private constant _weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
 
-    mapping(bytes32 => TriggerOrder[]) private _triggerOrders;
     mapping(address => LimitOrder[]) private _limitOrders;
 
     address public exchange;
@@ -149,7 +148,7 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         emit LimitOrderExecuted(account, limitOrderId);
     }
 
-    function createTriggerOrder(
+    function executeTriggerOrder(
         address account,
         address adapter,
         address collateral,
@@ -158,15 +157,8 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         uint256 size,
         TriggerOrderType orderType,
         uint256 triggerPrice, // 1e18
-        uint256 acceptablePrice, // 1e18
-        uint256 executionFee
-    ) external payable override onlyExchange {
-        require(
-            (isLong && triggerPrice >= acceptablePrice) ||
-                (!isLong && triggerPrice <= acceptablePrice),
-            "triggerPrice: invalid"
-        );
-
+        uint256 acceptablePrice // 1e18
+    ) external override onlyExchange {
         IAdapter.Position memory position = IAdapter(adapter).getPosition(
             account,
             collateral,
@@ -175,100 +167,17 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         );
         require(position.size > 0, "position: not exist");
 
-        bytes32 positionKey = getPositionKey(
-            account,
-            adapter,
-            collateral,
-            index,
-            isLong
-        );
-
-        TriggerOrder memory triggerOrder = TriggerOrder({
-            triggerOrderId: _triggerOrders[positionKey].length,
-            state: TriggerOrderState.Pending,
-            account: account,
-            adapter: adapter,
-            collateral: collateral,
-            index: index,
-            isLong: isLong,
-            size: size,
-            orderType: orderType,
-            triggerPrice: triggerPrice,
-            acceptablePrice: acceptablePrice,
-            executionFee: executionFee,
-            createdAt: block.timestamp
-        });
-        _triggerOrders[positionKey].push(triggerOrder);
-        emit TriggerOrderCreated(
-            account,
-            positionKey,
-            triggerOrder.triggerOrderId
-        );
-    }
-
-    function cancelTriggerOrder(
-        address account,
-        bytes32 positionKey,
-        uint256 triggerOrderId
-    )
-        external
-        override
-        onlyExchange
-        returns (TriggerOrder memory triggerOrder)
-    {
-        TriggerOrder memory triggerOrder = _triggerOrders[positionKey][
-            triggerOrderId
-        ];
         require(
-            triggerOrder.account == account,
-            "triggerOrder: not belong to account"
-        );
-        require(
-            triggerOrder.state == TriggerOrderState.Pending,
-            "triggerOrder: not pending"
+            (isLong && triggerPrice >= acceptablePrice) ||
+                (!isLong && triggerPrice <= acceptablePrice),
+            "triggerPrice: invalid"
         );
 
-        _triggerOrders[positionKey][triggerOrderId].state = TriggerOrderState
-            .Canceled;
-        emit TriggerOrderCanceled(
-            triggerOrder.account,
-            positionKey,
-            triggerOrderId
-        );
-    }
-
-    function executeTriggerOrder(
-        bytes32 positionKey,
-        uint256 triggerOrderId
-    )
-        external
-        override
-        onlyExchange
-        returns (TriggerOrder memory triggerOrder)
-    {
-        triggerOrder = _triggerOrders[positionKey][triggerOrderId];
+        uint256 markPrice = IAdapter(adapter).getWrapPrice(index, isLong);
         require(
-            triggerOrder.state == TriggerOrderState.Pending,
-            "state: not pending"
-        );
-
-        uint256 markPrice = IAdapter(triggerOrder.adapter).getWrapPrice(
-            triggerOrder.index,
-            triggerOrder.isLong
-        );
-        require(
-            (triggerOrder.isLong &&
-                markPrice >= triggerOrder.acceptablePrice) ||
-                (!triggerOrder.isLong &&
-                    markPrice <= triggerOrder.acceptablePrice),
+            (isLong && markPrice >= acceptablePrice) ||
+                (!isLong && markPrice <= acceptablePrice),
             "price: not acceptable"
-        );
-
-        _triggerOrders[positionKey][triggerOrderId].state = TriggerOrderState.Executed; // prettier-ignore
-        emit TriggerOrderExecuted(
-            triggerOrder.account,
-            positionKey,
-            triggerOrderId
         );
     }
 
@@ -283,19 +192,6 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
             keccak256(
                 abi.encodePacked(account, adapter, collateral, index, isLong)
             );
-    }
-
-    function getTriggerOrders(
-        bytes32 positionKey
-    ) public view override returns (TriggerOrder[] memory) {
-        return _triggerOrders[positionKey];
-    }
-
-    function getTriggerOrder(
-        bytes32 positionKey,
-        uint256 triggerOrderId
-    ) public view override returns (TriggerOrder memory) {
-        return _triggerOrders[positionKey][triggerOrderId];
     }
 
     function getLimitOrders(

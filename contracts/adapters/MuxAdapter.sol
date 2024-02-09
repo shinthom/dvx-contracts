@@ -407,7 +407,14 @@ contract MuxAdapter is BaseAdapter {
             );
         }
 
-        logAddAcmmMargin(address(this), _this, collateral, index, marginAmount, isLong);
+        logAddAcmmMargin(
+            address(this),
+            _this,
+            collateral,
+            index,
+            marginAmount,
+            isLong
+        );
     }
 
     function subAcmmMargin(
@@ -436,7 +443,14 @@ contract MuxAdapter is BaseAdapter {
             true // isProfit
         );
 
-        logSubAcmmMargin(address(this), _this, collateral, index, profitAmount, isLong);
+        logSubAcmmMargin(
+            address(this),
+            _this,
+            collateral,
+            index,
+            profitAmount,
+            isLong
+        );
     }
 
     function makeMarketOrder(
@@ -552,7 +566,8 @@ contract MuxAdapter is BaseAdapter {
             isLong
         );
 
-        uint256 collateralAmountUsd = position.collateralAmount * getPrice(collateral, isLong) / 1e18;
+        uint256 collateralAmountUsd = (position.collateralAmount *
+            getPrice(collateral, isLong)) / 1e18;
         address profitToken = getProfitToken(collateral, index, isLong);
 
         uint256 totalFee = positionFeeUsd + fundingFeeUsd;
@@ -593,7 +608,7 @@ contract MuxAdapter is BaseAdapter {
         address collateral,
         address index,
         bool isLong
-    ) external override view returns (address, uint256, address, uint256) {
+    ) external view override returns (address, uint256, address, uint256) {
         return getPositionNetValueUsd(account, collateral, index, isLong);
     }
 
@@ -603,8 +618,12 @@ contract MuxAdapter is BaseAdapter {
         address index,
         bool isLong
     ) external view override returns (address, uint256, address, uint256) {
-        (, uint256 collateralAmountUsd, address profitToken, uint256 pnlUsd)
-            = getPositionNetValueUsd(account, collateral, index, isLong);
+        (
+            ,
+            uint256 collateralAmountUsd,
+            address profitToken,
+            uint256 pnlUsd
+        ) = getPositionNetValueUsd(account, collateral, index, isLong);
 
         uint8 collateralDecimals = IERC20(collateral).decimals();
         uint8 profitDecimals = IERC20(profitToken).decimals();
@@ -612,16 +631,12 @@ contract MuxAdapter is BaseAdapter {
         uint256 collateralPrice = getPrice(collateral, isLong);
         uint256 profitTokenPrice = getPrice(profitToken, isLong);
 
-        uint256 collateralAmount = (collateralAmountUsd * (10 ** collateralDecimals)) /
-            collateralPrice;
-        uint256 profitAmount = (pnlUsd * (10 ** profitDecimals)) / profitTokenPrice;
+        uint256 collateralAmount = (collateralAmountUsd *
+            (10 ** collateralDecimals)) / collateralPrice;
+        uint256 profitAmount = (pnlUsd * (10 ** profitDecimals)) /
+            profitTokenPrice;
 
-        return (
-            collateral,
-            collateralAmount,
-            profitToken,
-            profitAmount
-        );
+        return (collateral, collateralAmount, profitToken, profitAmount);
     }
 
     function getProfitToken(
@@ -722,10 +737,14 @@ contract MuxAdapter is BaseAdapter {
 
         uint256 cumulativeFunding;
         if (isLong) {
-            cumulativeFunding = asset.longCumulativeFundingRate - position.fundingRate;
+            cumulativeFunding =
+                asset.longCumulativeFundingRate -
+                position.fundingRate;
             cumulativeFunding = (cumulativeFunding * uint256(price)) / 1e18;
         } else {
-            cumulativeFunding = asset.shortCumulativeFunding - position.fundingRate;
+            cumulativeFunding =
+                asset.shortCumulativeFunding -
+                position.fundingRate;
         }
         return (cumulativeFunding * position.size) / 1e18;
     }
@@ -747,12 +766,7 @@ contract MuxAdapter is BaseAdapter {
         }
 
         uint256 positionFee = getPositionFee(index, position.size);
-        uint256 fundingFee = getFundingFee(
-            account,
-            collateral,
-            index,
-            isLong
-        );
+        uint256 fundingFee = getFundingFee(account, collateral, index, isLong);
 
         return (positionFee, fundingFee);
     }
@@ -807,12 +821,7 @@ contract MuxAdapter is BaseAdapter {
                 1e5;
 
             int256 fundingFee = int256(
-                getFundingFee(
-                    account,
-                    collateral,
-                    index,
-                    isLong
-                )
+                getFundingFee(account, collateral, index, isLong)
             );
             p += fundingFee;
 
@@ -825,12 +834,7 @@ contract MuxAdapter is BaseAdapter {
                 1e5;
 
             int256 fundingFee = int256(
-                getFundingFee(
-                    account,
-                    collateral,
-                    index,
-                    isLong
-                )
+                getFundingFee(account, collateral, index, isLong)
             );
             p += fundingFee;
 

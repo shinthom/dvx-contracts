@@ -122,8 +122,7 @@ interface IExchange {
         address[] calldata adapters,
         uint256 limitOrderId
     ) external payable returns (IWarehouse.LimitOrder memory limitOrder);
-
-    function createTriggerOrder(
+    function executeTriggerOrder(
         address account,
         address adapter,
         address collateral,
@@ -132,18 +131,8 @@ interface IExchange {
         uint256 size,
         IWarehouse.TriggerOrderType orderType,
         uint256 triggerPrice,
-        uint256 acceptablePrice,
-        uint256 executionFee
+        uint256 acceptablePrice
     ) external;
-    function cancelTriggerOrder(
-        address account,
-        bytes32 positionKey,
-        uint256 triggerOrderId
-    ) external returns (IWarehouse.TriggerOrder memory triggerOrder);
-    function executeTriggerOrder(
-        bytes32 positionKey,
-        uint256 triggerOrderId
-    ) external returns (IWarehouse.TriggerOrder memory triggerOrder);
 
     function collectExecutionFee(
         address account,

@@ -321,7 +321,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             );
     }
 
-    function createTriggerOrder(
+    function executeTriggerOrder(
         address account,
         address adapter,
         address collateral,
@@ -330,10 +330,9 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         uint256 size,
         IWarehouse.TriggerOrderType orderType,
         uint256 triggerPrice,
-        uint256 acceptablePrice,
-        uint256 executionFee
+        uint256 acceptablePrice
     ) external override onlyAccount(account) {
-        IWarehouse(warehouse).createTriggerOrder(
+        IWarehouse(warehouse).executeTriggerOrder(
             account,
             adapter,
             collateral,
@@ -342,38 +341,8 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             size,
             orderType,
             triggerPrice,
-            acceptablePrice,
-            executionFee
+            acceptablePrice
         );
-    }
-
-    function cancelTriggerOrder(
-        address account,
-        bytes32 positionKey,
-        uint256 triggerOrderId
-    )
-        external
-        override
-        onlyAccount(account)
-        returns (IWarehouse.TriggerOrder memory)
-    {
-        return
-            IWarehouse(warehouse).cancelTriggerOrder(
-                account,
-                positionKey,
-                triggerOrderId
-            );
-    }
-
-    function executeTriggerOrder(
-        bytes32 positionKey,
-        uint256 triggerOrderId
-    ) external override returns (IWarehouse.TriggerOrder memory) {
-        return
-            IWarehouse(warehouse).executeTriggerOrder(
-                positionKey,
-                triggerOrderId
-            );
     }
 
     function collectExecutionFee(

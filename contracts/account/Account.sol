@@ -377,8 +377,7 @@ contract Account is IAccount {
             index,
             isLong,
             size,
-            acceptablePrice,
-            executionFee
+            acceptablePrice
         );
     }
 
@@ -758,7 +757,7 @@ contract Account is IAccount {
         }
     }
 
-    function createTriggerOrder(
+    function executeTriggerOrder(
         address adapter,
         address collateral,
         address index,
@@ -767,13 +766,34 @@ contract Account is IAccount {
         IWarehouse.TriggerOrderType orderType,
         uint256 triggerPrice,
         uint256 acceptablePrice,
-        uint256 executionFee
-    ) external payable virtual override onlyOwnerOrRelayer {
-        if (executionFee > 0) {
-            _feeDebts[collateral] += executionFee;
-        }
+        uint256 executionFee,
+        uint256 deadline,
+        bytes calldata signature
+    ) external payable override virtual onlyOrderKeeper {
+        require(
+            _verifySignature(
+                deadline,
+                delegatedAccount.wallet,
+                keccak256(
+                    abi.encodePacked(
+                        adapter,
+                        collateral,
+                        index,
+                        isLong,
+                        size,
+                        orderType,
+                        triggerPrice,
+                        acceptablePrice,
+                        executionFee,
+                        deadline
+                    )
+                ),
+                signature
+            ),
+            "signature: invalid"
+        );
 
-        IExchange(exchange).createTriggerOrder(
+        IExchange(exchange).executeTriggerOrder(
             address(this),
             adapter,
             collateral,
@@ -782,26 +802,20 @@ contract Account is IAccount {
             size,
             orderType,
             triggerPrice,
-            acceptablePrice,
-            executionFee
+            acceptablePrice
         );
-    }
 
-    function executeTriggerOrder(
-        bytes32 positionKey,
-        uint256 triggerOrderId
-    ) external payable virtual override onlyOrderKeeper {
-        IWarehouse.TriggerOrder memory triggerOrder = IExchange(exchange)
-            .executeTriggerOrder(positionKey, triggerOrderId);
+        if (executionFee > 0) {
+            _feeDebts[collateral] += executionFee;
+        }
 
         _decreasePosition(
-            triggerOrder.adapter,
-            triggerOrder.collateral,
-            triggerOrder.index,
-            triggerOrder.isLong,
-            triggerOrder.size,
-            0, // todo
-            triggerOrder.executionFee
+            adapter,
+            collateral,
+            index,
+            isLong,
+            size,
+            acceptablePrice
         );
     }
 
@@ -878,8 +892,7 @@ contract Account is IAccount {
         address index,
         bool isLong,
         uint256 size,
-        uint256 acceptablePrice,
-        uint256 executionFee
+        uint256 acceptablePrice
     ) private {
         // slither-disable-next-line controlled-delegatecall,low-level-calls
         (bool success, bytes memory data) = adapter.delegatecall(
@@ -969,10 +982,7 @@ contract Account is IAccount {
         bytes32 messageHash,
         bytes memory signature
     ) private view returns (bool) {
-        require(
-            deadline >= block.timestamp,
-            "deadline: expired"
-        );
+        require(deadline >= block.timestamp, "deadline: expired");
         require(
             delegatedAccount.expiration > block.timestamp,
             "delegatedAccount: expired"

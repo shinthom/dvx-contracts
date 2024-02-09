@@ -130,7 +130,14 @@ contract Logger is ILogger {
         uint256 marginAmount,
         bool isLong
     ) external override {
-        emit AcmmMarginAdded(account, adapter, collateral, index, marginAmount, isLong);
+        emit AcmmMarginAdded(
+            account,
+            adapter,
+            collateral,
+            index,
+            marginAmount,
+            isLong
+        );
     }
 
     function logSubAcmmMargin(

@@ -84,7 +84,9 @@ interface IVault {
         bool _isLong
     ) external view returns (bytes32);
 
-    function updateCumulativeFundingRate(address _collateralToken) external returns (bool);
+    function updateCumulativeFundingRate(
+        address _collateralToken
+    ) external returns (bool);
 }
 
 interface IRouter {
@@ -298,8 +300,14 @@ contract GmxV1Adapter is BaseAdapter {
         if (position.collateralAmount > position.size - sizeUsd) {
             sizeUsd = position.size;
         }
-
-        _decrease(collateral, index, 0, sizeUsd, isLong, acceptablePrice * 1e12);
+        _decrease(
+            collateral,
+            index,
+            0,
+            sizeUsd,
+            isLong,
+            acceptablePrice * 1e12
+        );
 
         uint256 price = getWrapPrice(index, isLong);
         logDecreasePosition(
@@ -379,7 +387,14 @@ contract GmxV1Adapter is BaseAdapter {
 
         _increase(collateral, index, marginAmount, 0, 0, isLong);
 
-        logAddAcmmMargin(address(this), _this, collateral, index, marginAmount, isLong);
+        logAddAcmmMargin(
+            address(this),
+            _this,
+            collateral,
+            index,
+            marginAmount,
+            isLong
+        );
     }
 
     function subAcmmMargin(
@@ -404,7 +419,14 @@ contract GmxV1Adapter is BaseAdapter {
 
         _decrease(collateral, index, marginAmountUsd, 0, isLong, 0);
 
-        logSubAcmmMargin(address(this), _this, collateral, index, marginAmount, isLong);
+        logSubAcmmMargin(
+            address(this),
+            _this,
+            collateral,
+            index,
+            marginAmount,
+            isLong
+        );
     }
 
     function makeMarketOrder(
@@ -583,9 +605,13 @@ contract GmxV1Adapter is BaseAdapter {
         address collateral,
         address index,
         bool isLong
-    ) external override view returns (address, uint256, address, uint256) {
-        (, uint256 collateralAmountUsd, address profitToken, uint256 pnlUsd)
-            = getPositionNetValueUsd(account, collateral, index, isLong);
+    ) external view override returns (address, uint256, address, uint256) {
+        (
+            ,
+            uint256 collateralAmountUsd,
+            address profitToken,
+            uint256 pnlUsd
+        ) = getPositionNetValueUsd(account, collateral, index, isLong);
 
         collateralAmountUsd /= 1e12;
         pnlUsd /= 1e12;
@@ -599,8 +625,12 @@ contract GmxV1Adapter is BaseAdapter {
         address index,
         bool isLong
     ) external view override returns (address, uint256, address, uint256) {
-        (, uint256 collateralAmountUsd, address profitToken, uint256 pnlUsd)
-            = getPositionNetValueUsd(account, collateral, index, isLong);
+        (
+            ,
+            uint256 collateralAmountUsd,
+            address profitToken,
+            uint256 pnlUsd
+        ) = getPositionNetValueUsd(account, collateral, index, isLong);
 
         uint8 collateralDecimals = IERC20(collateral).decimals();
         uint8 profitDecimals = IERC20(profitToken).decimals();
@@ -608,16 +638,12 @@ contract GmxV1Adapter is BaseAdapter {
         uint256 collateralPrice = getPrice(collateral, isLong);
         uint256 profitTokenPrice = getPrice(profitToken, isLong);
 
-        uint256 collateralAmount = (collateralAmountUsd * (10 ** collateralDecimals)) /
-            collateralPrice;
-        uint256 profitAmount = (pnlUsd * (10 ** profitDecimals)) / profitTokenPrice;
+        uint256 collateralAmount = (collateralAmountUsd *
+            (10 ** collateralDecimals)) / collateralPrice;
+        uint256 profitAmount = (pnlUsd * (10 ** profitDecimals)) /
+            profitTokenPrice;
 
-        return (
-            collateral,
-            collateralAmount,
-            profitToken,
-            profitAmount
-        );
+        return (collateral, collateralAmount, profitToken, profitAmount);
     }
 
     function getProfitToken(
@@ -673,7 +699,8 @@ contract GmxV1Adapter is BaseAdapter {
         address /* index */,
         uint256 size
     ) public view override returns (uint256) {
-        uint256 marginFeeBasisPoints = ITimelock(_timelock).marginFeeBasisPoints();
+        uint256 marginFeeBasisPoints = ITimelock(_timelock)
+            .marginFeeBasisPoints();
         return (size * marginFeeBasisPoints) / BASIS_POINTS_DIVISOR;
     }
 
@@ -744,7 +771,12 @@ contract GmxV1Adapter is BaseAdapter {
         if (position.size == 0) {
             return 0;
         }
-        return IVault(_vault).getFundingFee(collateral, position.size, position.fundingRate);
+        return
+            IVault(_vault).getFundingFee(
+                collateral,
+                position.size,
+                position.fundingRate
+            );
     }
 
     function getCloseFee(
@@ -814,12 +846,7 @@ contract GmxV1Adapter is BaseAdapter {
             return 0;
         }
 
-        uint256 fundingFee = getFundingFee(
-            account,
-            collateral,
-            index,
-            isLong
-        );
+        uint256 fundingFee = getFundingFee(account, collateral, index, isLong);
         uint256 totalFees = _calculateTotalFees(position.size, fundingFee);
 
         uint256 liquidationPriceForFees = _getLiquidationPriceFromDelta(
@@ -858,7 +885,8 @@ contract GmxV1Adapter is BaseAdapter {
         uint256 size,
         uint256 fundingFee
     ) private view returns (uint256) {
-        uint256 marginFeeBasisPoints = ITimelock(_timelock).marginFeeBasisPoints();
+        uint256 marginFeeBasisPoints = ITimelock(_timelock)
+            .marginFeeBasisPoints();
         uint256 liquidationFeeUsd = IVault(_vault).liquidationFeeUsd();
 
         return

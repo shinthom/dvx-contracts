@@ -147,8 +147,7 @@ interface IAccount {
         uint256[] calldata collateralAmounts,
         uint256[] calldata sizes
     ) external payable;
-
-    function createTriggerOrder(
+    function executeTriggerOrder(
         address adapter,
         address collateral,
         address index,
@@ -157,11 +156,9 @@ interface IAccount {
         IWarehouse.TriggerOrderType orderType,
         uint256 triggerPrice,
         uint256 acceptablePrice,
-        uint256 executionFee
-    ) external payable;
-    function executeTriggerOrder(
-        bytes32 positionKey,
-        uint256 triggerOrderId
+        uint256 executionFee,
+        uint256 deadline,
+        bytes calldata signature
     ) external payable;
 
     function getBalance(address token) external view returns (uint256);

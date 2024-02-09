@@ -23,6 +23,7 @@
     "e2e-quote": "hardhat test test/e2e/quote.js --network local",
     "e2e-receive-tokens": "hardhat test test/e2e/getReceiveTokens.js --network local",
     "e2e-funding-fee": "hardhat test test/e2e/getFundingFee.js --network local",
+    "e2e-execute-trigger-order": "hardhat test test/e2e/executeTriggerOrder.js --network local",
     "test": "hardhat test --network local",
     "test-account": "hardhat test test/Account.test.js --network local",
     "test-gmx-v1": "hardhat test test/adapters/GmxV1.test.js --network local",

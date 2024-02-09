@@ -8,11 +8,6 @@ interface IWarehouse {
         TakeProfit,
         StopLoss
     }
-    enum TriggerOrderState {
-        Pending,
-        Executed,
-        Canceled
-    }
     enum LimitOrderState {
         Pending,
         Executed,
@@ -32,21 +27,6 @@ interface IWarehouse {
         uint256 acceptablePrice;
         uint256 createdAt;
     }
-    struct TriggerOrder {
-        uint256 triggerOrderId;
-        TriggerOrderState state;
-        address account;
-        address adapter;
-        address collateral;
-        address index;
-        bool isLong;
-        uint256 size;
-        TriggerOrderType orderType;
-        uint256 triggerPrice;
-        uint256 acceptablePrice;
-        uint256 executionFee;
-        uint256 createdAt;
-    }
 
     event ExchangeSet(address indexed exchange);
     event OrderKeeperSet(address indexed orderKeeper, bool isActive);
@@ -63,22 +43,6 @@ interface IWarehouse {
     event LimitOrderExecuted(
         address indexed account,
         uint256 indexed limitOrderId
-    );
-
-    event TriggerOrderCreated(
-        address indexed account,
-        bytes32 indexed positionKey,
-        uint256 indexed triggerOrderId
-    );
-    event TriggerOrderCanceled(
-        address indexed account,
-        bytes32 indexed positionKey,
-        uint256 indexed triggerOrderId
-    );
-    event TriggerOrderExecuted(
-        address indexed account,
-        bytes32 indexed positionKey,
-        uint256 indexed triggerOrderId
     );
 
     function setExchange(address exchange) external;
@@ -107,8 +71,7 @@ interface IWarehouse {
         address[] calldata adapters,
         uint256 limitOrderId
     ) external payable returns (IWarehouse.LimitOrder memory limitOrder);
-
-    function createTriggerOrder(
+    function executeTriggerOrder(
         address account,
         address adapter,
         address collateral,
@@ -117,18 +80,8 @@ interface IWarehouse {
         uint256 size,
         TriggerOrderType orderType,
         uint256 triggerPrice, // 1e18
-        uint256 acceptablePrice, // 1e18
-        uint256 adapterExecutionFee
-    ) external payable;
-    function cancelTriggerOrder(
-        address account,
-        bytes32 positionKey,
-        uint256 triggerOrderId
-    ) external returns (IWarehouse.TriggerOrder memory limitOrder);
-    function executeTriggerOrder(
-        bytes32 positionKey,
-        uint256 triggerOrderId
-    ) external returns (IWarehouse.TriggerOrder memory triggerOrder);
+        uint256 acceptablePrice // 1e18
+    ) external;
 
     function getPositionKey(
         address account,
@@ -144,11 +97,4 @@ interface IWarehouse {
         address account,
         uint256 limitOrderId
     ) external view returns (LimitOrder memory);
-    function getTriggerOrders(
-        bytes32 positionKey
-    ) external view returns (TriggerOrder[] memory);
-    function getTriggerOrder(
-        bytes32 positionKey,
-        uint256 triggerOrderId
-    ) external view returns (TriggerOrder memory);
 }
