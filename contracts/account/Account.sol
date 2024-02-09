@@ -108,7 +108,7 @@ contract Account is IAccount {
                 _verifySignature(
                     deadline,
                     delegatedAccount.wallet,
-                    keccak256(abi.encodePacked(token, amount, executionFee)),
+                    keccak256(abi.encodePacked(token, amount, executionFee, deadline)),
                     signature
                 ),
                 "signature: invalid"
@@ -134,7 +134,7 @@ contract Account is IAccount {
                     deadline,
                     delegatedAccount.wallet,
                     keccak256(
-                        abi.encodePacked(token, amount, v, r, s, executionFee)
+                        abi.encodePacked(token, amount, v, r, s, executionFee, deadline)
                     ),
                     signature
                 ),
@@ -186,7 +186,7 @@ contract Account is IAccount {
                 _verifySignature(
                     deadline,
                     delegatedAccount.wallet,
-                    keccak256(abi.encodePacked(token, amount, executionFee)),
+                    keccak256(abi.encodePacked(token, amount, executionFee, deadline)),
                     signature
                 ),
                 "signature: invalid"
@@ -235,7 +235,8 @@ contract Account is IAccount {
                             tokenIn,
                             tokenOut,
                             amountIn,
-                            executionFee
+                            executionFee,
+                            deadline
                         )
                     ),
                     signature
@@ -295,7 +296,8 @@ contract Account is IAccount {
                             size,
                             isLong,
                             acceptablePrice,
-                            executionFee
+                            executionFee,
+                            deadline
                         )
                     ),
                     signature
@@ -358,7 +360,8 @@ contract Account is IAccount {
                             isLong,
                             size,
                             acceptablePrice,
-                            executionFee
+                            executionFee,
+                            deadline
                         )
                     ),
                     signature
@@ -405,7 +408,8 @@ contract Account is IAccount {
                             isLong,
                             tokenIn,
                             amountIn,
-                            executionFee
+                            executionFee,
+                            deadline
                         )
                     ),
                     signature
@@ -472,7 +476,8 @@ contract Account is IAccount {
                             index,
                             isLong,
                             collateralAmount,
-                            executionFee
+                            executionFee,
+                            deadline
                         )
                     ),
                     signature
@@ -626,7 +631,8 @@ contract Account is IAccount {
                             isLong,
                             triggerPrice,
                             acceptablePrice,
-                            executionFee
+                            executionFee,
+                            deadline
                         )
                     ),
                     signature
@@ -669,7 +675,7 @@ contract Account is IAccount {
                 _verifySignature(
                     deadline,
                     delegatedAccount.wallet,
-                    keccak256(abi.encodePacked(limitOrderId, executionFee)),
+                    keccak256(abi.encodePacked(limitOrderId, executionFee, deadline)),
                     signature
                 ),
                 "signature: invalid"
