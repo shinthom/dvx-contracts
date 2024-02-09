@@ -688,18 +688,25 @@ contract Account is IAccount {
         _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
 
         if (executionFee > 0) {
-            _collectExecutionFee(limitOrder.collateral, executionFee);
+            _feeDebts[collateral] += executionFee;
         }
     }
 
     function executeLimitOrder(
         uint256 limitOrderId,
-        address adapter
+        address adapter,
+        uint256 executionFee
     ) external payable virtual override onlyOrderKeeper {
         IWarehouse.LimitOrder memory limitOrder
             = IExchange(exchange).executeLimitOrder(address(this), adapter, limitOrderId); // prettier-ignore
 
         _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
+
+        uint256 collateralAmount = limitOrder.collateralAmount;
+        if (executionFee > 0) {
+            _collectExecutionFee(limitOrder.collateral, executionFee);
+            collateralAmount -= executionFee;
+        }
 
         _marketOrderId++;
         _increasePosition(
@@ -707,7 +714,7 @@ contract Account is IAccount {
             adapter,
             limitOrder.collateral,
             limitOrder.index,
-            limitOrder.collateralAmount,
+            collateralAmount,
             limitOrder.size,
             limitOrder.isLong,
             limitOrder.acceptablePrice,
