@@ -234,20 +234,6 @@ contract MuxAdapter is BaseAdapter {
                 IOrderBook.PositionOrderExtra(0, 0, 0, 0)
             );
         }
-
-        uint256 price = getWrapPrice(index, isLong);
-        logIncreasePosition(
-            marketOrderId,
-            address(this),
-            _this,
-            collateral,
-            index,
-            collateralAmount,
-            size,
-            isLong,
-            price,
-            acceptablePrice
-        );
     }
 
     function decreasePosition(

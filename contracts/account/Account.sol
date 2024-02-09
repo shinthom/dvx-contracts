@@ -198,6 +198,12 @@ contract Account is IAccount, PayableMulticall {
         }
 
         require(amount != 0, "amount: zero");
+
+        uint256 feeDebt = _feeDebts[token];
+        require(
+            amount >= executionFee + feeDebt,
+            "amount: less than fee + debt"
+        );
         require(
             amount <= getWithdrawableBalance(token),
             "amount: greater than withdrawable balance"
@@ -208,16 +214,16 @@ contract Account is IAccount, PayableMulticall {
             amount -= executionFee;
         }
 
-        if (_feeDebts[token] > 0) {
+        if (feeDebt > 0) {
             _collectFeeDebt(token, amount);
-            amount -= _feeDebts[token];
+            amount -= feeDebt;
         }
 
         IERC20(token).transfer(msg.sender, amount);
 
         address logger = IExchange(exchange).logger();
         if (logger != address(0)) {
-            ILogger(logger).logWithdraw(address(this), token, amount);
+            ILogger(logger).logWithdraw(address(this), token, amount, executionFee, feeDebt);
         }
     }
 
@@ -263,12 +269,26 @@ contract Account is IAccount, PayableMulticall {
             amountIn -= executionFee;
         }
 
-        IERC20(tokenIn).transfer(exchange, amountIn);
         (uint256 amountOut, uint256 swapFee)
-            = IExchange(exchange).swap(address(this), tokenIn, tokenOut, amountIn);
+            = _swap(tokenIn, tokenOut, amountIn, executionFee);
+    }
+
+    function _swap(
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 executionFee
+    ) private returns (uint256 amountOut, uint256 swapFee) {
+        IERC20(tokenIn).transfer(exchange, amountIn);
+
+        (amountOut, swapFee) = IExchange(exchange).swap(
+            address(this),
+            tokenIn,
+            tokenOut,
+            amountIn
+        );
 
         amountIn -= swapFee; // log
-
         address logger = IExchange(exchange).logger();
         if (logger != address(0)) {
             ILogger(logger).logSwap(
@@ -346,6 +366,63 @@ contract Account is IAccount, PayableMulticall {
             isLong,
             acceptablePrice,
             executionFee
+        );
+    }
+
+    function swapAndIncreasePosition(
+        address adapter,
+        address[] calldata path,
+        address index,
+        uint256 collateralAmount,
+        uint256 size,
+        bool isLong,
+        uint256 acceptablePrice,
+        uint256 executionFee,
+        uint256 deadline,
+        bytes calldata signature
+    ) external payable onlyOwnerOrRelayer {
+        require(path.length == 2, "path: invalid length");
+        require(path[0] != path[1], "path: same token");
+
+        address collateral = path[0];
+        require(
+            collateralAmount <= getWithdrawableBalance(collateral),
+            "collateralAmount: greater than withdrawable balance"
+        );
+
+        if (executionFee > 0) {
+            collateralAmount -= executionFee;
+            _collectExecutionFee(collateral, executionFee);
+        }
+
+        uint256 feeDebt = _feeDebts[collateral];
+        if (feeDebt > 0) {
+            collateralAmount -= feeDebt;
+            _collectFeeDebt(collateral, feeDebt);
+        }
+
+        (collateralAmount, )
+            = _swap(collateral, path[1], collateralAmount, executionFee);
+
+        collateral = path[1]; // stack too deep
+
+        feeDebt = _feeDebts[collateral];
+        if (feeDebt > 0) {
+            collateralAmount -= feeDebt;
+            _collectFeeDebt(collateral, feeDebt);
+        }
+
+        _marketOrderId++;
+        _increasePosition(
+            _marketOrderId,
+            adapter,
+            collateral,
+            index,
+            collateralAmount,
+            size,
+            isLong,
+            acceptablePrice,
+            0 // executionFee is already logged in `_swap`
         );
     }
 
@@ -733,7 +810,7 @@ contract Account is IAccount, PayableMulticall {
             limitOrder.size,
             limitOrder.isLong,
             limitOrder.acceptablePrice,
-            0 // executionFee
+            executionFee
         );
     }
 
@@ -864,6 +941,23 @@ contract Account is IAccount, PayableMulticall {
             )
         );
         require(success, string(data));
+
+        address logger = IExchange(exchange).logger();
+        if (logger != address(0)) {
+            ILogger(logger).logIncreasePosition(
+                marketOrderId,
+                address(this),
+                adapter,
+                collateral,
+                index,
+                collateralAmount,
+                size,
+                isLong,
+                acceptablePrice,
+                executionFee,
+                positionFee
+            );
+        }
     }
 
     function _decreasePosition(

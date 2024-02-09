@@ -24,9 +24,11 @@ contract Logger is ILogger {
     function logWithdraw(
         address account,
         address token,
-        uint256 amount
+        uint256 amount,
+        uint256 executionFee,
+        uint256 feeDebtRepaid
     ) external override {
-        emit Withdrawn(account, token, amount);
+        emit Withdrawn(account, token, amount, executionFee, feeDebtRepaid);
     }
 
     function logSwap(
@@ -34,9 +36,11 @@ contract Logger is ILogger {
         address tokenIn,
         address tokenOut,
         uint256 amountIn,
-        uint256 amountOut
+        uint256 amountOut,
+        uint256 executionFee,
+        uint256 swapFee
     ) external override {
-        emit Swapped(account, tokenIn, tokenOut, amountIn, amountOut);
+        emit Swapped(account, tokenIn, tokenOut, amountIn, amountOut, executionFee, swapFee);
     }
 
     function logIncreasePosition(
@@ -48,8 +52,9 @@ contract Logger is ILogger {
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
-        uint256 price,
-        uint256 acceptablePrice
+        uint256 acceptablePrice,
+        uint256 executionFee,
+        uint256 positionFee
     ) external override {
         emit PositionIncreased(
             marketOrderId,
@@ -60,8 +65,9 @@ contract Logger is ILogger {
             collateralAmount,
             size,
             isLong,
-            price,
-            acceptablePrice
+            acceptablePrice,
+            executionFee,
+            positionFee
         );
     }
 

@@ -7,7 +7,7 @@ abstract contract PayableMulticall {
 
         for (uint256 i; i < data.length; i++) {
             (bool success, bytes memory result) = address(this).delegatecall(data[i]);
-            require(success, "delegatecall failed");
+            require(success, "call failed");
             results[i] = result;
         }
 

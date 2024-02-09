@@ -13,19 +13,24 @@ interface ILogger {
     event Deposited(
         address indexed account,
         address indexed token,
-        uint256 amount
+        uint256 amount,
+        uint256 executionFee
     );
     event Withdrawn(
         address indexed account,
         address indexed token,
-        uint256 amount
+        uint256 amount,
+        uint256 executionFee,
+        uint256 feeDebtRepaid
     );
     event Swapped(
         address indexed account,
         address indexed tokenIn,
         address indexed tokenOut,
         uint256 amountIn,
-        uint256 amountOut
+        uint256 amountOut,
+        uint256 executionFee,
+        uint256 protocolFee
     );
 
     event PositionIncreased(
@@ -37,8 +42,9 @@ interface ILogger {
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
-        uint256 price,
-        uint256 acceptablePrice
+        uint256 acceptablePrice,
+        uint256 executionFee,
+        uint256 positionFee
     );
     event PositionDecreased(
         address indexed account,
@@ -93,19 +99,24 @@ interface ILogger {
     function logDeposit(
         address account,
         address token,
-        uint256 amount
+        uint256 amount,
+        uint256 executionFee
     ) external;
     function logWithdraw(
         address account,
         address token,
-        uint256 amount
+        uint256 amount,
+        uint256 executionFee,
+        uint256 feeDebtRepaid
     ) external;
     function logSwap(
         address account,
         address tokenIn,
         address tokenOut,
         uint256 amountIn,
-        uint256 amountOut
+        uint256 amountOut,
+        uint256 executionFee,
+        uint256 protocolFee
     ) external;
 
     function logIncreasePosition(
@@ -117,8 +128,9 @@ interface ILogger {
         uint256 collateralAmount,
         uint256 size,
         bool isLong,
-        uint256 price,
-        uint256 acceptablePrice
+        uint256 acceptablePrice,
+        uint256 executionFee,
+        uint256 positionFee
     ) external;
     function logDecreasePosition(
         address account,

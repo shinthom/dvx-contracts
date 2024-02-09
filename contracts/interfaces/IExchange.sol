@@ -98,10 +98,11 @@ interface IExchange {
     ) external returns (address account);
 
     function swap(
+        address account,
         address tokenIn,
         address tokenOut,
         uint256 amountIn
-    ) external returns (uint256);
+    ) external returns (uint256, uint256);
 
     function createLimitOrder(
         address collateral,
@@ -148,12 +149,6 @@ interface IExchange {
         address token,
         uint256 amount
     ) external;
-    function collectDebt(
-        address account,
-        address token,
-        uint256 amount,
-        uint256 debt
-    ) external returns (uint256);
 
     function validateAddAcmmMargin(
         address adapter,

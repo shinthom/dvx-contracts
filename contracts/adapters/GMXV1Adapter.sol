@@ -265,20 +265,6 @@ contract GmxV1Adapter is BaseAdapter {
             acceptablePrice * 1e12, // 1e30
             isLong
         );
-
-        uint256 price = indexPrice / 1e12; // 1e18
-        logIncreasePosition(
-            marketOrderId,
-            address(this),
-            _this,
-            collateral,
-            index,
-            collateralAmount,
-            size,
-            isLong,
-            price,
-            acceptablePrice
-        );
     }
 
     function decreasePosition(
@@ -943,7 +929,8 @@ contract GmxV1Adapter is BaseAdapter {
     ) private {
         if (isLong && (collateral != index)) {
             IERC20(collateral).approve(_exchange, collateralAmount);
-            uint256 amountOut = IExchange(_exchange).swap(
+            (uint256 amountOut, ) = IExchange(_exchange).swap(
+                address(this),
                 collateral,
                 index,
                 collateralAmount
@@ -959,7 +946,8 @@ contract GmxV1Adapter is BaseAdapter {
 
             IERC20(collateral).approve(_exchange, collateralAmount);
 
-            uint256 amountOut = IExchange(_exchange).swap(
+            (uint256 amountOut, ) = IExchange(_exchange).swap(
+                address(this),
                 collateral,
                 defaultStableToken,
                 collateralAmount

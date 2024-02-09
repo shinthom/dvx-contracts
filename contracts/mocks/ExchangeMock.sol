@@ -9,12 +9,13 @@ contract ExchangeMock is Exchange {
     }
 
     function swap(
+        address account,
         address tokenIn,
         address tokenOut,
         uint256 amountIn
-    ) public override returns (uint256 amountOut) {
-        super.swap(tokenIn, tokenOut, amountIn);
-        return 100;
+    ) public override returns (uint256 amountOut, uint256 swapFee) {
+        super.swap(msg.sender, tokenIn, tokenOut, amountIn);
+        return (100, 0);
     }
 
     function setSwapper(address _swapper) public override {

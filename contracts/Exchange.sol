@@ -17,7 +17,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     address private constant _swapRouter =
         0xE592427A0AEce92De3Edee1F18E0157C05861564; // uniswap V3
 
-    uint256 public constant BASIS_POINTS = 100_000_000;
+    uint256 public constant BASIS_POINTS = 1e8;
 
     address public override accountFactory;
     address public override warehouse;
@@ -243,20 +243,24 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function swap(
+        address account,
         address tokenIn,
         address tokenOut,
         uint256 amountIn
-    ) public virtual override returns (uint256 amountOut) {
+    ) public virtual override onlyAccount(account) returns (uint256, uint256) {
         uint256 swapFee = getSwapFee(amountIn);
         if (swapFee > 0) {
-            IERC20(tokenIn).transferFrom(msg.sender, feeCollector, swapFee);
+            require(amountIn >= swapFee, "amountIn: less than swapFee");
+            collectProtocolFee(msg.sender, tokenIn, swapFee);
             amountIn -= swapFee;
         }
 
-        IERC20(tokenIn).transferFrom(msg.sender, swapper, amountIn);
-        amountOut = ISwapper(swapper).swap(tokenIn, tokenOut, amountIn);
+        IERC20(tokenIn).transfer(swapper, amountIn);
+        uint256 amountOut = ISwapper(swapper).swap(tokenIn, tokenOut, amountIn);
 
         IERC20(tokenOut).transfer(msg.sender, amountOut);
+
+        return (amountOut, swapFee);
     }
 
     function createLimitOrder(
@@ -367,35 +371,9 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address account,
         address token,
         uint256 amount
-    ) external override {
+    ) public override {
         IERC20(token).transfer(feeCollector, amount);
         emit ProtocolFeeCollected(account, token, amount);
-    }
-
-    function collectDebt(
-        address account,
-        address token,
-        uint256 amount,
-        uint256 debt
-    ) external override returns (uint256) {
-        uint256 tokenIn = ISwapper(swapper).quoteExactOutput(
-            token,
-            defaultStableToken,
-            debt
-        );
-        require(amount >= tokenIn, "amount: insufficient to cover the debt");
-
-        uint256 tokenOut = ISwapper(swapper).swap(
-            token,
-            defaultStableToken,
-            tokenIn
-        );
-        IERC20(token).transfer(feeCollector, tokenOut);
-        emit DebtCollected(account, token, tokenIn, debt);
-
-        IERC20(token).transfer(account, amount - tokenIn);
-
-        return amount - tokenIn;
     }
 
     function validateAddAcmmMargin(
