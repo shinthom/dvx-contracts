@@ -69,6 +69,18 @@ interface IAccount {
         uint256 deadline,
         bytes calldata signature
     ) external payable;
+    function swapAndIncreasePosition(
+        address adapter,
+        address[] calldata path,
+        address index,
+        uint256 collateralAmount,
+        uint256 size,
+        bool isLong,
+        uint256 acceptablePrice,
+        uint256 networkFee,
+        uint256 deadline,
+        bytes calldata signature
+    ) external payable;
     function decreasePosition(
         address adapter,
         address collateral,

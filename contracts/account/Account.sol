@@ -380,7 +380,7 @@ contract Account is IAccount, PayableMulticall {
         uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
-    ) external payable onlyOwnerOrRelayer {
+    ) external payable virtual override onlyOwnerOrRelayer {
         require(path.length == 2, "path: invalid length");
         require(path[0] != path[1], "path: same token");
 
