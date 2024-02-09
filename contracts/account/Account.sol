@@ -228,7 +228,7 @@ contract Account is IAccount, PayableMulticall {
         uint256 executionFee,
         uint256 deadline,
         bytes calldata signature
-    ) external virtual override onlyOwnerOrRelayer returns (uint256 amountOut) {
+    ) external virtual override onlyOwnerOrRelayer {
         if (msg.sender != owner) {
             require(
                 _verifySignature(
@@ -255,12 +255,19 @@ contract Account is IAccount, PayableMulticall {
         );
 
         if (executionFee > 0) {
+            require(
+                amountIn >= executionFee,
+                "amount: less than execution fee"
+            );
             _collectExecutionFee(tokenIn, executionFee);
             amountIn -= executionFee;
         }
 
-        IERC20(tokenIn).approve(exchange, amountIn);
-        amountOut = IExchange(exchange).swap(tokenIn, tokenOut, amountIn);
+        IERC20(tokenIn).transfer(exchange, amountIn);
+        (uint256 amountOut, uint256 swapFee)
+            = IExchange(exchange).swap(address(this), tokenIn, tokenOut, amountIn);
+
+        amountIn -= swapFee; // log
 
         address logger = IExchange(exchange).logger();
         if (logger != address(0)) {
@@ -269,7 +276,9 @@ contract Account is IAccount, PayableMulticall {
                 tokenIn,
                 tokenOut,
                 amountIn,
-                amountOut
+                amountOut,
+                executionFee,
+                swapFee
             );
         }
     }
@@ -430,7 +439,8 @@ contract Account is IAccount, PayableMulticall {
         uint256 collateralAmount = amountIn;
         if (tokenIn != collateral) {
             IERC20(tokenIn).approve(exchange, amountIn);
-            collateralAmount = IExchange(exchange).swap(
+            (collateralAmount, ) = IExchange(exchange).swap(
+                address(this),
                 tokenIn,
                 collateral,
                 amountIn
@@ -526,7 +536,8 @@ contract Account is IAccount, PayableMulticall {
 
             if (collateral != tokens[i]) {
                 IERC20(tokens[i]).approve(exchange, amounts[i]);
-                uint256 amountOut = IExchange(exchange).swap(
+                (uint256 amountOut, ) = IExchange(exchange).swap(
+                    address(this),
                     tokens[i],
                     collateral,
                     amounts[i]
