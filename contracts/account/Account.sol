@@ -847,33 +847,8 @@ contract Account is IAccount, PayableMulticall {
         IWarehouse.TriggerOrderType orderType,
         uint256 triggerPrice,
         uint256 acceptablePrice,
-        uint256 executionFee,
-        uint256 deadline,
-        bytes calldata signature
+        uint256 executionFee
     ) external payable override virtual onlyOrderKeeper {
-        require(
-            _verifySignature(
-                deadline,
-                delegatedAccount.wallet,
-                keccak256(
-                    abi.encodePacked(
-                        adapter,
-                        collateral,
-                        index,
-                        isLong,
-                        size,
-                        orderType,
-                        triggerPrice,
-                        acceptablePrice,
-                        executionFee,
-                        deadline
-                    )
-                ),
-                signature
-            ),
-            "signature: invalid"
-        );
-
         IExchange(exchange).executeTriggerOrder(
             address(this),
             adapter,

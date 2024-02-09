@@ -44,6 +44,17 @@ interface IWarehouse {
         address indexed account,
         uint256 indexed limitOrderId
     );
+    event TriggerOrderExecuted(
+        address indexed account,
+        address indexed adapter,
+        address collateral,
+        address index,
+        bool isLong,
+        uint256 size,
+        TriggerOrderType orderType,
+        uint256 triggerPrice,
+        uint256 acceptablePrice
+    );
 
     function setExchange(address exchange) external;
 

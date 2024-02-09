@@ -151,9 +151,7 @@ interface IAccount {
         IWarehouse.TriggerOrderType orderType,
         uint256 triggerPrice,
         uint256 acceptablePrice,
-        uint256 executionFee,
-        uint256 deadline,
-        bytes calldata signature
+        uint256 executionFee
     ) external payable;
 
     function getBalance(address token) external view returns (uint256);

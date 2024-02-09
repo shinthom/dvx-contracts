@@ -179,6 +179,17 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
                 (!isLong && markPrice <= acceptablePrice),
             "price: not acceptable"
         );
+        emit TriggerOrderExecuted(
+            account,
+            adapter,
+            collateral,
+            index,
+            isLong,
+            size,
+            orderType,
+            triggerPrice,
+            acceptablePrice
+        );
     }
 
     function getPositionKey(
