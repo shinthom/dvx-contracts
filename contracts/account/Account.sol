@@ -223,7 +223,7 @@ contract Account is IAccount, PayableMulticall {
 
         address logger = IExchange(exchange).logger();
         if (logger != address(0)) {
-            ILogger(logger).logWithdraw(address(this), token, amount, executionFee, feeDebt);
+            ILogger(logger).logWithdraw(address(this), token, amount, executionFee);
         }
     }
 

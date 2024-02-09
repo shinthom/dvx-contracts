@@ -20,8 +20,7 @@ interface ILogger {
         address indexed account,
         address indexed token,
         uint256 amount,
-        uint256 executionFee,
-        uint256 feeDebtRepaid
+        uint256 executionFee
     );
     event Swapped(
         address indexed account,
@@ -106,8 +105,7 @@ interface ILogger {
         address account,
         address token,
         uint256 amount,
-        uint256 executionFee,
-        uint256 feeDebtRepaid
+        uint256 executionFee
     ) external;
     function logSwap(
         address account,
