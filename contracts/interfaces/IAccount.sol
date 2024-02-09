@@ -141,12 +141,6 @@ interface IAccount {
         uint256 limitOrderId,
         address adapter
     ) external payable;
-    function executeLimitOrderMulti(
-        uint256 limitOrderId,
-        address[] calldata adapters,
-        uint256[] calldata collateralAmounts,
-        uint256[] calldata sizes
-    ) external payable;
     function executeTriggerOrder(
         address adapter,
         address collateral,

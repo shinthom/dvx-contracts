@@ -722,54 +722,6 @@ contract Account is IAccount {
         );
     }
 
-    function executeLimitOrderMulti(
-        uint256 limitOrderId,
-        address[] calldata adapters,
-        uint256[] calldata collateralAmounts,
-        uint256[] calldata sizes
-    ) external payable virtual override onlyOrderKeeper {
-        require(
-            adapters.length == collateralAmounts.length &&
-                adapters.length == sizes.length,
-            "length: not match"
-        );
-
-        IWarehouse.LimitOrder memory limitOrder
-            = IExchange(exchange).executeLimitOrderMulti(address(this), adapters, limitOrderId); // prettier-ignore
-
-        uint256 totalCollateralAmount;
-        for (uint256 i = 0; i < adapters.length; i++) {
-            totalCollateralAmount += collateralAmounts[i];
-        }
-        require(
-            totalCollateralAmount == limitOrder.collateralAmount,
-            "collateralAmount: not match"
-        );
-
-        uint256 totalSize;
-        for (uint256 i = 0; i < adapters.length; i++) {
-            totalSize += sizes[i];
-        }
-        require(totalSize == limitOrder.size, "size: not match");
-
-        _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
-
-        _marketOrderId++;
-        for (uint256 i = 0; i < adapters.length; i++) {
-            _increasePosition(
-                _marketOrderId,
-                adapters[i],
-                limitOrder.collateral,
-                limitOrder.index,
-                collateralAmounts[i],
-                sizes[i],
-                limitOrder.isLong,
-                limitOrder.acceptablePrice,
-                0 // executionFee
-            );
-        }
-    }
-
     function executeTriggerOrder(
         address adapter,
         address collateral,
