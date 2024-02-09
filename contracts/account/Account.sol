@@ -6,10 +6,9 @@ import {IExchange} from "../interfaces/IExchange.sol";
 import {IWarehouse} from "../interfaces/IWarehouse.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
 import {ILogger} from "../interfaces/ILogger.sol";
+import {PayableMulticall} from "./PayableMulticall.sol";
 
-contract Account is IAccount {
-    uint256 private constant chainIdAdjustedV = 35 + 42161 * 2;
-
+contract Account is IAccount, PayableMulticall {
     address private constant _weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
 
     address public override owner;
@@ -118,7 +117,7 @@ contract Account is IAccount {
         _deposit(token, amount, executionFee, signature);
     }
 
-    function deposit(
+    function depositPermit(
         address token,
         uint256 amount,
         uint8 v,
@@ -162,15 +161,20 @@ contract Account is IAccount {
     ) private {
         require(amount != 0, "amount: zero");
 
+        IERC20(token).transferFrom(owner, address(this), amount);
+
         if (executionFee > 0) {
+            require(
+                amount >= executionFee,
+                "amount: less than execution fee"
+            );
             _collectExecutionFee(token, executionFee);
             amount -= executionFee;
         }
-        IERC20(token).transferFrom(msg.sender, address(this), amount);
 
         address logger = IExchange(exchange).logger();
         if (logger != address(0)) {
-            ILogger(logger).logDeposit(address(this), token, amount);
+            ILogger(logger).logDeposit(address(this), token, amount, executionFee);
         }
     }
 

@@ -15,9 +15,10 @@ contract Logger is ILogger {
     function logDeposit(
         address account,
         address token,
-        uint256 amount
+        uint256 amount,
+        uint256 executionFee
     ) external override {
-        emit Deposited(account, token, amount);
+        emit Deposited(account, token, amount, executionFee);
     }
 
     function logWithdraw(

@@ -6,19 +6,13 @@ const { deploy } = require("../fixture");
 describe("depositPermit", () => {
   const depositAmount = ethers.parseUnits("100", 6);
 
-  let chainId;
-
-  before(async () => {
-    chainId = (await ethers.provider.getNetwork()).chainId;
-  });
-
   it("weth", async () => {
     const { owner, account, weth, faucet } = await loadFixture(deploy);
 
     const domain = {
       name: await weth.name(),
       version: "1",
-      chainId: chainId,
+      chainId: (await ethers.provider.getNetwork()).chainId,
       verifyingContract: weth.target,
     };
 
@@ -79,7 +73,7 @@ describe("depositPermit", () => {
     const domain = {
       name: await wbtc.name(),
       version: "1",
-      chainId: chainId,
+      chainId: (await ethers.provider.getNetwork()).chainId,
       verifyingContract: wbtc.target,
     };
 
@@ -140,7 +134,7 @@ describe("depositPermit", () => {
     const domain = {
       name: await usdt.name(),
       version: "1",
-      chainId: chainId,
+      chainId: (await ethers.provider.getNetwork()).chainId,
       verifyingContract: usdt.target,
     };
 
@@ -201,7 +195,7 @@ describe("depositPermit", () => {
     const domain = {
       name: await usdc.name(),
       version: "2",
-      chainId: chainId,
+      chainId: (await ethers.provider.getNetwork()).chainId,
       verifyingContract: usdc.target,
     };
 
@@ -262,7 +256,7 @@ describe("depositPermit", () => {
     const domain = {
       name: await usdce.name(),
       version: "1",
-      chainId: chainId,
+      chainId: (await ethers.provider.getNetwork()).chainId,
       verifyingContract: usdce.target,
     };
 

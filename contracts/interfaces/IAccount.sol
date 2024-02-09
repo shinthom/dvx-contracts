@@ -31,7 +31,7 @@ interface IAccount {
         uint256 deadline,
         bytes calldata signature
     ) external;
-    function deposit(
+    function depositPermit(
         address token,
         uint256 amount,
         uint8 v,
@@ -55,7 +55,7 @@ interface IAccount {
         uint256 executionFee,
         uint256 deadline,
         bytes calldata signature
-    ) external returns (uint256 amountOut);
+    ) external;
 
     function increasePosition(
         address adapter,

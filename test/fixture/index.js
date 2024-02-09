@@ -742,6 +742,7 @@ stable:
     muxAdapter,
     quoter,
     reader,
+    feeCollector,
     logger,
     accountFactory,
     account,
