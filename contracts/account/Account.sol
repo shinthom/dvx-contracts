@@ -192,6 +192,7 @@ contract Account is IAccount, PayableMulticall {
 
     function withdraw(
         address token,
+        address to,
         uint256 amount,
         uint256 networkFee,
         uint256 deadline,
@@ -203,7 +204,7 @@ contract Account is IAccount, PayableMulticall {
                     deadline,
                     delegatedAccount.wallet,
                     keccak256(
-                        abi.encodePacked(token, amount, networkFee, deadline)
+                        abi.encodePacked(token, to, amount, networkFee, deadline)
                     ),
                     signature
                 ),
@@ -230,12 +231,13 @@ contract Account is IAccount, PayableMulticall {
             amount -= feeDebt;
         }
 
-        IERC20(token).transfer(owner, amount);
+        IERC20(token).transfer(to, amount);
 
         address logger = IExchange(exchange).logger();
         if (logger != address(0)) {
             ILogger(logger).logWithdraw(
                 address(this),
+                to,
                 token,
                 amount,
                 networkFee
