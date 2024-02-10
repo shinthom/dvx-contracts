@@ -168,11 +168,7 @@ contract MuxAdapter is IAdapter {
     address private immutable _orderBook;
     address private immutable _exchange;
 
-    constructor(
-        address orderBook,
-        address liquidityPool,
-        address exchange
-    ) {
+    constructor(address orderBook, address liquidityPool, address exchange) {
         require(orderBook != address(0), "orderBook: zero address");
         require(liquidityPool != address(0), "liquidityPool: zero address");
 

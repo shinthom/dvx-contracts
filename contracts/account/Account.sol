@@ -458,7 +458,7 @@ contract Account is IAccount, PayableMulticall {
             _collectFeeDebt(collateral, feeDebt);
         }
 
-         // stack too deep
+        // stack too deep
         (collateralAmount, ) = _swap(
             collateral,
             path[1],
@@ -681,20 +681,14 @@ contract Account is IAccount, PayableMulticall {
         );
 
         if (networkFee > 0) {
-            require(
-                amountIn >= networkFee,
-                "amountIn: less than network fee"
-            );
+            require(amountIn >= networkFee, "amountIn: less than network fee");
             amountIn -= networkFee;
             _collectNetworkFee(tokenIn, networkFee);
         }
 
         uint256 feeDebt = _feeDebts[tokenIn];
         if (feeDebt > 0) {
-            require(
-                amountIn >= feeDebt,
-                "amountIn: less than fee debt"
-            );
+            require(amountIn >= feeDebt, "amountIn: less than fee debt");
             amountIn -= feeDebt;
             _collectFeeDebt(tokenIn, feeDebt);
         }
@@ -876,12 +870,22 @@ contract Account is IAccount, PayableMulticall {
         uint256 addAcmmMarginFee
             = IExchange(exchange).getAddAcmmMarginFee(marginAmount); // prettier-ignore
         if (addAcmmMarginFee > 0) {
-            require(marginAmount >= addAcmmMarginFee, "marginAmount: less than margin management fee");
+            require(
+                marginAmount >= addAcmmMarginFee,
+                "marginAmount: less than margin management fee"
+            );
             _collectProtocolFee(collateral, addAcmmMarginFee);
             marginAmount -= addAcmmMarginFee;
         }
 
-        _addAcmmMargin(adapter, collateral, index, isLong, marginAmount, addAcmmMarginFee);
+        _addAcmmMargin(
+            adapter,
+            collateral,
+            index,
+            isLong,
+            marginAmount,
+            addAcmmMarginFee
+        );
     }
 
     function _addAcmmMargin(
