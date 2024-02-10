@@ -1050,8 +1050,7 @@ contract Account is IAccount, PayableMulticall {
         IWarehouse.TriggerOrderType orderType,
         uint256 triggerPrice,
         uint256 acceptablePrice,
-        uint256 networkFee,
-        uint256 executionFee
+        uint256 networkFee
     ) external payable virtual override onlyOrderKeeper {
         IExchange(exchange).executeTriggerOrder(
             address(this),
@@ -1065,11 +1064,6 @@ contract Account is IAccount, PayableMulticall {
             acceptablePrice
         );
 
-        // todo: gmx adapter fee
-        if (executionFee > 0) {
-            _feeDebts[collateral] += executionFee;
-        }
-
         if (networkFee > 0) {
             _feeDebts[collateral] += networkFee;
         }
@@ -1081,7 +1075,7 @@ contract Account is IAccount, PayableMulticall {
             isLong,
             size,
             acceptablePrice,
-            0
+            networkFee
         );
     }
 
