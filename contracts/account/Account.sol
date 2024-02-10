@@ -843,12 +843,11 @@ contract Account is IAccount, PayableMulticall {
             );
 
             if (collateral != tokens[i]) {
-                IERC20(tokens[i]).approve(exchange, amounts[i]);
-                (uint256 amountOut, ) = IExchange(exchange).swap(
-                    address(this),
+                (uint256 amountOut, ) = _swap(
                     tokens[i],
                     collateral,
-                    amounts[i]
+                    amounts[i],
+                    0
                 );
                 marginAmount += amountOut;
             } else {
