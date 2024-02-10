@@ -1,6 +1,6 @@
 const { ethers, network } = require("hardhat");
 const { expect } = require("chai");
-const { faucet } = require("./helper");
+const { faucet } = require("../test/helper");
 
 let snapshotId;
 

@@ -1,6 +1,6 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
-const { faucet, WETH, WBTC } = require("./helper");
+const { faucet, WETH, WBTC } = require("../test/helper");
 
 describe("Account", () => {
   let owner;

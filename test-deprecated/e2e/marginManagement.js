@@ -1,7 +1,7 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
-const { deploy } = require("../fixture");
+const { deploy } = require("../../test/fixture");
 
 describe("marginManagement", async () => {
   it("addMargin - gmxV1", async () => {

@@ -1,7 +1,7 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
-const { deploy } = require("../fixture");
+const { deploy } = require("../../test/fixture");
 
 const deadline = Math.ceil(Date.now() / 1000) + 60 * 60 * 3;
 

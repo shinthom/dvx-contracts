@@ -1,7 +1,7 @@
 const { ethers } = require("hardhat");
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 const { expect } = require("chai");
-const { deploy } = require("../fixture");
+const { deploy } = require("../../test/fixture");
 
 const orderType = {
   tp: 0,

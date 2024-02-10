@@ -230,7 +230,7 @@ contract Account is IAccount, PayableMulticall {
             amount -= feeDebt;
         }
 
-        IERC20(token).transfer(msg.sender, amount);
+        IERC20(token).transfer(owner, amount);
 
         address logger = IExchange(exchange).logger();
         if (logger != address(0)) {
