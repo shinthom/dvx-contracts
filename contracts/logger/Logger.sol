@@ -39,7 +39,15 @@ contract Logger is ILogger {
         uint256 networkFee,
         uint256 swapFee
     ) external override {
-        emit Swapped(account, tokenIn, tokenOut, amountIn, amountOut, networkFee, swapFee);
+        emit Swapped(
+            account,
+            tokenIn,
+            tokenOut,
+            amountIn,
+            amountOut,
+            networkFee,
+            swapFee
+        );
     }
 
     function logIncreasePosition(

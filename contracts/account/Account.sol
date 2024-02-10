@@ -107,7 +107,9 @@ contract Account is IAccount, PayableMulticall {
                 _verifySignature(
                     deadline,
                     delegatedAccount.wallet,
-                    keccak256(abi.encodePacked(token, amount, networkFee, deadline)),
+                    keccak256(
+                        abi.encodePacked(token, amount, networkFee, deadline)
+                    ),
                     signature
                 ),
                 "signature: invalid"
@@ -133,7 +135,15 @@ contract Account is IAccount, PayableMulticall {
                     deadline,
                     delegatedAccount.wallet,
                     keccak256(
-                        abi.encodePacked(token, amount, v, r, s, networkFee, deadline)
+                        abi.encodePacked(
+                            token,
+                            amount,
+                            v,
+                            r,
+                            s,
+                            networkFee,
+                            deadline
+                        )
                     ),
                     signature
                 ),
@@ -164,17 +174,19 @@ contract Account is IAccount, PayableMulticall {
         IERC20(token).transferFrom(owner, address(this), amount);
 
         if (networkFee > 0) {
-            require(
-                amount >= networkFee,
-                "amount: less than execution fee"
-            );
+            require(amount >= networkFee, "amount: less than execution fee");
             _collectNetworkFee(token, networkFee);
             amount -= networkFee;
         }
 
         address logger = IExchange(exchange).logger();
         if (logger != address(0)) {
-            ILogger(logger).logDeposit(address(this), token, amount, networkFee);
+            ILogger(logger).logDeposit(
+                address(this),
+                token,
+                amount,
+                networkFee
+            );
         }
     }
 
@@ -190,7 +202,9 @@ contract Account is IAccount, PayableMulticall {
                 _verifySignature(
                     deadline,
                     delegatedAccount.wallet,
-                    keccak256(abi.encodePacked(token, amount, networkFee, deadline)),
+                    keccak256(
+                        abi.encodePacked(token, amount, networkFee, deadline)
+                    ),
                     signature
                 ),
                 "signature: invalid"
@@ -200,10 +214,7 @@ contract Account is IAccount, PayableMulticall {
         require(amount != 0, "amount: zero");
 
         uint256 feeDebt = _feeDebts[token];
-        require(
-            amount >= networkFee + feeDebt,
-            "amount: less than fee + debt"
-        );
+        require(amount >= networkFee + feeDebt, "amount: less than fee + debt");
         require(
             amount <= getWithdrawableBalance(token),
             "amount: greater than withdrawable balance"
@@ -223,7 +234,12 @@ contract Account is IAccount, PayableMulticall {
 
         address logger = IExchange(exchange).logger();
         if (logger != address(0)) {
-            ILogger(logger).logWithdraw(address(this), token, amount, networkFee);
+            ILogger(logger).logWithdraw(
+                address(this),
+                token,
+                amount,
+                networkFee
+            );
         }
     }
 
@@ -261,16 +277,17 @@ contract Account is IAccount, PayableMulticall {
         );
 
         if (networkFee > 0) {
-            require(
-                amountIn >= networkFee,
-                "amount: less than execution fee"
-            );
+            require(amountIn >= networkFee, "amount: less than execution fee");
             _collectNetworkFee(tokenIn, networkFee);
             amountIn -= networkFee;
         }
 
-        (uint256 amountOut, uint256 swapFee)
-            = _swap(tokenIn, tokenOut, amountIn, networkFee);
+        (uint256 amountOut, uint256 swapFee) = _swap(
+            tokenIn,
+            tokenOut,
+            amountIn,
+            networkFee
+        );
     }
 
     function _swap(
@@ -425,8 +442,12 @@ contract Account is IAccount, PayableMulticall {
             _collectFeeDebt(collateral, feeDebt);
         }
 
-        (collateralAmount, )
-            = _swap(collateral, path[1], collateralAmount, networkFee);
+        (collateralAmount, ) = _swap(
+            collateral,
+            path[1],
+            collateralAmount,
+            networkFee
+        );
 
         collateral = path[1]; // stack too deep
 
@@ -448,6 +469,66 @@ contract Account is IAccount, PayableMulticall {
             acceptablePrice,
             0 // networkFee is already logged in `_swap`
         );
+    }
+
+    function _increasePosition(
+        uint256 marketOrderId,
+        address adapter,
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        uint256 size,
+        bool isLong,
+        uint256 acceptablePrice,
+        uint256 networkFee
+    ) private {
+        require(
+            IExchange(exchange).isRegisteredAdapter(adapter),
+            "adapter: not registered"
+        );
+
+        uint256 positionFee = IExchange(exchange).getPositionFee(
+            adapter,
+            collateral,
+            index,
+            size,
+            isLong
+        );
+        if (positionFee > 0) {
+            _collectProtocolFee(collateral, positionFee);
+            collateralAmount -= positionFee;
+        }
+
+        (bool success, bytes memory data) = adapter.delegatecall(
+            abi.encodeWithSignature(
+                "increasePosition(uint256,address,address,uint256,uint256,uint256,bool)",
+                marketOrderId,
+                collateral,
+                index,
+                collateralAmount,
+                size,
+                acceptablePrice,
+                isLong
+            )
+        );
+        require(success, string(data));
+
+        address logger = IExchange(exchange).logger();
+        if (logger != address(0)) {
+            ILogger(logger).logIncreasePosition(
+                marketOrderId,
+                address(this),
+                adapter,
+                collateral,
+                index,
+                collateralAmount,
+                size,
+                isLong,
+                acceptablePrice,
+                networkFee,
+                positionFee
+            );
+        }
     }
 
     function decreasePosition(
@@ -497,6 +578,43 @@ contract Account is IAccount, PayableMulticall {
             acceptablePrice,
             networkFee
         );
+    }
+
+    function _decreasePosition(
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong,
+        uint256 size,
+        uint256 acceptablePrice,
+        uint256 networkFee
+    ) private {
+        // slither-disable-next-line controlled-delegatecall,low-level-calls
+        (bool success, bytes memory data) = adapter.delegatecall(
+            abi.encodeWithSignature(
+                "decreasePosition(address,address,uint256,bool,uint256)",
+                collateral,
+                index,
+                size,
+                isLong,
+                acceptablePrice
+            )
+        );
+        require(success, string(data));
+
+        address logger = IExchange(exchange).logger();
+        if (logger != address(0)) {
+            ILogger(logger).logDecreasePosition(
+                address(this),
+                adapter,
+                collateral,
+                index,
+                size,
+                isLong,
+                acceptablePrice,
+                networkFee
+            );
+        }
     }
 
     function increaseCollateral(
@@ -568,6 +686,45 @@ contract Account is IAccount, PayableMulticall {
             collateralAmount,
             networkFee
         );
+    }
+
+    function _increaseCollateral(
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong,
+        uint256 collateralAmount,
+        uint256 networkFee
+    ) private {
+        require(
+            IExchange(exchange).isRegisteredAdapter(adapter),
+            "adapter: not registered"
+        );
+
+        // slither-disable-next-line controlled-delegatecall,low-level-calls
+        (bool success, bytes memory data) = adapter.delegatecall(
+            abi.encodeWithSignature(
+                "increaseCollateral(address,address,uint256,bool)",
+                collateral,
+                index,
+                collateralAmount,
+                isLong
+            )
+        );
+        require(success, string(data));
+
+        address logger = IExchange(exchange).logger();
+        if (logger != address(0)) {
+            ILogger(logger).logIncreaseCollateral(
+                address(this),
+                adapter,
+                collateral,
+                index,
+                collateralAmount,
+                isLong,
+                networkFee
+            );
+        }
     }
 
     function decreaseCollateral(
@@ -682,6 +839,31 @@ contract Account is IAccount, PayableMulticall {
         }
 
         _addAcmmMargin(adapter, collateral, index, isLong, marginAmount);
+    }
+
+    function _addAcmmMargin(
+        address adapter,
+        address collateral,
+        address index,
+        bool isLong,
+        uint256 marginAmount
+    ) private {
+        require(
+            IExchange(exchange).isRegisteredAdapter(adapter),
+            "adapter: not registered"
+        );
+
+        // slither-disable-next-line controlled-delegatecall,low-level-calls
+        (bool success, bytes memory data) = adapter.delegatecall(
+            abi.encodeWithSignature(
+                "addAcmmMargin(address,address,bool,uint256)",
+                collateral,
+                index,
+                isLong,
+                marginAmount
+            )
+        );
+        require(success, string(data));
     }
 
     function subAcmmMargin(
@@ -808,7 +990,9 @@ contract Account is IAccount, PayableMulticall {
                 _verifySignature(
                     deadline,
                     delegatedAccount.wallet,
-                    keccak256(abi.encodePacked(limitOrderId, networkFee, deadline)),
+                    keccak256(
+                        abi.encodePacked(limitOrderId, networkFee, deadline)
+                    ),
                     signature
                 ),
                 "signature: invalid"
@@ -836,7 +1020,10 @@ contract Account is IAccount, PayableMulticall {
 
         uint256 collateralAmount = limitOrder.collateralAmount;
         if (limitOrder.executionFee > 0) {
-            _collectExecutionFee(limitOrder.collateral, limitOrder.executionFee);
+            _collectExecutionFee(
+                limitOrder.collateral,
+                limitOrder.executionFee
+            );
             collateralAmount -= limitOrder.executionFee;
         }
 
@@ -865,7 +1052,7 @@ contract Account is IAccount, PayableMulticall {
         uint256 acceptablePrice,
         uint256 networkFee,
         uint256 executionFee
-    ) external payable override virtual onlyOrderKeeper {
+    ) external payable virtual override onlyOrderKeeper {
         IExchange(exchange).executeTriggerOrder(
             address(this),
             adapter,
@@ -920,167 +1107,6 @@ contract Account is IAccount, PayableMulticall {
         address token
     ) public view virtual override returns (uint256) {
         return _feeDebts[token];
-    }
-
-    function _increasePosition(
-        uint256 marketOrderId,
-        address adapter,
-        address collateral,
-        address index,
-        uint256 collateralAmount,
-        uint256 size,
-        bool isLong,
-        uint256 acceptablePrice,
-        uint256 networkFee
-    ) private {
-        require(
-            IExchange(exchange).isRegisteredAdapter(adapter),
-            "adapter: not registered"
-        );
-
-        uint256 positionFee = IExchange(exchange).getPositionFee(
-            adapter,
-            collateral,
-            index,
-            size,
-            isLong
-        );
-        if (positionFee > 0) {
-            _collectProtocolFee(collateral, positionFee);
-            collateralAmount -= positionFee;
-        }
-
-        (bool success, bytes memory data) = adapter.delegatecall(
-            abi.encodeWithSignature(
-                "increasePosition(uint256,address,address,uint256,uint256,uint256,bool)",
-                marketOrderId,
-                collateral,
-                index,
-                collateralAmount,
-                size,
-                acceptablePrice,
-                isLong
-            )
-        );
-        require(success, string(data));
-
-        address logger = IExchange(exchange).logger();
-        if (logger != address(0)) {
-            ILogger(logger).logIncreasePosition(
-                marketOrderId,
-                address(this),
-                adapter,
-                collateral,
-                index,
-                collateralAmount,
-                size,
-                isLong,
-                acceptablePrice,
-                networkFee,
-                positionFee
-            );
-        }
-    }
-
-    function _decreasePosition(
-        address adapter,
-        address collateral,
-        address index,
-        bool isLong,
-        uint256 size,
-        uint256 acceptablePrice,
-        uint256 networkFee
-    ) private {
-        // slither-disable-next-line controlled-delegatecall,low-level-calls
-        (bool success, bytes memory data) = adapter.delegatecall(
-            abi.encodeWithSignature(
-                "decreasePosition(address,address,uint256,bool,uint256)",
-                collateral,
-                index,
-                size,
-                isLong,
-                acceptablePrice
-            )
-        );
-        require(success, string(data));
-
-        address logger = IExchange(exchange).logger();
-        if (logger != address(0)) {
-            ILogger(logger).logDecreasePosition(
-                address(this),
-                adapter,
-                collateral,
-                index,
-                size,
-                isLong,
-                acceptablePrice,
-                networkFee
-            );
-        }
-    }
-
-    function _increaseCollateral(
-        address adapter,
-        address collateral,
-        address index,
-        bool isLong,
-        uint256 collateralAmount,
-        uint256 networkFee
-    ) private {
-        require(
-            IExchange(exchange).isRegisteredAdapter(adapter),
-            "adapter: not registered"
-        );
-
-        // slither-disable-next-line controlled-delegatecall,low-level-calls
-        (bool success, bytes memory data) = adapter.delegatecall(
-            abi.encodeWithSignature(
-                "increaseCollateral(address,address,uint256,bool)",
-                collateral,
-                index,
-                collateralAmount,
-                isLong
-            )
-        );
-        require(success, string(data));
-
-        address logger = IExchange(exchange).logger();
-        if (logger != address(0)) {
-            ILogger(logger).logIncreaseCollateral(
-                address(this),
-                adapter,
-                collateral,
-                index,
-                collateralAmount,
-                isLong,
-                networkFee
-            );
-        }
-    }
-
-    function _addAcmmMargin(
-        address adapter,
-        address collateral,
-        address index,
-        bool isLong,
-        uint256 marginAmount
-    ) private {
-        require(
-            IExchange(exchange).isRegisteredAdapter(adapter),
-            "adapter: not registered"
-        );
-
-        // slither-disable-next-line controlled-delegatecall,low-level-calls
-        (bool success, bytes memory data) = adapter.delegatecall(
-            abi.encodeWithSignature(
-                "addAcmmMargin(address,address,bool,uint256)",
-                collateral,
-                index,
-                isLong,
-                marginAmount
-            )
-        );
-        require(success, string(data));
     }
 
     function _collectFeeDebt(address token, uint256 amount) private {

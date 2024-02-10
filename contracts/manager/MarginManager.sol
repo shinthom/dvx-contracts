@@ -10,7 +10,7 @@ contract MarginManager is IMarginManager {
         address index,
         bool isLong,
         uint256 marginAmount
-    ) external override view returns (bool) {
+    ) external view override returns (bool) {
         return true;
     }
 
@@ -20,7 +20,7 @@ contract MarginManager is IMarginManager {
         address index,
         bool isLong,
         uint256 marginAmount
-    ) external override view returns (bool) {
+    ) external view override returns (bool) {
         return true;
     }
 }

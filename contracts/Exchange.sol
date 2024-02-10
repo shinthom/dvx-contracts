@@ -79,7 +79,9 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         emit SwapperSet(_swapper);
     }
 
-    function setMarginManager(address _marginManager) public virtual override onlyOwner {
+    function setMarginManager(
+        address _marginManager
+    ) public virtual override onlyOwner {
         require(_marginManager != address(0), "manager: zero address");
 
         marginManager = _marginManager;
@@ -404,13 +406,14 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         bool isLong,
         uint256 marginAmount
     ) external view override returns (bool) {
-        return IMarginManager(marginManager).validateAddAcmmMargin(
-            adapter,
-            collateral,
-            index,
-            isLong,
-            marginAmount
-        );
+        return
+            IMarginManager(marginManager).validateAddAcmmMargin(
+                adapter,
+                collateral,
+                index,
+                isLong,
+                marginAmount
+            );
     }
 
     function validateSubAcmmMargin(
@@ -420,13 +423,14 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         bool isLong,
         uint256 marginAmount
     ) external view override returns (bool) {
-        return IMarginManager(marginManager).validateSubAcmmMargin(
-            adapter,
-            collateral,
-            index,
-            isLong,
-            marginAmount
-        );
+        return
+            IMarginManager(marginManager).validateSubAcmmMargin(
+                adapter,
+                collateral,
+                index,
+                isLong,
+                marginAmount
+            );
     }
 
     function getAllRegisteredAdapters()
