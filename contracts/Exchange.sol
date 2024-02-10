@@ -362,7 +362,6 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         );
     }
 
-    // todo: only account?
     function collectFeeDebt(
         address account,
         address token,

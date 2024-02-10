@@ -226,7 +226,7 @@ contract Account is IAccount, PayableMulticall {
         }
 
         if (feeDebt > 0) {
-            _collectFeeDebt(token, amount);
+            _collectFeeDebt(token, feeDebt);
             amount -= feeDebt;
         }
 
