@@ -93,7 +93,6 @@ describe("depositPermit", () => {
       ]),
     ];
 
-    await weth.connect(owner).approve(account.target, depositAmount);
     await account.connect(owner).multicall(multicallArgs);
     expect(await weth.balanceOf(account.target)).to.equal(depositAmount);
   });

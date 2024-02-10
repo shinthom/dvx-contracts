@@ -956,6 +956,10 @@ contract Account is IAccount, PayableMulticall {
         }
 
         require(
+            executionFee <= collateralAmount,
+            "executionFee: greater than collateralAmount"
+        );
+        require(
             collateralAmount <= getWithdrawableBalance(collateral),
             "collateralAmount: greater than withdrawable balance"
         );
