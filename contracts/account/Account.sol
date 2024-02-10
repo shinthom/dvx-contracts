@@ -680,34 +680,44 @@ contract Account is IAccount, PayableMulticall {
             "tokenIn: greater than withdrawable balance"
         );
 
-        uint256 collateralAmount = amountIn;
-        if (tokenIn != collateral) {
-            IERC20(tokenIn).approve(exchange, amountIn);
-            (collateralAmount, ) = IExchange(exchange).swap(
-                address(this),
-                tokenIn,
-                collateral,
-                amountIn
-            );
-        }
-
         if (networkFee > 0) {
             require(
-                collateralAmount >= networkFee,
-                "collateralAmount: less than network fee"
+                amountIn >= networkFee,
+                "amountIn: less than network fee"
             );
-            collateralAmount -= networkFee;
-            _collectNetworkFee(collateral, networkFee);
+            amountIn -= networkFee;
+            _collectNetworkFee(tokenIn, networkFee);
         }
 
-        uint256 feeDebt = _feeDebts[collateral];
+        uint256 feeDebt = _feeDebts[tokenIn];
         if (feeDebt > 0) {
             require(
-                collateralAmount >= feeDebt,
-                "collateralAmount: less than fee debt"
+                amountIn >= feeDebt,
+                "amountIn: less than fee debt"
             );
-            collateralAmount -= feeDebt;
-            _collectFeeDebt(collateral, feeDebt);
+            amountIn -= feeDebt;
+            _collectFeeDebt(tokenIn, feeDebt);
+        }
+
+        uint256 collateralAmount = amountIn;
+        bool swap = tokenIn != collateral;
+        if (swap) {
+            (collateralAmount, ) = _swap(
+                tokenIn,
+                collateral,
+                amountIn,
+                networkFee
+            );
+
+            feeDebt = _feeDebts[collateral];
+            if (feeDebt > 0) {
+                require(
+                    collateralAmount >= feeDebt,
+                    "collateralAmount: less than fee debt"
+                );
+                collateralAmount -= feeDebt;
+                _collectFeeDebt(collateral, feeDebt);
+            }
         }
 
         _increaseCollateral(
@@ -716,7 +726,7 @@ contract Account is IAccount, PayableMulticall {
             index,
             isLong,
             collateralAmount,
-            networkFee
+            swap ? 0 : networkFee
         );
     }
 
