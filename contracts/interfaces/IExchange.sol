@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.7;
 
+import {IAdapter} from "./IAdapter.sol";
 import {IWarehouse} from "./IWarehouse.sol";
 
 // prettier-ignore
@@ -177,6 +178,21 @@ interface IExchange {
         uint256 profitAmount
     ) external view returns (bool);
 
+    function getAccount(address _owner) external view returns (address);
+    function getPosition(
+        address adapter,
+        address account,
+        address collateral,
+        address index,
+        bool isLong
+    ) external returns (IAdapter.Position memory);
+    function getWrapPosition(
+        address adapter,
+        address account,
+        address collateral,
+        address index,
+        bool isLong
+    ) external returns (IAdapter.Position memory);
     function getAllRegisteredAdapters() external view returns (address[] memory);
     function getPositionFee(
         address adapter,
