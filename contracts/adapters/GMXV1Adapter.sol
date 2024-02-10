@@ -4,8 +4,6 @@ pragma solidity 0.8.7;
 import {IAdapter} from "../interfaces/IAdapter.sol";
 import {IExchange} from "../interfaces/IExchange.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
-import {BaseAdapter} from "./BaseAdapter.sol";
-import "hardhat/console.sol";
 
 interface ITimelock {
     function marginFeeBasisPoints() external view returns (uint256);
@@ -199,7 +197,7 @@ interface IVaultPriceFeed {
     function setSecondaryPriceFeed(address _secondaryPriceFeed) external;
 }
 
-contract GmxV1Adapter is BaseAdapter {
+contract GmxV1Adapter is IAdapter {
     uint256 public constant BASIS_POINTS_DIVISOR = 10_000;
 
     uint256 public constant PRICE_DECIMALS = 30;
@@ -212,16 +210,14 @@ contract GmxV1Adapter is BaseAdapter {
     address private immutable _vault;
     address private immutable _timelock;
     address private immutable _exchange;
-    address private immutable _this;
 
     constructor(
         address positionRouter,
         address router,
         address vault,
         address timelock,
-        address exchange,
-        address logger
-    ) BaseAdapter(logger) {
+        address exchange
+    ) {
         require(positionRouter != address(0), "positionRouter: zero address");
         require(router != address(0), "router: zero address");
         require(vault != address(0), "vault: zero address");
@@ -233,8 +229,6 @@ contract GmxV1Adapter is BaseAdapter {
         _vault = vault;
         _timelock = timelock;
         _exchange = exchange;
-
-        _this = address(this);
     }
 
     function increasePosition(
@@ -342,15 +336,6 @@ contract GmxV1Adapter is BaseAdapter {
         require(index != address(0), "index: zero address");
 
         _increase(collateral, index, marginAmount, 0, 0, isLong);
-
-        logAddAcmmMargin(
-            address(this),
-            _this,
-            collateral,
-            index,
-            marginAmount,
-            isLong
-        );
     }
 
     function subAcmmMargin(
@@ -374,15 +359,6 @@ contract GmxV1Adapter is BaseAdapter {
         }
 
         _decrease(collateral, index, marginAmountUsd, 0, isLong, 0);
-
-        logSubAcmmMargin(
-            address(this),
-            _this,
-            collateral,
-            index,
-            marginAmount,
-            isLong
-        );
     }
 
     function makeMarketOrder(

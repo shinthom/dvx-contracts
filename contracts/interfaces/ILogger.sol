@@ -80,7 +80,8 @@ interface ILogger {
         address collateral,
         address index,
         uint256 marginAmount,
-        bool isLong
+        bool isLong,
+        uint256 addAcmmMarginFee
     );
     event AcmmMarginSubtracted(
         address indexed account,
@@ -88,7 +89,8 @@ interface ILogger {
         address collateral,
         address index,
         uint256 marginAmount,
-        bool isLong
+        bool isLong,
+        uint256 subAcmmMarginFee
     );
 
     function logRenewDelegatedAccount(
@@ -167,7 +169,8 @@ interface ILogger {
         address collateral,
         address index,
         uint256 marginAmount,
-        bool isLong
+        bool isLong,
+        uint256 addAcmmMarginFee
     ) external;
     function logSubAcmmMargin(
         address account,
@@ -175,6 +178,7 @@ interface ILogger {
         address collateral,
         address index,
         uint256 marginAmount,
-        bool isLong
+        bool isLong,
+        uint256 subAcmmMarginFee
     ) external;
 }

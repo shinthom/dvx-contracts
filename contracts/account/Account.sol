@@ -876,11 +876,12 @@ contract Account is IAccount, PayableMulticall {
         uint256 addAcmmMarginFee
             = IExchange(exchange).getAddAcmmMarginFee(marginAmount); // prettier-ignore
         if (addAcmmMarginFee > 0) {
+            require(marginAmount >= addAcmmMarginFee, "marginAmount: less than margin management fee");
             _collectProtocolFee(collateral, addAcmmMarginFee);
             marginAmount -= addAcmmMarginFee;
         }
 
-        _addAcmmMargin(adapter, collateral, index, isLong, marginAmount);
+        _addAcmmMargin(adapter, collateral, index, isLong, marginAmount, addAcmmMarginFee);
     }
 
     function _addAcmmMargin(
@@ -888,7 +889,8 @@ contract Account is IAccount, PayableMulticall {
         address collateral,
         address index,
         bool isLong,
-        uint256 marginAmount
+        uint256 marginAmount,
+        uint256 addAcmmMarginFee
     ) private {
         require(
             IExchange(exchange).isRegisteredAdapter(adapter),
@@ -906,6 +908,19 @@ contract Account is IAccount, PayableMulticall {
             )
         );
         require(success, string(data));
+
+        address logger = IExchange(exchange).logger();
+        if (logger != address(0)) {
+            ILogger(logger).logAddAcmmMargin(
+                address(this),
+                adapter,
+                collateral,
+                index,
+                marginAmount,
+                isLong,
+                addAcmmMarginFee
+            );
+        }
     }
 
     function subAcmmMargin(
@@ -948,7 +963,24 @@ contract Account is IAccount, PayableMulticall {
         uint256 subAcmmMarginFee
             = IExchange(exchange).getSubAcmmMarginFee(marginAmount); // prettier-ignore
         if (subAcmmMarginFee > 0) {
+            require(
+                marginAmount >= subAcmmMarginFee,
+                "marginAmount: less than margin management fee"
+            );
             _collectProtocolFee(marginToken, subAcmmMarginFee);
+        }
+
+        address logger = IExchange(exchange).logger();
+        if (logger != address(0)) {
+            ILogger(logger).logSubAcmmMargin(
+                address(this),
+                adapter,
+                collateral,
+                index,
+                marginAmount,
+                isLong,
+                subAcmmMarginFee
+            );
         }
     }
 

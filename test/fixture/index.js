@@ -207,13 +207,11 @@ const deploy = async (noAccount) => {
     Vault,
     Timelock,
     exchange.target,
-    logger.target,
   ]);
   muxAdapter = await ethers.deployContract("MuxAdapter", [
     OrderBook,
     LiquidityPool,
     exchange.target,
-    logger.target,
   ]);
   quoter = await ethers.deployContract("Quoter");
   reader = await ethers.deployContract("Reader", [warehouse.target]);

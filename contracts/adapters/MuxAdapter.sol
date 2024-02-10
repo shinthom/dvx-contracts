@@ -4,7 +4,6 @@ pragma solidity 0.8.7;
 import {IAdapter} from "../interfaces/IAdapter.sol";
 import {IExchange} from "../interfaces/IExchange.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
-import {BaseAdapter} from "./BaseAdapter.sol";
 
 interface ILiquidityPool {
     enum ReferenceOracleType {
@@ -157,7 +156,7 @@ interface IChainlink {
     function latestAnswer() external view returns (int256);
 }
 
-contract MuxAdapter is BaseAdapter {
+contract MuxAdapter is IAdapter {
     uint256 public constant TOKEN_DEFAULT_DECIMALS = 18;
 
     uint256 public constant PRICE_DECIMALS = 18;
@@ -169,22 +168,17 @@ contract MuxAdapter is BaseAdapter {
     address private immutable _orderBook;
     address private immutable _exchange;
 
-    address private immutable _this;
-
     constructor(
         address orderBook,
         address liquidityPool,
-        address exchange,
-        address logger
-    ) BaseAdapter(logger) {
+        address exchange
+    ) {
         require(orderBook != address(0), "orderBook: zero address");
         require(liquidityPool != address(0), "liquidityPool: zero address");
 
         _orderBook = orderBook;
         _liquidityPool = liquidityPool;
         _exchange = exchange;
-
-        _this = address(this);
     }
 
     function increasePosition(
@@ -362,15 +356,6 @@ contract MuxAdapter is BaseAdapter {
                 marginAmount
             );
         }
-
-        logAddAcmmMargin(
-            address(this),
-            _this,
-            collateral,
-            index,
-            marginAmount,
-            isLong
-        );
     }
 
     function subAcmmMargin(
@@ -397,15 +382,6 @@ contract MuxAdapter is BaseAdapter {
             uint96(profitAmount),
             profitTokenId,
             true // isProfit
-        );
-
-        logSubAcmmMargin(
-            address(this),
-            _this,
-            collateral,
-            index,
-            profitAmount,
-            isLong
         );
     }
 
