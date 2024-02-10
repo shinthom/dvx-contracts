@@ -265,6 +265,10 @@ stable:
   };
 
   const checkPosition = async (adapter, account, collateral, index, isLong) => {
+    if (adapter.target == gmxV1Adapter.target && isLong) {
+      collateral = index;
+    }
+
     const position = await adapter.getPosition(
       account.target,
       collateral,

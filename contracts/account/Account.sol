@@ -174,7 +174,7 @@ contract Account is IAccount, PayableMulticall {
         IERC20(token).transferFrom(owner, address(this), amount);
 
         if (networkFee > 0) {
-            require(amount >= networkFee, "amount: less than execution fee");
+            require(amount >= networkFee, "amount: less than network fee");
             _collectNetworkFee(token, networkFee);
             amount -= networkFee;
         }
@@ -212,20 +212,20 @@ contract Account is IAccount, PayableMulticall {
         }
 
         require(amount != 0, "amount: zero");
-
-        uint256 feeDebt = _feeDebts[token];
-        require(amount >= networkFee + feeDebt, "amount: less than fee + debt");
         require(
             amount <= getWithdrawableBalance(token),
             "amount: greater than withdrawable balance"
         );
 
         if (networkFee > 0) {
+            require(amount >= networkFee, "amount: less than network fee");
             _collectNetworkFee(token, networkFee);
             amount -= networkFee;
         }
 
+        uint256 feeDebt = _feeDebts[token];
         if (feeDebt > 0) {
+            require(amount >= feeDebt, "amount: less than fee debt");
             _collectFeeDebt(token, feeDebt);
             amount -= feeDebt;
         }
@@ -277,7 +277,7 @@ contract Account is IAccount, PayableMulticall {
         );
 
         if (networkFee > 0) {
-            require(amountIn >= networkFee, "amount: less than execution fee");
+            require(amountIn >= networkFee, "amount: less than network fee");
             _collectNetworkFee(tokenIn, networkFee);
             amountIn -= networkFee;
         }
@@ -362,12 +362,20 @@ contract Account is IAccount, PayableMulticall {
         );
 
         if (networkFee > 0) {
+            require(
+                collateralAmount >= networkFee,
+                "collateralAmount: less than network fee"
+            );
             collateralAmount -= networkFee;
             _collectNetworkFee(collateral, networkFee);
         }
 
         uint256 feeDebt = _feeDebts[collateral];
         if (feeDebt > 0) {
+            require(
+                collateralAmount >= feeDebt,
+                "collateralAmount: less than fee debt"
+            );
             collateralAmount -= feeDebt;
             _collectFeeDebt(collateral, feeDebt);
         }
@@ -432,27 +440,39 @@ contract Account is IAccount, PayableMulticall {
         );
 
         if (networkFee > 0) {
+            require(
+                collateralAmount >= networkFee,
+                "collateralAmount: less than network fee"
+            );
             collateralAmount -= networkFee;
             _collectNetworkFee(collateral, networkFee);
         }
 
         uint256 feeDebt = _feeDebts[collateral];
         if (feeDebt > 0) {
+            require(
+                collateralAmount >= feeDebt,
+                "collateralAmount: less than fee debt"
+            );
             collateralAmount -= feeDebt;
             _collectFeeDebt(collateral, feeDebt);
         }
 
+         // stack too deep
         (collateralAmount, ) = _swap(
             collateral,
             path[1],
             collateralAmount,
             networkFee
         );
-
-        collateral = path[1]; // stack too deep
+        collateral = path[1];
 
         feeDebt = _feeDebts[collateral];
         if (feeDebt > 0) {
+            require(
+                collateralAmount >= feeDebt,
+                "collateralAmount: less than fee debt"
+            );
             collateralAmount -= feeDebt;
             _collectFeeDebt(collateral, feeDebt);
         }
@@ -495,6 +515,10 @@ contract Account is IAccount, PayableMulticall {
             isLong
         );
         if (positionFee > 0) {
+            require(
+                collateralAmount >= positionFee,
+                "collateralAmount: less than position fee"
+            );
             _collectProtocolFee(collateral, positionFee);
             collateralAmount -= positionFee;
         }
@@ -668,12 +692,20 @@ contract Account is IAccount, PayableMulticall {
         }
 
         if (networkFee > 0) {
+            require(
+                collateralAmount >= networkFee,
+                "collateralAmount: less than network fee"
+            );
             collateralAmount -= networkFee;
             _collectNetworkFee(collateral, networkFee);
         }
 
         uint256 feeDebt = _feeDebts[collateral];
         if (feeDebt > 0) {
+            require(
+                collateralAmount >= feeDebt,
+                "collateralAmount: less than fee debt"
+            );
             collateralAmount -= feeDebt;
             _collectFeeDebt(collateral, feeDebt);
         }
@@ -965,6 +997,10 @@ contract Account is IAccount, PayableMulticall {
         );
 
         if (networkFee > 0) {
+            require(
+                collateralAmount >= networkFee,
+                "collateralAmount: less than network fee"
+            );
             _collectNetworkFee(collateral, networkFee);
             collateralAmount -= networkFee;
         }
