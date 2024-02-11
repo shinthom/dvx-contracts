@@ -12,6 +12,7 @@ interface IAccount {
 
     function owner() external view returns (address);
     function exchange() external view returns (address);
+    function delegatedAccount() external view returns (address, uint256);
 
     function initialize(
         address _owner,

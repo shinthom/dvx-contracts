@@ -13,7 +13,7 @@ contract Account is IAccount, PayableMulticall {
 
     address public override owner;
     address public override exchange;
-    DelegatedAccount public delegatedAccount;
+    DelegatedAccount public override delegatedAccount;
 
     bool private _intitalized;
 
