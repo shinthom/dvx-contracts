@@ -18,7 +18,7 @@ describe("withdraw", () => {
     var withdrawAmount = await account.getBalance(token);
     await account
       .connect(owner)
-      .withdraw(token, withdrawAmount, networkFee, 0, "0x");
+      .withdraw(token, owner.address, withdrawAmount, networkFee, 0, "0x");
     console.log(await weth.balanceOf(owner.address));
   });
 
@@ -34,7 +34,7 @@ describe("withdraw", () => {
     var withdrawAmount = await account.getBalance(token);
     await account
       .connect(owner)
-      .withdraw(token, withdrawAmount, networkFee, 0, "0x");
+      .withdraw(token, owner.address, withdrawAmount, networkFee, 0, "0x");
     console.log(await weth.balanceOf(owner.address));
   });
 
@@ -105,7 +105,7 @@ describe("withdraw", () => {
     var withdrawAmount = await account.getBalance(collateral);
     await account
       .connect(owner)
-      .withdraw(collateral, withdrawAmount, 0, 0, "0x");
+      .withdraw(collateral, owner.address, withdrawAmount, 0, 0, "0x");
     console.log(await weth.balanceOf(owner.address));
     expect(await weth.balanceOf(feeCollector.target)).to.equal(networkFee);
     expect(await account.getFeeDebt(collateral)).to.equal(0);
@@ -125,18 +125,26 @@ describe("withdraw", () => {
     var messageHash = ethers.solidityPackedKeccak256(
       [
         "address", // token
+        "address", // to
         "uint256", // amount
         "uint256", // networkFee
         "uint256", // deadline
       ],
-      [token, withdrawAmount, networkFee, deadline]
+      [token, owner.address, withdrawAmount, networkFee, deadline]
     );
     var signature = await va.signMessage(ethers.getBytes(messageHash));
 
     await weth.connect(owner).approve(account.target, depositAmount);
     await account
       .connect(relayer)
-      .withdraw(token, depositAmount, networkFee, deadline, signature);
+      .withdraw(
+        token,
+        owner.address,
+        depositAmount,
+        networkFee,
+        deadline,
+        signature
+      );
     console.log(await weth.balanceOf(owner.address));
   });
 });
