@@ -874,7 +874,7 @@ contract GmxV1Adapter is IAdapter {
         bool isLong
     ) private {
         if (isLong && (collateral != index)) {
-            IERC20(collateral).approve(_exchange, collateralAmount);
+            IERC20(collateral).transfer(_exchange, collateralAmount);
             (uint256 amountOut, ) = IExchange(_exchange).swap(
                 address(this),
                 collateral,
@@ -890,7 +890,7 @@ contract GmxV1Adapter is IAdapter {
             address defaultStableToken
                 = IExchange(_exchange).defaultStableToken(); // prettier-ignore
 
-            IERC20(collateral).approve(_exchange, collateralAmount);
+            IERC20(collateral).transfer(_exchange, collateralAmount);
 
             (uint256 amountOut, ) = IExchange(_exchange).swap(
                 address(this),
@@ -903,7 +903,7 @@ contract GmxV1Adapter is IAdapter {
             collateral = defaultStableToken;
         }
 
-        uint256 networkFee = IPositionRouter(_positionRouter).minExecutionFee();
+        uint256 executionFee = IPositionRouter(_positionRouter).minExecutionFee();
 
         address[] memory path = new address[](1);
         path[0] = collateral;
@@ -914,7 +914,7 @@ contract GmxV1Adapter is IAdapter {
 
         IERC20(collateral).approve(_router, collateralAmount);
         IPositionRouter(_positionRouter).createIncreasePosition{
-            value: networkFee
+            value: executionFee
         }(
             path,
             index,
@@ -923,7 +923,7 @@ contract GmxV1Adapter is IAdapter {
             size,
             isLong,
             acceptablePrice,
-            networkFee,
+            executionFee,
             0x0,
             address(0)
         );
@@ -940,13 +940,13 @@ contract GmxV1Adapter is IAdapter {
         if (acceptablePrice == 0) {
             acceptablePrice = isLong ? 0 : type(uint256).max;
         }
-        uint256 networkFee = IPositionRouter(_positionRouter).minExecutionFee();
+        uint256 executionFee = IPositionRouter(_positionRouter).minExecutionFee();
 
         address[] memory path = new address[](1);
         path[0] = collateral;
 
         IPositionRouter(_positionRouter).createDecreasePosition{
-            value: networkFee
+            value: executionFee
         }(
             path,
             index,
@@ -956,7 +956,7 @@ contract GmxV1Adapter is IAdapter {
             address(this),
             acceptablePrice,
             0,
-            networkFee,
+            executionFee,
             false, // withdrawETH,
             address(0)
         );
