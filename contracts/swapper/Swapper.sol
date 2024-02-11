@@ -17,6 +17,8 @@ contract Swapper is ISwapper {
         address tokenOut,
         uint256 amountIn
     ) public override returns (uint256 amountOut) {
+        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
+
         IERC20(tokenIn).approve(_swapRouter, amountIn);
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({

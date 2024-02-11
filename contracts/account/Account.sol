@@ -304,8 +304,7 @@ contract Account is IAccount, PayableMulticall {
         uint256 amountIn,
         uint256 networkFee
     ) private returns (uint256 amountOut, uint256 swapFee) {
-        IERC20(tokenIn).transfer(exchange, amountIn);
-
+        IERC20(tokenIn).approve(exchange, amountIn);
         (amountOut, swapFee) = IExchange(exchange).swap(
             address(this),
             tokenIn,

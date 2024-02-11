@@ -250,6 +250,8 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address tokenOut,
         uint256 amountIn
     ) public virtual override onlyAccount(account) returns (uint256, uint256) {
+        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
+
         uint256 swapFee = getSwapFee(amountIn);
         if (swapFee > 0) {
             require(amountIn >= swapFee, "amountIn: less than swapFee");
@@ -257,11 +259,10 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             amountIn -= swapFee;
         }
 
-        IERC20(tokenIn).transfer(swapper, amountIn);
+        IERC20(tokenIn).approve(swapper, amountIn);
         uint256 amountOut = ISwapper(swapper).swap(tokenIn, tokenOut, amountIn);
 
         IERC20(tokenOut).transfer(msg.sender, amountOut);
-
         return (amountOut, swapFee);
     }
 
