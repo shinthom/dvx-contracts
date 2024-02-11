@@ -299,4 +299,108 @@ describe("marginManagement", async () => {
     await checkBalance(account);
     await checkPosition(muxAdapter, account, collateral, index, isLong);
   });
+
+  describe("fee", () => {
+    it("addMargin", async () => {
+      const {
+        orderKeeper,
+        account,
+        gmxV1Adapter,
+        exchange,
+        WETH,
+        weth,
+        feeCollector,
+        WBTC,
+        checkPosition,
+        deposit,
+        setDummyPrice,
+        increasePosition,
+        executeIncreasePosition,
+      } = await loadFixture(deploy);
+      await setDummyPrice();
+
+      var collateral = WETH;
+      var index = WETH;
+      var collateralAmount = ethers.parseEther("1");
+      var size = ethers.parseEther("10");
+      var isLong = true;
+      var acceptablePrice = ethers.parseUnits("2000", 18);
+
+      await deposit(collateral, collateralAmount);
+      await increasePosition(gmxV1Adapter, collateral, index, collateralAmount, size, acceptablePrice, isLong); // prettier-ignore
+      await checkPosition(gmxV1Adapter, account, collateral, index, isLong);
+
+      var acmmAddMarginRate = ethers.parseUnits("0.01", 8); // 1%
+      await exchange.setAcmmAddMarginFeeRate(acmmAddMarginRate);
+
+      const marginWETH = ethers.parseEther("0.1");
+      await deposit(WETH, marginWETH);
+      await account
+        .connect(orderKeeper)
+        .addAcmmMargin(
+          gmxV1Adapter.target,
+          collateral,
+          index,
+          isLong,
+          [WETH],
+          [marginWETH],
+          { value: await gmxV1Adapter.getMinExecutionFee() }
+        );
+      await executeIncreasePosition(account.target);
+      await checkPosition(gmxV1Adapter, account, collateral, index, isLong);
+      console.log(await weth.balanceOf(feeCollector.target));
+    });
+
+    it("subMargin", async () => {
+      const {
+        orderKeeper,
+        account,
+        gmxV1Adapter,
+        exchange,
+        WETH,
+        weth,
+        feeCollector,
+        checkPosition,
+        deposit,
+        setPrice,
+        setDummyPrice,
+        increasePosition,
+        executeDecreasePosition,
+      } = await loadFixture(deploy);
+      await setDummyPrice();
+
+      var collateral = WETH;
+      var index = WETH;
+      var collateralAmount = ethers.parseEther("1");
+      var size = ethers.parseEther("10");
+      var isLong = true;
+      var acceptablePrice = ethers.parseUnits("2000", 18);
+
+      await deposit(collateral, collateralAmount);
+      await increasePosition(gmxV1Adapter, collateral, index, collateralAmount, size, acceptablePrice, isLong); // prettier-ignore
+      await checkPosition(gmxV1Adapter, account, collateral, index, isLong);
+
+      var acmmSubMarginRate = ethers.parseUnits("0.01", 8); // 1%
+      await exchange.setAcmmSubMarginFeeRate(acmmSubMarginRate);
+
+      var price = ethers.parseUnits("2200", 30);
+      await setPrice(gmxV1Adapter, index, price, price, true);
+
+      const marginWETH = ethers.parseEther("0.01");
+      await account
+        .connect(orderKeeper)
+        .subAcmmMargin(
+          gmxV1Adapter.target,
+          collateral,
+          index,
+          isLong,
+          marginWETH,
+          { value: await gmxV1Adapter.getMinExecutionFee() }
+        );
+      await executeDecreasePosition(account.target);
+      await checkPosition(gmxV1Adapter, account, collateral, index, isLong);
+      console.log(await weth.balanceOf(feeCollector.target));
+      console.log(await account.getFeeDebt(WETH));
+    });
+  });
 });

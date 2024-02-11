@@ -968,11 +968,7 @@ contract Account is IAccount, PayableMulticall {
         uint256 subAcmmMarginFee
             = IExchange(exchange).getSubAcmmMarginFee(marginAmount); // prettier-ignore
         if (subAcmmMarginFee > 0) {
-            require(
-                marginAmount >= subAcmmMarginFee,
-                "marginAmount: less than margin management fee"
-            );
-            _collectProtocolFee(marginToken, subAcmmMarginFee);
+            _feeDebts[marginToken] += subAcmmMarginFee;
         }
 
         address logger = IExchange(exchange).logger();
