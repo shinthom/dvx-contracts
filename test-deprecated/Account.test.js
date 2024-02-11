@@ -59,6 +59,7 @@ describe("Account", () => {
     });
   });
 
+  // TODO: Change test with new implementation: parameter 'to' should be used from now. @0xdargan
   describe("withdraw", async () => {
     const token = WETH;
     const tokenAmount = ethers.parseUnits("1", 18);

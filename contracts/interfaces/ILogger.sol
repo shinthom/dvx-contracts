@@ -18,6 +18,7 @@ interface ILogger {
     );
     event Withdrawn(
         address indexed account,
+        address indexed to,
         address indexed token,
         uint256 amount,
         uint256 networkFee
@@ -107,6 +108,7 @@ interface ILogger {
     ) external;
     function logWithdraw(
         address account,
+        address to,
         address token,
         uint256 amount,
         uint256 networkFee

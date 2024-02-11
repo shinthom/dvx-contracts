@@ -23,11 +23,12 @@ contract Logger is ILogger {
 
     function logWithdraw(
         address account,
+        address to,
         address token,
         uint256 amount,
         uint256 networkFee
     ) external override {
-        emit Withdrawn(account, token, amount, networkFee);
+        emit Withdrawn(account, to, token, amount, networkFee);
     }
 
     function logSwap(
