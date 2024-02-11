@@ -14,10 +14,7 @@ contract AttendanceBook is Ownable {
     event CheckedIn(address indexed account, uint256 indexed day);
 
     constructor(uint256 _startTime, address _relayer) {
-        require(
-            _startTime > block.timestamp,
-            "invalid start time"
-        );
+        require(_startTime > block.timestamp, "invalid start time");
         require(_relayer != address(0), "invalid relayer");
 
         startTime = _startTime;
@@ -37,13 +34,8 @@ contract AttendanceBook is Ownable {
         uint256 from,
         uint256 to
     ) external view returns (uint256[] memory) {
-        require(
-            from > 0,
-            "invalid from"
-        );
-        require (
-            to >= from, "invalid to"
-        );
+        require(from > 0, "invalid from");
+        require(to >= from, "invalid to");
 
         uint256[] memory history = new uint256[](to - from + 1);
         for (uint256 i = from; i <= to; i++) {
@@ -64,11 +56,9 @@ contract AttendanceBook is Ownable {
         );
 
         if (msg.sender == relayer) {
-            (address wallet, uint256 expiration) = IAccount(account).delegatedAccount();
-            require(
-                expiration > block.timestamp,
-                "delegatedAccount: expired"
-            );
+            (address wallet, uint256 expiration) = IAccount(account)
+                .delegatedAccount();
+            require(expiration > block.timestamp, "delegatedAccount: expired");
 
             _verifySignature(
                 deadline,
@@ -81,7 +71,7 @@ contract AttendanceBook is Ownable {
         _checkIn(account);
     }
 
-    function _checkIn(address account) private  {
+    function _checkIn(address account) private {
         require(activated, "not activated");
         require(block.timestamp > startTime, "not started");
 

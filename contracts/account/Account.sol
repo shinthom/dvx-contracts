@@ -204,7 +204,13 @@ contract Account is IAccount, PayableMulticall {
                     deadline,
                     delegatedAccount.wallet,
                     keccak256(
-                        abi.encodePacked(token, to, amount, networkFee, deadline)
+                        abi.encodePacked(
+                            token,
+                            to,
+                            amount,
+                            networkFee,
+                            deadline
+                        )
                     ),
                     signature
                 ),

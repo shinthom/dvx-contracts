@@ -13,14 +13,20 @@ abstract contract ERC5633 is ERC1155, IERC5633 {
     mapping(uint256 => bool) private _soulbounds;
 
     /// @dev See {IERC165-supportsInterface}.
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155) returns (bool) {
-        return interfaceId == type(IERC5633).interfaceId || super.supportsInterface(interfaceId);
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view virtual override(ERC1155) returns (bool) {
+        return
+            interfaceId == type(IERC5633).interfaceId ||
+            super.supportsInterface(interfaceId);
     }
 
     /**
      * @dev Returns true if a token type `id` is soulbound.
      */
-    function isSoulbound(uint256 id) public view virtual override returns (bool) {
+    function isSoulbound(
+        uint256 id
+    ) public view virtual override returns (bool) {
         return _soulbounds[id];
     }
 
@@ -44,7 +50,10 @@ abstract contract ERC5633 is ERC1155, IERC5633 {
 
         for (uint256 i = 0; i < ids.length; ++i) {
             if (isSoulbound(ids[i])) {
-                require(from == address(0) || to == address(0), "ERC5633: Soulbound, Non-Transferable");
+                require(
+                    from == address(0) || to == address(0),
+                    "ERC5633: Soulbound, Non-Transferable"
+                );
             }
         }
     }

@@ -432,7 +432,9 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             );
     }
 
-    function getAccount(address _owner) external view override returns (address) {
+    function getAccount(
+        address _owner
+    ) external view override returns (address) {
         return IAccountFactory(accountFactory).accounts(_owner);
     }
 
@@ -443,12 +445,8 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address index,
         bool isLong
     ) external view override returns (IAdapter.Position memory) {
-        return IAdapter(adapter).getPosition(
-            account,
-            collateral,
-            index,
-            isLong
-        );
+        return
+            IAdapter(adapter).getPosition(account, collateral, index, isLong);
     }
 
     function getWrapPosition(
@@ -458,12 +456,13 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address index,
         bool isLong
     ) external view override returns (IAdapter.Position memory) {
-        return IAdapter(adapter).getWrapPosition(
-            account,
-            collateral,
-            index,
-            isLong
-        );
+        return
+            IAdapter(adapter).getWrapPosition(
+                account,
+                collateral,
+                index,
+                isLong
+            );
     }
 
     function getAllRegisteredAdapters()
