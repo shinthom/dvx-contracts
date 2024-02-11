@@ -487,6 +487,14 @@ contract GmxV1Adapter is IAdapter {
             index,
             isLong
         );
+        if (position.size == 0) {
+            return (
+                collateral,
+                0,
+                getProfitToken(collateral, index, isLong),
+                0
+            );
+        }
 
         (uint256 positionFeeUsd, uint256 fundingFeeUsd) = getCloseFee(
             account,
@@ -599,6 +607,16 @@ contract GmxV1Adapter is IAdapter {
         address index,
         bool isLong
     ) public view override returns (bool hasProfit, uint256 pnlUsd) {
+        IAdapter.Position memory position = getPosition(
+            account,
+            collateral,
+            index,
+            isLong
+        );
+        if (position.size == 0) {
+            return (false, 0);
+        }
+
         (hasProfit, pnlUsd) = IVault(_vault).getPositionDelta(
             account,
             collateral,
