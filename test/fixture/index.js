@@ -376,19 +376,18 @@ stable:
     networkFee
   ) => {
     const adapterFee = await adapter.getMinExecutionFee();
-    await account
-      .connect(owner)
-      .decreasePosition(
-        adapter.target,
-        collateral,
-        index,
-        isLong,
-        size,
-        networkFee,
-        "0x",
-        { value: adapterFee }
-      );
-    console.log("decrease position");
+    await account.connect(owner).decreasePosition(
+      adapter.target,
+      collateral,
+      index,
+      isLong,
+      size,
+      0, // acceptablePrice
+      networkFee,
+      0, // deadline
+      "0x",
+      { value: adapterFee }
+    );
 
     if (adapter.target == gmxV1Adapter.target) {
       await executeDecreasePosition(account.target);
@@ -692,7 +691,7 @@ stable:
     await increaseTime(seconds);
 
     // const beforeFundingRate = await vault.cumulativeFundingRates(collateral);
-    await vault.updateCumulativeFundingRate(collateral, ethers.ZeroAddress);
+    await vault.updateCumulativeFundingRate(collateral);
     // const afterFundingRate = await vault.cumulativeFundingRates(collateral);
     // console.log(`\nfundingRate is updated: ${beforeFundingRate} -> ${afterFundingRate}\n`) // prettier-ignore
   };

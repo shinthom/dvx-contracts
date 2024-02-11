@@ -1,7 +1,7 @@
 const { ethers } = require("hardhat");
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 const { expect } = require("chai");
-const { deploy } = require("../fixture");
+const { deploy } = require("./fixture");
 
 describe("liquidationPrice", () => {
   it("gmx v1", async () => {

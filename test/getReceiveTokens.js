@@ -1,6 +1,6 @@
 const { ethers } = require("hardhat");
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
-const { deploy } = require("../fixture");
+const { deploy } = require("./fixture");
 
 describe("getReceiveToken", () => {
   it("gmx v1", async () => {

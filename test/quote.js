@@ -1,9 +1,9 @@
 const { ethers } = require("hardhat");
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
-const { deploy } = require("../fixture");
+const { deploy } = require("./fixture");
 
 describe("Quoter", () => {
-  it("scenario", async () => {
+  it("quote", async () => {
     const { gmxV1Adapter, muxAdapter, quoter, account, WETH } =
       await loadFixture(deploy);
 
