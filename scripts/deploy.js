@@ -185,6 +185,17 @@ async function main() {
     await warehouse.setExchange(exchange.target)
   );
   console.log("Warehouse: setExchange\n");
+
+  const owner = (await ethers.provider.getSigner()).address;
+
+  // set orderKeeper, relayer
+  await waitAndLogAccumulatedGasUsed(
+    await exchange.setOrderKeeper(owner, true)
+  );
+  console.log("Exchange: setOrderKeeper\n");
+
+  await waitAndLogAccumulatedGasUsed(await exchange.setRelayer(owner, true));
+  console.log("Exchange: setRelayer\n");
 }
 
 main().catch((error) => {
