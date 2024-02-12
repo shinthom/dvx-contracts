@@ -921,7 +921,8 @@ contract GmxV1Adapter is IAdapter {
             collateral = defaultStableToken;
         }
 
-        uint256 executionFee = IPositionRouter(_positionRouter).minExecutionFee();
+        uint256 executionFee = IPositionRouter(_positionRouter)
+            .minExecutionFee();
 
         address[] memory path = new address[](1);
         path[0] = collateral;
@@ -958,7 +959,8 @@ contract GmxV1Adapter is IAdapter {
         if (acceptablePrice == 0) {
             acceptablePrice = isLong ? 0 : type(uint256).max;
         }
-        uint256 executionFee = IPositionRouter(_positionRouter).minExecutionFee();
+        uint256 executionFee = IPositionRouter(_positionRouter)
+            .minExecutionFee();
 
         address[] memory path = new address[](1);
         path[0] = collateral;

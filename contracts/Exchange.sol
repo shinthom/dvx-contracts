@@ -145,7 +145,9 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         }
     }
 
-    function removeCollateralTokens(address[] calldata tokens) external override onlyOwner {
+    function removeCollateralTokens(
+        address[] calldata tokens
+    ) external override onlyOwner {
         for (uint256 i = 0; i < tokens.length; i++) {
             require(tokens[i] != address(0), "token: zero address");
 
@@ -154,7 +156,9 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         }
     }
 
-    function removeIndexTokens(address[] calldata tokens) external override onlyOwner {
+    function removeIndexTokens(
+        address[] calldata tokens
+    ) external override onlyOwner {
         for (uint256 i = 0; i < tokens.length; i++) {
             require(tokens[i] != address(0), "token: zero address");
 
@@ -162,7 +166,6 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             emit IndexTokenRemoved(tokens[i]);
         }
     }
-
 
     function setStableToken(
         address token,
