@@ -141,6 +141,14 @@ async function main() {
   await waitAndLogAccumulatedGasUsed(marginManager.deploymentTransaction());
   console.log("MarginManager deployed at:", marginManager.target, "\n");
 
+  const AttendanceBook = await ethers.getContractFactory("AttendanceBook");
+  const attendanceBook = await AttendanceBook.deploy(
+    1707868800, // todo: fix
+    marginManager.target // todo: fix
+  );
+  await waitAndLogAccumulatedGasUsed(attendanceBook.deploymentTransaction());
+  console.log("MarginManager deployed at:", attendanceBook.target, "\n");
+
   await waitAndLogAccumulatedGasUsed(
     await exchange.setAccountFactory(accountFactory.target)
   );
@@ -208,16 +216,20 @@ async function main() {
   );
   console.log("Warehouse: setExchange\n");
 
-  const owner = (await ethers.provider.getSigner()).address;
-
-  // set orderKeeper, relayer
   await waitAndLogAccumulatedGasUsed(
-    await exchange.setOrderKeeper(owner, true)
+    await exchange.setRelayer(attendanceBook.target, true)
   );
-  console.log("Exchange: setOrderKeeper\n");
+  console.log("Exchange: setRelayer (AttendanceBook)\n");
 
-  await waitAndLogAccumulatedGasUsed(await exchange.setRelayer(owner, true));
-  console.log("Exchange: setRelayer\n");
+  // (optional) set relayer for AttendanceBook
+  // const owner = (await ethers.provider.getSigner()).address;
+  // await waitAndLogAccumulatedGasUsed(await exchange.setRelayer(owner, true));
+  // console.log("Exchange: setRelayer\n");
+
+  // await waitAndLogAccumulatedGasUsed(
+  //   await exchange.setOrderKeeper(owner, true)
+  // );
+  // console.log("Exchange: setOrderKeeper\n");
 }
 
 main().catch((error) => {

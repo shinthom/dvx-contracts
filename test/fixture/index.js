@@ -244,6 +244,7 @@ const deploy = async (noAccount) => {
 
   await exchange.setOrderKeeper(orderKeeper.address, true);
   await exchange.setRelayer(relayer.address, true);
+  await exchange.setRelayer(attendanceBook.target, true);
 
   if (!noAccount) {
     await exchange.connect(owner).createAccount(va.address, ethers.MaxUint256);
