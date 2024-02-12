@@ -1,7 +1,7 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
-const { deploy } = require("../../test/fixture");
+const { deploy } = require("./fixture");
 
 const deadline = Math.ceil(Date.now() / 1000) + 60 * 60 * 3;
 
@@ -196,6 +196,7 @@ describe("marketOrder", () => {
           "bool", // isLong
           "uint256", // acceptablePrice
           "uint256", // networkFee
+          "uint256", // deadline
         ],
         [
           gmxV1Adapter.target,
@@ -206,6 +207,7 @@ describe("marketOrder", () => {
           isLong,
           acceptablePrice,
           networkFee,
+          deadline,
         ]
       );
       var signature = await va.signMessage(ethers.getBytes(messageHash));
@@ -227,6 +229,7 @@ describe("marketOrder", () => {
           { value: adapterFee }
         );
       await executeIncreasePosition(account.target);
+
       var wrapPosition = await gmxV1Adapter.getWrapPosition(
         account.target,
         collateral,
@@ -255,6 +258,7 @@ describe("marketOrder", () => {
           "address", // tokenIn
           "uint256", // amountIn
           "uint256", // networkFee
+          "uint256", // deadline
         ],
         [
           gmxV1Adapter.target,
@@ -264,6 +268,7 @@ describe("marketOrder", () => {
           collateral, // tokenIn
           collateralAmount, // amountIn
           networkFee,
+          deadline,
         ]
       );
       var signature = await va.signMessage(ethers.getBytes(messageHash));
@@ -305,7 +310,8 @@ describe("marketOrder", () => {
           "address", // index
           "bool", // isLong
           "uint256", // collateralAmount
-          "uint256", // networkFee
+          "uint256", // networkFee,
+          "uint256", // deadline
         ],
         [
           gmxV1Adapter.target,
@@ -314,6 +320,7 @@ describe("marketOrder", () => {
           isLong,
           collateralAmount,
           networkFee,
+          deadline,
         ]
       );
       var signature = await va.signMessage(ethers.getBytes(messageHash));
@@ -358,6 +365,7 @@ describe("marketOrder", () => {
           "uint256", // size
           "uint256", // acceptablePrice
           "uint256", // networkFee
+          "uint256", // deadline
         ],
         [
           gmxV1Adapter.target,
@@ -367,6 +375,7 @@ describe("marketOrder", () => {
           size,
           acceptablePrice,
           networkFee,
+          deadline,
         ]
       );
       var signature = await va.signMessage(ethers.getBytes(messageHash));
@@ -417,20 +426,16 @@ describe("marketOrder", () => {
         fillWithdrawalOrder,
       } = await loadFixture(deploy);
       await setDummyPrice();
-
       const collateral = WETH;
       const index = WETH;
       const collateralAmount = ethers.parseEther("1");
       const size = ethers.parseEther("10");
       const isLong = true;
-
       const acceptablePrice = ethers.parseUnits("2000", 18);
       const networkFee = 0;
       const adapterFee = await muxAdapter.getMinExecutionFee();
-
       // deposit
       await deposit(collateral, collateralAmount);
-
       // increasePosition
       await account
         .connect(owner)
@@ -462,10 +467,8 @@ describe("marketOrder", () => {
         isLong
       );
       console.log(position);
-
       // deposit to add collateral
       await deposit(collateral, collateralAmount);
-
       // increaseCollateral
       await account.connect(owner).increaseCollateral(
         muxAdapter.target,
@@ -493,7 +496,6 @@ describe("marketOrder", () => {
         isLong
       );
       console.log(position);
-
       // decreaseCollateral
       await account
         .connect(owner)
@@ -523,7 +525,6 @@ describe("marketOrder", () => {
         isLong
       );
       console.log(position);
-
       // decreasePosition
       await account
         .connect(owner)
@@ -569,20 +570,16 @@ describe("marketOrder", () => {
         fillWithdrawalOrder,
       } = await loadFixture(deploy);
       await setDummyPrice();
-
       const collateral = WETH;
       const index = WETH;
       const collateralAmount = ethers.parseEther("1");
       const size = ethers.parseEther("10");
       const isLong = true;
-
       const acceptablePrice = ethers.parseUnits("2000", 18);
       const networkFee = 0;
       const adapterFee = await muxAdapter.getMinExecutionFee();
-
       // deposit
       await deposit(collateral, collateralAmount);
-
       // make signature from relayer
       var messageHash = ethers.solidityPackedKeccak256(
         [
@@ -594,6 +591,7 @@ describe("marketOrder", () => {
           "bool", // isLong
           "uint256", // acceptablePrice
           "uint256", // networkFee
+          "uint256", // deadline
         ],
         [
           muxAdapter.target,
@@ -604,10 +602,10 @@ describe("marketOrder", () => {
           isLong,
           acceptablePrice,
           networkFee,
+          deadline,
         ]
       );
       var signature = await va.signMessage(ethers.getBytes(messageHash));
-
       // increasePosition
       await account
         .connect(relayer)
@@ -639,10 +637,8 @@ describe("marketOrder", () => {
         isLong
       );
       console.log(position);
-
       // deposit to add collateral
       await deposit(collateral, collateralAmount);
-
       // make signature from relayer
       var messageHash = ethers.solidityPackedKeccak256(
         [
@@ -653,6 +649,7 @@ describe("marketOrder", () => {
           "address", // tokenIn
           "uint256", // amountIn
           "uint256", // networkFee
+          "uint256", // deadline
         ],
         [
           muxAdapter.target,
@@ -662,10 +659,10 @@ describe("marketOrder", () => {
           collateral, // tokenIn
           collateralAmount, // amountIn
           networkFee,
+          deadline,
         ]
       );
       var signature = await va.signMessage(ethers.getBytes(messageHash));
-
       // increaseCollateral
       await account.connect(relayer).increaseCollateral(
         muxAdapter.target,
@@ -693,7 +690,6 @@ describe("marketOrder", () => {
         isLong
       );
       console.log(position);
-
       // make signature from relayer
       var messageHash = ethers.solidityPackedKeccak256(
         [
@@ -703,6 +699,7 @@ describe("marketOrder", () => {
           "bool", // isLong
           "uint256", // collateralAmount
           "uint256", // networkFee
+          "uint256", // deadline
         ],
         [
           muxAdapter.target,
@@ -711,10 +708,10 @@ describe("marketOrder", () => {
           isLong,
           collateralAmount,
           networkFee,
+          deadline,
         ]
       );
       var signature = await va.signMessage(ethers.getBytes(messageHash));
-
       // decreaseCollateral
       await account
         .connect(relayer)
@@ -744,7 +741,6 @@ describe("marketOrder", () => {
         isLong
       );
       console.log(position);
-
       // make signature from relayer
       var messageHash = ethers.solidityPackedKeccak256(
         [
@@ -755,6 +751,7 @@ describe("marketOrder", () => {
           "uint256", // size
           "uint256", // acceptablePrice
           "uint256", // networkFee
+          "uint256", // deadline
         ],
         [
           muxAdapter.target,
@@ -764,10 +761,10 @@ describe("marketOrder", () => {
           size,
           acceptablePrice,
           networkFee,
+          deadline,
         ]
       );
       var signature = await va.signMessage(ethers.getBytes(messageHash));
-
       // decreasePosition
       await account
         .connect(relayer)

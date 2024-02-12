@@ -14,8 +14,6 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 
 contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     address private constant _weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
-    address private constant _swapRouter =
-        0xE592427A0AEce92De3Edee1F18E0157C05861564; // uniswap V3
 
     uint256 public constant BASIS_POINTS = 1e8;
 
