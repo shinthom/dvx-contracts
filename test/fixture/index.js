@@ -221,7 +221,6 @@ const deploy = async (noAccount) => {
   marginManager = await ethers.deployContract("MarginManager");
 
   const startTime = Math.ceil(Date.now() / 1000) + 86400 * 3;
-  const expiration = startTime + 86400 * 30;
   attendanceBook = await ethers.deployContract("AttendanceBook", [
     startTime,
     relayer,
@@ -248,10 +247,9 @@ const deploy = async (noAccount) => {
 
   if (!noAccount) {
     await exchange.connect(owner).createAccount(va.address, ethers.MaxUint256);
-
     account = await ethers.getContractAt(
       "Account",
-      await accountFactory.accounts(owner.address)
+      await exchange.getAccount(owner.address)
     );
   }
 

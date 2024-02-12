@@ -58,13 +58,13 @@ contract AttendanceBook is Ownable {
 
     function getTotalCheckIn(
         address account,
-        uint256 startDay,
-        uint256 endDay
+        uint256 from,
+        uint256 to
     ) external view returns (uint256 totalCheckIn) {
-        require(startDay >= 1, "invalid startDay");
-        require(endDay >= startDay, "invalid endDay");
+        require(from >= 1, "invalid from");
+        require(to >= from, "invalid to");
 
-        for (uint256 i = startDay; i <= endDay; i++) {
+        for (uint256 i = from; i <= to; i++) {
             if (accountHistory[account][i] == 1) {
                 totalCheckIn++;
             }
