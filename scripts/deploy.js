@@ -8,6 +8,8 @@ const Timelock = "0xe7E740Fa40CA16b15B621B49de8E9F0D69CF4858";
 const OrderBook = "0xa19fD5aB6C8DCffa2A295F78a5Bb4aC543AAF5e3";
 const LiquidityPool = "0x3e0199792ce69dc29a0a36146bfa68bd7c8d6633";
 
+const WETH = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1";
+const WBTC = "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f";
 const USDC = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
 const USDT = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9";
 const USDCe = "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8";
@@ -134,6 +136,11 @@ async function main() {
   await waitAndLogAccumulatedGasUsed(feeCollector.deploymentTransaction());
   console.log("FeeCollector deployed at:", feeCollector.target, "\n");
 
+  const MarginManager = await ethers.getContractFactory("MarginManager");
+  const marginManager = await MarginManager.deploy();
+  await waitAndLogAccumulatedGasUsed(marginManager.deploymentTransaction());
+  console.log("MarginManager deployed at:", marginManager.target, "\n");
+
   await waitAndLogAccumulatedGasUsed(
     await exchange.setAccountFactory(accountFactory.target)
   );
@@ -154,6 +161,11 @@ async function main() {
     await exchange.setFeeCollector(feeCollector.target)
   );
   console.log("Exchange: setFeeCollector\n");
+
+  await waitAndLogAccumulatedGasUsed(
+    await exchange.setMarginManager(marginManager.target)
+  );
+  console.log("Exchange: setMarginManager\n");
 
   await waitAndLogAccumulatedGasUsed(
     await exchange.registerAdapter(gmxV1Adapter.target)
@@ -180,6 +192,16 @@ async function main() {
     await exchange.setDefaultStableToken(USDCe)
   );
   console.log("Exchange: setDefaultStableToken\n");
+
+  await waitAndLogAccumulatedGasUsed(
+    await exchange.addCollateralTokens([WBTC, WETH, USDCe, USDC, USDT])
+  );
+  console.log("Exchange: addCollateralTokens\n");
+
+  await waitAndLogAccumulatedGasUsed(
+    await exchange.addIndexTokens([WBTC, WETH])
+  );
+  console.log("Exchange: addIndexTokens\n");
 
   await waitAndLogAccumulatedGasUsed(
     await warehouse.setExchange(exchange.target)
