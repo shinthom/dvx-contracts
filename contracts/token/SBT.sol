@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./ERC5633.sol";
 
 contract SBT is ERC5633, Ownable {
-    mapping(uint256 => string) private _uris;
+    string private baseURI;
     mapping(address => bool) public whitelist;
 
     event WhitelistAdded(address[] accounts);
@@ -18,11 +18,6 @@ contract SBT is ERC5633, Ownable {
         require(!isSoulbound(id), "already soulbound");
 
         _setSoulbound(id, true);
-    }
-
-    function setURI(uint256 id, string memory newuri) external onlyOwner {
-        _uris[id] = newuri;
-        emit URI(newuri, id);
     }
 
     function mint(
@@ -85,7 +80,19 @@ contract SBT is ERC5633, Ownable {
         emit WhitelistAdded(accounts);
     }
 
-    function uri(uint256 id) public view override returns (string memory) {
-        return _uris[id];
+    function updateBaseUri(string calldata base) external onlyOwner {
+        baseURI = base;
+    }
+
+    function uri(uint256 id)
+        public
+        view
+        override
+        returns (string memory)
+    {
+        return
+            bytes(baseURI).length > 0
+                ? string(abi.encodePacked(baseURI, id.toString()))
+                : baseURI;
     }
 }
