@@ -2,9 +2,12 @@ pragma solidity 0.8.7;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IAccount} from "../interfaces/IAccount.sol";
+import {IERC20} from "../interfaces/IERC20.sol";
 
 contract AttendanceBook is Ownable {
     uint256 public startTime;
+    uint256 public endTime;
+
     bool public activated;
 
     mapping(address => mapping(uint256 => uint256)) public accountHistory;
@@ -18,8 +21,9 @@ contract AttendanceBook is Ownable {
         require(_relayer != address(0), "invalid relayer");
 
         startTime = _startTime;
-        activated = true;
         relayer = _relayer;
+
+        activated = true;
     }
 
     function getDay() public view returns (uint256) {
@@ -27,6 +31,14 @@ contract AttendanceBook is Ownable {
             return 0;
         }
         return 1 + (block.timestamp - startTime) / (3600 * 24);
+    }
+
+    function getEndDay() public view returns (uint256) {
+        if (endTime == 0) {
+            return 0;
+        }
+
+        return 1 + (endTime - startTime) / (3600 * 24);
     }
 
     function getAccountHistory(
@@ -44,8 +56,25 @@ contract AttendanceBook is Ownable {
         return history;
     }
 
+    function getTotalCheckIn(
+        address account,
+        uint256 startDay,
+        uint256 endDay
+    ) external view returns (uint256 totalCheckIn) {
+        require(startDay >= 1, "invalid startDay");
+        require(endDay >= startDay, "invalid endDay");
+
+        for (uint256 i = startDay; i <= endDay; i++) {
+            if (accountHistory[account][i] == 1) {
+                totalCheckIn++;
+            }
+        }
+    }
+
     function checkIn(
         address account,
+        address token,
+        uint256 amount, // check-in network fee
         uint256 deadline,
         bytes calldata signature
     ) external {
@@ -56,14 +85,12 @@ contract AttendanceBook is Ownable {
         );
 
         if (msg.sender == relayer) {
-            (address wallet, uint256 expiration) = IAccount(account)
-                .delegatedAccount();
-            require(expiration > block.timestamp, "delegatedAccount: expired");
-
-            _verifySignature(
+            IAccount(account).withdraw(
+                token,
+                address(this),
+                amount,
+                0,
                 deadline,
-                wallet,
-                keccak256(abi.encodePacked(account, deadline)),
                 signature
             );
         }
@@ -89,6 +116,16 @@ contract AttendanceBook is Ownable {
 
     function deactivate() external onlyOwner {
         activated = false;
+
+        endTime = block.timestamp;
+    }
+
+    function withdraw(
+        address receiver,
+        address token,
+        uint256 amount
+    ) external onlyOwner {
+        IERC20(token).transfer(receiver, amount);
     }
 
     function _verifySignature(

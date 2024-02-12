@@ -1,51 +1,28 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
+const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
+const { deploy } = require("./fixture");
 const {
   increaseTo,
 } = require("@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time");
 
 describe("checkIn", () => {
-  let snapshotId;
+  // let snapshotId;
 
-  let owner;
-  let relayer;
+  // beforeEach(async () => {
+  //   snapshotId = await network.provider.send("evm_snapshot");
+  // });
 
-  let startTime;
-  let expiration;
-
-  let account;
-  let attendanceBook;
-
-  const vaPk = ethers.Wallet.createRandom().privateKey;
-  const va = new ethers.Wallet(vaPk);
-
-  beforeEach(async () => {
-    snapshotId = await network.provider.send("evm_snapshot");
-
-    [owner, relayer] = await ethers.getSigners();
-    startTime = Math.ceil(Date.now() / 1000) + 86400 * 3;
-    expiration = startTime + 86400 * 30;
-
-    account = await ethers.deployContract("Account");
-    await account.initialize(
-      owner,
-      "0x" + "11".repeat(20),
-      va.address,
-      expiration
-    );
-    attendanceBook = await ethers.deployContract("AttendanceBook", [
-      startTime,
-      relayer,
-    ]);
-  });
-
-  afterEach(async () => {
-    await network.provider.send("evm_revert", [snapshotId]);
-  });
+  // afterEach(async () => {
+  //   await network.provider.send("evm_revert", [snapshotId]);
+  // });
 
   it("getDay", async () => {
-    const day1 = 86400;
-    await increaseTo(startTime - 1);
+    const { attendanceBook } = await loadFixture(deploy);
+    const startTime = await attendanceBook.startTime();
+
+    const day1 = 86400n;
+    await increaseTo(startTime - 1n);
     console.log(await attendanceBook.getDay());
     await increaseTo(startTime);
     console.log(await attendanceBook.getDay());
@@ -56,52 +33,135 @@ describe("checkIn", () => {
   });
 
   it("checkIn", async () => {
+    const { owner, account, attendanceBook } = await loadFixture(deploy);
+    const startTime = await attendanceBook.startTime();
+
+    console.log(startTime);
+
     await increaseTo(startTime);
     const day = await attendanceBook.getDay();
 
-    await attendanceBook.checkIn(account.target, 0, "0x");
+    await attendanceBook
+      .connect(owner)
+      .checkIn(account.target, ethers.ZeroAddress, 0, 0, "0x");
     expect(await attendanceBook.accountHistory(account.target, day)).to.equal(
       1
     );
   });
 
   it("relay checkIn", async () => {
+    const {
+      va,
+      owner,
+      relayer,
+      account,
+      attendanceBook,
+      exchange,
+      WETH,
+      weth,
+      deposit,
+    } = await loadFixture(deploy);
+    const startTime = await attendanceBook.startTime();
+
     await increaseTo(startTime);
     const day = await attendanceBook.getDay();
 
-    const deadline = expiration;
+    const deadline = startTime + 86400n;
+    const checkInNetworkFee = ethers.parseEther("0.01");
+
+    await deposit(WETH, checkInNetworkFee);
 
     var messageHash = ethers.solidityPackedKeccak256(
       [
-        "address", // account
+        "address", // token
+        "address", // to
+        "uint256", // amount
+        "uint256", // network fee
         "uint256", // deadline
       ],
-      [account.target, deadline]
+      [WETH, attendanceBook.target, checkInNetworkFee, 0, deadline]
     );
     var signature = await va.signMessage(ethers.getBytes(messageHash));
 
+    await exchange.setRelayer(attendanceBook.target, true);
+
     await attendanceBook
       .connect(relayer)
-      .checkIn(account.target, deadline, signature);
+      .checkIn(account.target, WETH, checkInNetworkFee, deadline, signature);
     expect(await attendanceBook.accountHistory(account.target, day)).to.equal(
       1
     );
+
+    console.log(await weth.balanceOf(attendanceBook.target));
+    await attendanceBook.withdraw(owner.address, WETH, checkInNetworkFee);
+    console.log(await weth.balanceOf(attendanceBook.target));
   });
 
   it("account history", async () => {
-    const day1 = 86400;
-    await increaseTo(startTime - 1);
+    const { owner, account, attendanceBook, exchange, WETH, deposit } =
+      await loadFixture(deploy);
+    const startTime = await attendanceBook.startTime();
+
+    const day1 = 86400n;
+    await increaseTo(startTime - 1n);
     await expect(
-      attendanceBook.checkIn(account.target, 0, "0x")
+      attendanceBook
+        .connect(owner)
+        .checkIn(account.target, ethers.ZeroAddress, 0, 0, "0x")
     ).to.be.revertedWith("not started");
 
     await increaseTo(startTime);
-    await attendanceBook.checkIn(account.target, 0, "0x");
+    await attendanceBook
+      .connect(owner)
+      .checkIn(account.target, ethers.ZeroAddress, 0, 0, "0x");
     await increaseTo(startTime + day1);
-    await attendanceBook.checkIn(account.target, 0, "0x");
+    await attendanceBook
+      .connect(owner)
+      .checkIn(account.target, ethers.ZeroAddress, 0, 0, "0x");
     await increaseTo(startTime + day1 + day1);
-    await attendanceBook.checkIn(account.target, 0, "0x");
+    await attendanceBook
+      .connect(owner)
+      .checkIn(account.target, ethers.ZeroAddress, 0, 0, "0x");
 
     console.log(await attendanceBook.getAccountHistory(account.target, 1, 3));
+    console.log(await attendanceBook.getTotalCheckIn(account.target, 1, 1));
+    console.log(await attendanceBook.getTotalCheckIn(account.target, 1, 2));
+    console.log(await attendanceBook.getTotalCheckIn(account.target, 1, 3));
+  });
+
+  it("deactivate", async () => {
+    const { owner, account, attendanceBook, exchange, WETH, deposit } =
+      await loadFixture(deploy);
+    const startTime = await attendanceBook.startTime();
+
+    const day1 = 86400n;
+    await increaseTo(startTime - 1n);
+    await expect(
+      attendanceBook
+        .connect(owner)
+        .checkIn(account.target, ethers.ZeroAddress, 0, 0, "0x")
+    ).to.be.revertedWith("not started");
+
+    await increaseTo(startTime);
+    await attendanceBook
+      .connect(owner)
+      .checkIn(account.target, ethers.ZeroAddress, 0, 0, "0x");
+    await increaseTo(startTime + day1);
+    await attendanceBook
+      .connect(owner)
+      .checkIn(account.target, ethers.ZeroAddress, 0, 0, "0x");
+    await increaseTo(startTime + day1 + day1);
+    await attendanceBook
+      .connect(owner)
+      .checkIn(account.target, ethers.ZeroAddress, 0, 0, "0x");
+
+    console.log(await attendanceBook.getEndDay());
+    await attendanceBook.deactivate();
+    console.log(await attendanceBook.getEndDay());
+
+    const endDay = await attendanceBook.getEndDay();
+    console.log(
+      await attendanceBook.getTotalCheckIn(account.target, 1, endDay)
+    );
   });
 });

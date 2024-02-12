@@ -110,6 +110,7 @@ let reader;
 let logger;
 let swapper;
 let marginManager;
+let attendanceBook;
 
 let account;
 
@@ -218,6 +219,13 @@ const deploy = async (noAccount) => {
   swapper = await ethers.deployContract("Swapper");
   feeCollector = await ethers.deployContract("FeeCollector");
   marginManager = await ethers.deployContract("MarginManager");
+
+  const startTime = Math.ceil(Date.now() / 1000) + 86400 * 3;
+  const expiration = startTime + 86400 * 30;
+  attendanceBook = await ethers.deployContract("AttendanceBook", [
+    startTime,
+    relayer,
+  ]);
 
   await exchange.setAccountFactory(accountFactory.target);
   await exchange.setWarehouse(warehouse.target);
@@ -749,6 +757,7 @@ stable:
     feeCollector,
     logger,
     accountFactory,
+    attendanceBook,
     account,
     ETH,
     WETH,
