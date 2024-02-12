@@ -773,6 +773,48 @@ contract MuxAdapter is IAdapter {
         }
     }
 
+    function estimateLiquidationPrice(
+        address account,
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        uint256 size,
+        bool isLong
+    ) external view override returns (int256 p) {
+        int256 maintenanceMarginRate = int256(_getMaintenanceMarginRate(index));
+
+        uint256 price = getPrice(index, isLong);
+        collateralAmount = _adjustSizeDecimal(collateral, collateralAmount);
+        size = _adjustSizeDecimal(index, size);
+
+        int256 longFactor = isLong ? int256(1e5) : int256(-1e5);
+        int256 t = ((longFactor - maintenanceMarginRate) * int256(size)) / 1e5;
+
+        if (collateral == index) {
+            p = (longFactor * int256(price) * int256(size)) / 1e18 / 1e5;
+
+            int256 fundingFee = int256(
+                getFundingFee(account, collateral, index, isLong)
+            );
+            p += fundingFee;
+
+            p *= 1e18;
+            p /= t + int256(collateralAmount);
+        } else {
+            p = (longFactor * int256(price) * int256(size)) / 1e18 / 1e5;
+
+            int256 fundingFee = int256(
+                getFundingFee(account, collateral, index, isLong)
+            );
+            p += fundingFee;
+
+            int256 collateralPrice = int256(getPrice(collateral, isLong));
+            p -= (collateralPrice * int256(collateralAmount)) / 1e18; // https://github.com/mux-world/mux-protocol/blob/21103d644d4c4c3d4a18dd51182ee981efc94453/contracts/core/Account.sol#L51
+
+            p = (p * 1e18) / t;
+        }
+    }
+
     function getAvailableLiquidity(
         address index,
         bool isLong
@@ -799,7 +841,7 @@ contract MuxAdapter is IAdapter {
     function _adjustSizeDecimal(
         address token,
         uint256 size
-    ) private returns (uint256) {
+    ) private view returns (uint256) {
         uint8 decimals = IERC20(token).decimals();
 
         if (decimals <= 18) {

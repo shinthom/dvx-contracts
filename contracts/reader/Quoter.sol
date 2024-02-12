@@ -27,6 +27,7 @@ contract Quoter {
         uint256 availableLiquidity;
         IExchange.MarketOrder marketOrder;
         uint256 adapterExecutionFee;
+        uint256 liquidationPrice;
     }
 
     function quoteExactInputSingle(
@@ -115,6 +116,11 @@ contract Quoter {
         );
         answer.marketOrder = makeMarketOrder(adapter, request);
         answer.adapterExecutionFee = getMinExecutionFee(adapter);
+        answer.liquidationPrice = getLiquidationPrice(
+            account,
+            adapter,
+            request
+        );
     }
 
     function makeMarketOrder(
@@ -220,5 +226,21 @@ contract Quoter {
 
     function getMinExecutionFee(address adapter) public view returns (uint256) {
         return IAdapter(adapter).getMinExecutionFee();
+    }
+
+    function getLiquidationPrice(
+        address account,
+        address adapter,
+        Request memory request
+    ) public view returns (uint256) {
+        int256 liquidationPrice = IAdapter(adapter).estimateLiquidationPrice(
+            account,
+            request.collateral,
+            request.index,
+            request.collateralAmount,
+            request.size,
+            request.isLong
+        );
+        return uint256(liquidationPrice);
     }
 }

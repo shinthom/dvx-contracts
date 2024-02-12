@@ -831,6 +831,64 @@ contract GmxV1Adapter is IAdapter {
         return int256(p / 1e12);
     }
 
+    function estimateLiquidationPrice(
+        address account,
+        address collateral,
+        address index,
+        uint256 collateralAmount,
+        uint256 size,
+        bool isLong
+    ) external view override returns (int256) {
+        uint256 fundingFee = getFundingFee(account, collateral, index, isLong);
+
+        uint256 collateralPrice = getPrice(collateral, isLong);
+        {
+            uint8 collateralDecimal = IERC20(collateral).decimals();
+            collateralAmount =
+                (collateralAmount * collateralPrice) /
+                (10 ** collateralDecimal);
+        }
+
+        uint256 indexPrice = getPrice(index, isLong);
+        {
+            uint8 indexDecimal = IERC20(index).decimals();
+            size = (size * indexPrice) / (10 ** indexDecimal);
+        }
+
+        uint256 totalFees = _calculateTotalFees(size, fundingFee);
+
+        uint256 liquidationPriceForFees = _getLiquidationPriceFromDelta(
+            totalFees,
+            size,
+            collateralAmount,
+            indexPrice,
+            isLong
+        );
+
+        uint256 maxLeverage = IVault(_vault).maxLeverage();
+        uint256 liquidationPriceForMaxLevearge = _getLiquidationPriceFromDelta(
+            (size * BASIS_POINTS_DIVISOR) / maxLeverage,
+            size,
+            collateralAmount,
+            indexPrice,
+            isLong
+        );
+
+        uint256 p;
+        if (isLong) {
+            p = liquidationPriceForFees > liquidationPriceForMaxLevearge
+                ? liquidationPriceForFees
+                : liquidationPriceForMaxLevearge;
+        } else {
+            p = liquidationPriceForFees < liquidationPriceForMaxLevearge
+                ? liquidationPriceForFees
+                : liquidationPriceForMaxLevearge;
+        }
+
+        // 1e30 -> 1e18
+        return int256(p / 1e12);
+    }
+
     function _calculateTotalFees(
         uint256 size,
         uint256 fundingFee

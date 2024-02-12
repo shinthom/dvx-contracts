@@ -14,11 +14,17 @@ describe("Quoter", () => {
     const size = ethers.parseEther("10");
 
     const request = { collateral, index, collateralAmount, size, isLong };
-    const answers = await quoter.quote(
+    var answers1 = await quoter.quote(
       account.target,
-      [gmxV1Adapter.target, muxAdapter.target],
+      [gmxV1Adapter.target],
       request
     );
-    console.log(answers);
+    console.log(answers1);
+    var answers2 = await quoter.quote(
+      account.target,
+      [muxAdapter.target],
+      request
+    );
+    console.log(answers2);
   });
 });
