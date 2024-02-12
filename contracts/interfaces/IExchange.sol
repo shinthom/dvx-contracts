@@ -152,7 +152,8 @@ interface IExchange {
         uint256 size,
         IWarehouse.TriggerOrderType orderType,
         uint256 triggerPrice,
-        uint256 acceptablePrice
+        uint256 acceptablePrice,
+        uint256 networkFee
     ) external;
 
     function collectFeeDebt(

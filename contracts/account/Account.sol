@@ -1170,7 +1170,8 @@ contract Account is IAccount, PayableMulticall {
             size,
             orderType,
             triggerPrice,
-            acceptablePrice
+            acceptablePrice,
+            networkFee
         );
 
         if (networkFee > 0) {

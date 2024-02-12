@@ -393,7 +393,8 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         uint256 size,
         IWarehouse.TriggerOrderType orderType,
         uint256 triggerPrice,
-        uint256 acceptablePrice
+        uint256 acceptablePrice,
+        uint256 networkFee
     ) external override onlyAccount(account) {
         IWarehouse(warehouse).executeTriggerOrder(
             account,
@@ -404,7 +405,8 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             size,
             orderType,
             triggerPrice,
-            acceptablePrice
+            acceptablePrice,
+            networkFee
         );
     }
 

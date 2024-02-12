@@ -159,7 +159,8 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         uint256 size,
         TriggerOrderType orderType,
         uint256 triggerPrice, // 1e18
-        uint256 acceptablePrice // 1e18
+        uint256 acceptablePrice, // 1e18
+        uint256 networkFee
     ) external override onlyExchange {
         IAdapter.Position memory position = IAdapter(adapter).getPosition(
             account,
@@ -190,7 +191,8 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
             size,
             orderType,
             triggerPrice,
-            acceptablePrice
+            acceptablePrice,
+            networkFee
         );
     }
 

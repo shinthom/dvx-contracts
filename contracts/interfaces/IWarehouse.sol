@@ -54,7 +54,8 @@ interface IWarehouse {
         uint256 size,
         TriggerOrderType orderType,
         uint256 triggerPrice,
-        uint256 acceptablePrice
+        uint256 acceptablePrice,
+        uint256 networkFee
     );
 
     function setExchange(address exchange) external;
@@ -93,7 +94,8 @@ interface IWarehouse {
         uint256 size,
         TriggerOrderType orderType,
         uint256 triggerPrice, // 1e18
-        uint256 acceptablePrice // 1e18
+        uint256 acceptablePrice, // 1e18
+        uint256 networkFee
     ) external;
 
     function getPositionKey(
