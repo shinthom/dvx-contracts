@@ -25,6 +25,9 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
     address[] private _registeredAdapters;
     mapping(address => bool) public override isRegisteredAdapter;
+
+    mapping(address => bool) public override isSupportedCollateralToken;
+    mapping(address => bool) public override isSupportedIndexToken;
     mapping(address => bool) public override isStableToken;
     address public override defaultStableToken =
         0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8; // usdc.e
@@ -119,6 +122,47 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         isRegisteredAdapter[adapter] = false;
         emit AdapterUnregistered(adapter);
     }
+
+    function addCollateralTokens(
+        address[] calldata tokens
+    ) external override onlyOwner {
+        for (uint256 i = 0; i < tokens.length; i++) {
+            require(tokens[i] != address(0), "token: zero address");
+
+            isSupportedCollateralToken[tokens[i]] = true;
+            emit CollateralTokenAdded(tokens[i]);
+        }
+    }
+
+    function addIndexTokens(
+        address[] calldata tokens
+    ) external override onlyOwner {
+        for (uint256 i = 0; i < tokens.length; i++) {
+            require(tokens[i] != address(0), "token: zero address");
+
+            isSupportedIndexToken[tokens[i]] = true;
+            emit IndexTokenAdded(tokens[i]);
+        }
+    }
+
+    function removeCollateralTokens(address[] calldata tokens) external override onlyOwner {
+        for (uint256 i = 0; i < tokens.length; i++) {
+            require(tokens[i] != address(0), "token: zero address");
+
+            isSupportedCollateralToken[tokens[i]] = false;
+            emit CollateralTokenRemoved(tokens[i]);
+        }
+    }
+
+    function removeIndexTokens(address[] calldata tokens) external override onlyOwner {
+        for (uint256 i = 0; i < tokens.length; i++) {
+            require(tokens[i] != address(0), "token: zero address");
+
+            isSupportedIndexToken[tokens[i]] = false;
+            emit IndexTokenRemoved(tokens[i]);
+        }
+    }
+
 
     function setStableToken(
         address token,

@@ -231,6 +231,8 @@ const deploy = async (noAccount) => {
   await exchange.setStableToken(USDT, true);
   await exchange.setStableToken(USDCe, true);
   await exchange.setDefaultStableToken(USDCe);
+  await exchange.addCollateralTokens([WETH, WBTC, USDC, USDCe, USDT]);
+  await exchange.addIndexTokens([WETH, WBTC]);
   await warehouse.setExchange(exchange.target);
 
   await exchange.setOrderKeeper(orderKeeper.address, true);

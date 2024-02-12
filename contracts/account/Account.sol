@@ -170,6 +170,10 @@ contract Account is IAccount, PayableMulticall {
         bytes calldata signature
     ) private {
         require(amount != 0, "amount: zero");
+        require(
+            IExchange(exchange).isSupportedCollateralToken(token),
+            "token: not supported"
+        );
 
         IERC20(token).transferFrom(owner, address(this), amount);
 
@@ -512,6 +516,15 @@ contract Account is IAccount, PayableMulticall {
         require(
             IExchange(exchange).isRegisteredAdapter(adapter),
             "adapter: not registered"
+        );
+
+        require(
+            IExchange(exchange).isSupportedCollateralToken(collateral),
+            "collateral: not supported"
+        );
+        require(
+            IExchange(exchange).isSupportedIndexToken(index),
+            "index: not supported"
         );
 
         uint256 positionFee = IExchange(exchange).getPositionFee(
@@ -1034,6 +1047,14 @@ contract Account is IAccount, PayableMulticall {
                 "signature: invalid"
             );
         }
+        require(
+            IExchange(exchange).isSupportedCollateralToken(collateral),
+            "collateral: not supported"
+        );
+        require(
+            IExchange(exchange).isSupportedIndexToken(index),
+            "index: not supported"
+        );
 
         require(
             executionFee <= collateralAmount,

@@ -23,6 +23,11 @@ interface IExchange {
 
     event AdapterRegistered(address indexed adapter);
     event AdapterUnregistered(address indexed adapter);
+
+    event CollateralTokenAdded(address indexed token);
+    event IndexTokenAdded(address indexed token);
+    event CollateralTokenRemoved(address indexed token);
+    event IndexTokenRemoved(address indexed token);
     event StableTokenSet(address indexed token, bool isStable);
     event DefaultStableTokenSet(address indexed token);
 
@@ -50,6 +55,9 @@ interface IExchange {
     function logger() external returns (address);
 
     function isRegisteredAdapter(address adapter) external view returns (bool);
+
+    function isSupportedCollateralToken(address token) external view returns (bool);
+    function isSupportedIndexToken(address token) external view returns (bool);
     function isStableToken(address token) external view returns (bool);
     function defaultStableToken() external view returns (address);
 
@@ -73,6 +81,11 @@ interface IExchange {
 
     function registerAdapter(address adapter) external;
     function unregisterAdapter(address adapter) external;
+
+    function addCollateralTokens(address[] calldata tokens) external;
+    function addIndexTokens(address[] calldata tokens) external;
+    function removeCollateralTokens(address[] calldata tokens) external;
+    function removeIndexTokens(address[] calldata tokens) external;
     function setStableToken(address token, bool isStable) external;
     function setDefaultStableToken(address token) external;
 
