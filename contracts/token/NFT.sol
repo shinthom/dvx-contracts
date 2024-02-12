@@ -35,10 +35,10 @@ contract NFT is ERC1155, Ownable {
         uint256 id,
         uint256[] calldata amounts
     ) external onlyOwner {
-        require(accounts.length == amounts.length, "NTx: length mismatch");
+        require(accounts.length == amounts.length, "length mismatch");
 
         for (uint256 i = 0; i < accounts.length; i++) {
-            require(amounts[i] != 0, "NTx: zero amount");
+            require(amounts[i] != 0, "zero amount");
 
             _mint(accounts[i], id, amounts[i], "");
         }

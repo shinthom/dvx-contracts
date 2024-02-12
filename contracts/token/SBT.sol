@@ -7,11 +7,15 @@ import "./ERC5633.sol";
 
 contract SBT is ERC5633, Ownable {
     mapping(uint256 => string) private _uris;
+    mapping(address => bool) public whitelist;
+
+    event WhitelistAdded(address[] accounts);
+    event Claimed(address indexed account, uint256 id, uint256 amount);
 
     constructor() ERC1155("") {}
 
     function setSoulbound(uint256 id) external onlyOwner {
-        require(!isSoulbound(id), "NTx: already soulbound");
+        require(!isSoulbound(id), "already soulbound");
 
         _setSoulbound(id, true);
     }
@@ -42,13 +46,20 @@ contract SBT is ERC5633, Ownable {
         uint256 id,
         uint256[] calldata amounts
     ) external onlyOwner {
-        require(accounts.length == amounts.length, "NTx: length mismatch");
+        require(accounts.length == amounts.length, "length mismatch");
 
         for (uint256 i = 0; i < accounts.length; i++) {
-            require(amounts[i] != 0, "NTx: zero amount");
+            require(amounts[i] != 0, "zero amount");
 
             _mint(accounts[i], id, amounts[i], "");
         }
+    }
+
+    function claim(uint256 id, uint256 amount) external {
+        require(whitelist[msg.sender], "not whitelisted");
+
+        _mint(msg.sender, id, amount, "");
+        emit Claimed(msg.sender, id, amount);
     }
 
     function burn(
@@ -67,9 +78,12 @@ contract SBT is ERC5633, Ownable {
         _burnBatch(account, ids, amounts);
     }
 
-    // function supportsInterface(bytes4 interfaceId) public view override(ERC5633) returns (bool) {
-    //     return super.supportsInterface(interfaceId);
-    // }
+    function addWhitelist(address[] calldata accounts) external onlyOwner {
+        for (uint256 i = 0; i < accounts.length; i++) {
+            whitelist[accounts[i]] = true;
+        }
+        emit WhitelistAdded(accounts);
+    }
 
     function uri(uint256 id) public view override returns (string memory) {
         return _uris[id];
