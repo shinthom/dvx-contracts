@@ -13,6 +13,7 @@ async function main() {
     quoter,
     logger,
     accountFactory,
+    attendanceBook,
     account,
     weth,
     wbtc,
@@ -34,6 +35,7 @@ async function main() {
 - quoter        : ${quoter.target}
 - logger        : ${logger.target}
 - accountFactory: ${accountFactory.target}
+- attendanceBook: ${attendanceBook.target}
 - account       : ${noAccount ? "null" : account.target}
   `);
 
