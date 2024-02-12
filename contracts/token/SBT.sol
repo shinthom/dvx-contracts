@@ -3,9 +3,12 @@ pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 import "./ERC5633.sol";
 
 contract SBT is ERC5633, Ownable {
+    using Strings for uint256;
+
     string private baseURI;
     mapping(address => bool) public whitelist;
 
