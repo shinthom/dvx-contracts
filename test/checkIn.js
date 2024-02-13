@@ -127,6 +127,16 @@ describe("checkIn", () => {
     console.log(await attendanceBook.getTotalCheckIn(account.target, 1, 1));
     console.log(await attendanceBook.getTotalCheckIn(account.target, 1, 2));
     console.log(await attendanceBook.getTotalCheckIn(account.target, 1, 3));
+
+    let day = await attendanceBook.getEndDay();
+    if (day == 0n) {
+      day = await attendanceBook.getDay();
+    }
+    console.log(day);
+    console.log(await attendanceBook.getAccountHistory(account.target, 1, day));
+    console.log(await attendanceBook.getTotalCheckIn(account.target, 1, day));
+    console.log(await attendanceBook.getTotalCheckIn(account.target, 1, day));
+    console.log(await attendanceBook.getTotalCheckIn(account.target, 1, day));
   });
 
   it("deactivate", async () => {
