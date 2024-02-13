@@ -195,10 +195,7 @@ const deploy = async (noAccount) => {
     "AccountFactory",
     accountFactoryProxy.target
   );
-  await accountFactory.initialize(
-    accountTargetContract.target,
-    exchange.target
-  );
+  await accountFactory.initialize(exchange.target);
 
   logger = await ethers.deployContract("Logger", []);
 
@@ -226,6 +223,7 @@ const deploy = async (noAccount) => {
     relayer,
   ]);
 
+  await exchange.addAccountImplementation(1, accountTargetContract.target);
   await exchange.setAccountFactory(accountFactory.target);
   await exchange.setWarehouse(warehouse.target);
   await exchange.setLogger(logger.target);

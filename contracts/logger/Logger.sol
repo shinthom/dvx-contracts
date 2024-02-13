@@ -6,10 +6,14 @@ import {ILogger} from "../interfaces/ILogger.sol";
 contract Logger is ILogger {
     function logRenewDelegatedAccount(
         address account,
-        address delegatedWallet,
-        uint256 expiration
+        address delegatedAccount,
+        uint256 delegatedAccountExpiration
     ) external override {
-        emit DelegatedAccountRenewed(account, delegatedWallet, expiration);
+        emit DelegatedAccountRenewed(
+            account,
+            delegatedAccount,
+            delegatedAccountExpiration
+        );
     }
 
     function logDeposit(

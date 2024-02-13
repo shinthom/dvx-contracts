@@ -7,21 +7,28 @@ import {IWarehouse} from "../interfaces/IWarehouse.sol";
 import {IERC20} from "../interfaces/IERC20.sol";
 import {ILogger} from "../interfaces/ILogger.sol";
 import {PayableMulticall} from "./PayableMulticall.sol";
+import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
 
-contract Account is IAccount, PayableMulticall {
-    address private constant _weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
+contract Storage {
+    bytes32 internal constant ACCOUNT_VERSION_SLOT =
+        bytes32(uint256(keccak256("dvx.account.version")) - 1);
 
-    address public override owner;
-    address public override exchange;
-    DelegatedAccount public override delegatedAccount;
+    address internal constant _weth =
+        0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
 
-    bool private _intitalized;
+    bool internal _intitalized;
 
-    uint256 private _marketOrderId;
+    address internal _owner;
+    address internal _exchange;
+    address internal _delegatedAccount;
+    uint256 internal _delegatedAccountExpiration;
 
-    mapping(address => uint256) private _lockedBalances;
-    mapping(address => uint256) private _feeDebts;
+    uint256 internal _marketOrderId;
+    mapping(address => uint256) internal _lockedBalances;
+    mapping(address => uint256) internal _feeDebts;
+}
 
+contract Account is Storage, PayableMulticall, IAccount {
     receive() external payable {
         if (msg.sender != _weth) {
             IERC20(_weth).deposit{value: msg.value}();
@@ -29,13 +36,13 @@ contract Account is IAccount, PayableMulticall {
     }
 
     modifier onlyOwner() {
-        require(msg.sender == owner, "msg.sender: not owner");
+        require(msg.sender == _owner, "msg.sender: not owner");
         _;
     }
 
     modifier onlyOrderKeeper() {
         require(
-            IExchange(exchange).isOrderKeeper(msg.sender),
+            IExchange(_exchange).isOrderKeeper(msg.sender),
             "msg.sender: not order keeper"
         );
         _;
@@ -43,54 +50,71 @@ contract Account is IAccount, PayableMulticall {
 
     modifier onlyOwnerOrRelayer() {
         require(
-            msg.sender == owner || IExchange(exchange).isRelayer(msg.sender),
+            msg.sender == _owner || IExchange(_exchange).isRelayer(msg.sender),
             "msg.sender: not owner or relayer"
         );
         _;
     }
 
     function initialize(
-        address _owner,
-        address _exchange,
-        address _delegatedWallet,
-        uint256 _expiration
-    ) external override {
+        address owner,
+        address exchange,
+        address delegatedAccount,
+        uint256 delegatedAccountExpiration
+    ) public virtual override {
         require(!_intitalized, "already initialized");
         _intitalized = true;
 
-        require(_owner != address(0), "owner: zero address");
-        require(_exchange != address(0), "exchange: zero address");
+        require(owner != address(0), "owner: zero address");
+        require(exchange != address(0), "exchange: zero address");
         require(
-            _delegatedWallet != address(0),
-            "delegatedWallet: zero address"
+            delegatedAccount != address(0),
+            "delegatedAccount: zero address"
         );
-        require(_expiration > block.timestamp, "expiration: before now");
+        require(
+            delegatedAccountExpiration > block.timestamp,
+            "expiration: before now"
+        );
 
-        owner = _owner;
-        exchange = _exchange;
-        delegatedAccount.wallet = _delegatedWallet;
-        delegatedAccount.expiration = _expiration;
+        _owner = owner;
+        _exchange = exchange;
+        _delegatedAccount = delegatedAccount;
+        _delegatedAccountExpiration = delegatedAccountExpiration;
+    }
+
+    function upgrade(uint256 version) public virtual override onlyOwner {
+        require(version > 0, "version: zero");
+
+        address implementation = IExchange(_exchange).accountImplementation(
+            version
+        );
+        require(implementation != address(0), "implementation: zero address");
+
+        StorageSlot.getUint256Slot(ACCOUNT_VERSION_SLOT).value = version;
     }
 
     function renewDelegatedAccount(
-        address _delegatedWallet,
-        uint256 _expiration
-    ) external override onlyOwner {
+        address delegatedAccount,
+        uint256 delegatedAccountExpiration
+    ) public virtual override onlyOwner {
         require(
-            _delegatedWallet != address(0),
-            "delegatedWallet: zero address"
+            delegatedAccount != address(0),
+            "delegatedAccount: zero address"
         );
-        require(_expiration > block.timestamp, "expiration: before now");
+        require(
+            delegatedAccountExpiration > block.timestamp,
+            "expiration: before now"
+        );
 
-        delegatedAccount.wallet = _delegatedWallet;
-        delegatedAccount.expiration = _expiration;
+        _delegatedAccount = delegatedAccount;
+        _delegatedAccountExpiration = delegatedAccountExpiration;
 
-        address logger = IExchange(exchange).logger();
+        address logger = IExchange(_exchange).logger();
         if (logger != address(0)) {
             ILogger(logger).logRenewDelegatedAccount(
                 address(this),
-                _delegatedWallet,
-                _expiration
+                delegatedAccount,
+                delegatedAccountExpiration
             );
         }
     }
@@ -101,12 +125,11 @@ contract Account is IAccount, PayableMulticall {
         uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
-    ) external virtual override onlyOwnerOrRelayer {
-        if (msg.sender != owner) {
+    ) public virtual override onlyOwnerOrRelayer {
+        if (msg.sender != _owner) {
             require(
                 _verifySignature(
                     deadline,
-                    delegatedAccount.wallet,
                     keccak256(
                         abi.encodePacked(token, amount, networkFee, deadline)
                     ),
@@ -128,12 +151,11 @@ contract Account is IAccount, PayableMulticall {
         uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
-    ) external virtual override onlyOwnerOrRelayer {
-        if (msg.sender != owner) {
+    ) public virtual override onlyOwnerOrRelayer {
+        if (msg.sender != _owner) {
             require(
                 _verifySignature(
                     deadline,
-                    delegatedAccount.wallet,
                     keccak256(
                         abi.encodePacked(
                             token,
@@ -152,7 +174,7 @@ contract Account is IAccount, PayableMulticall {
         }
 
         IERC20(token).permit(
-            owner,
+            _owner,
             address(this),
             amount,
             type(uint256).max,
@@ -168,14 +190,14 @@ contract Account is IAccount, PayableMulticall {
         uint256 amount,
         uint256 networkFee,
         bytes calldata signature
-    ) private {
+    ) internal {
         require(amount != 0, "amount: zero");
         require(
-            IExchange(exchange).isSupportedCollateralToken(token),
+            IExchange(_exchange).isSupportedCollateralToken(token),
             "token: not supported"
         );
 
-        IERC20(token).transferFrom(owner, address(this), amount);
+        IERC20(token).transferFrom(_owner, address(this), amount);
 
         if (networkFee > 0) {
             require(amount >= networkFee, "amount: less than network fee");
@@ -183,7 +205,7 @@ contract Account is IAccount, PayableMulticall {
             amount -= networkFee;
         }
 
-        address logger = IExchange(exchange).logger();
+        address logger = IExchange(_exchange).logger();
         if (logger != address(0)) {
             ILogger(logger).logDeposit(
                 address(this),
@@ -201,12 +223,11 @@ contract Account is IAccount, PayableMulticall {
         uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
-    ) external virtual override onlyOwnerOrRelayer {
-        if (msg.sender != owner) {
+    ) public virtual override onlyOwnerOrRelayer {
+        if (msg.sender != _owner) {
             require(
                 _verifySignature(
                     deadline,
-                    delegatedAccount.wallet,
                     keccak256(
                         abi.encodePacked(
                             token,
@@ -243,7 +264,7 @@ contract Account is IAccount, PayableMulticall {
 
         IERC20(token).transfer(to, amount);
 
-        address logger = IExchange(exchange).logger();
+        address logger = IExchange(_exchange).logger();
         if (logger != address(0)) {
             ILogger(logger).logWithdraw(
                 address(this),
@@ -262,12 +283,11 @@ contract Account is IAccount, PayableMulticall {
         uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
-    ) external virtual override onlyOwnerOrRelayer {
-        if (msg.sender != owner) {
+    ) public virtual override onlyOwnerOrRelayer {
+        if (msg.sender != _owner) {
             require(
                 _verifySignature(
                     deadline,
-                    delegatedAccount.wallet,
                     keccak256(
                         abi.encodePacked(
                             tokenIn,
@@ -307,9 +327,9 @@ contract Account is IAccount, PayableMulticall {
         address tokenOut,
         uint256 amountIn,
         uint256 networkFee
-    ) private returns (uint256 amountOut, uint256 swapFee) {
-        IERC20(tokenIn).approve(exchange, amountIn);
-        (amountOut, swapFee) = IExchange(exchange).swap(
+    ) internal returns (uint256 amountOut, uint256 swapFee) {
+        IERC20(tokenIn).approve(_exchange, amountIn);
+        (amountOut, swapFee) = IExchange(_exchange).swap(
             address(this),
             tokenIn,
             tokenOut,
@@ -317,7 +337,7 @@ contract Account is IAccount, PayableMulticall {
         );
 
         amountIn -= swapFee; // log
-        address logger = IExchange(exchange).logger();
+        address logger = IExchange(_exchange).logger();
         if (logger != address(0)) {
             ILogger(logger).logSwap(
                 address(this),
@@ -342,12 +362,11 @@ contract Account is IAccount, PayableMulticall {
         uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
-    ) external payable virtual override onlyOwnerOrRelayer {
-        if (msg.sender != owner) {
+    ) public payable virtual override onlyOwnerOrRelayer {
+        if (msg.sender != _owner) {
             require(
                 _verifySignature(
                     deadline,
-                    delegatedAccount.wallet,
                     keccak256(
                         abi.encodePacked(
                             adapter,
@@ -416,15 +435,14 @@ contract Account is IAccount, PayableMulticall {
         uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
-    ) external payable virtual override onlyOwnerOrRelayer {
+    ) public payable virtual override onlyOwnerOrRelayer {
         require(path.length == 2, "path: invalid length");
         require(path[0] != path[1], "path: same token");
 
-        if (msg.sender != owner) {
+        if (msg.sender != _owner) {
             require(
                 _verifySignature(
                     deadline,
-                    delegatedAccount.wallet,
                     keccak256(
                         abi.encodePacked(
                             adapter,
@@ -512,22 +530,22 @@ contract Account is IAccount, PayableMulticall {
         bool isLong,
         uint256 acceptablePrice,
         uint256 networkFee
-    ) private {
+    ) internal {
         require(
-            IExchange(exchange).isRegisteredAdapter(adapter),
+            IExchange(_exchange).isRegisteredAdapter(adapter),
             "adapter: not registered"
         );
 
         require(
-            IExchange(exchange).isSupportedCollateralToken(collateral),
+            IExchange(_exchange).isSupportedCollateralToken(collateral),
             "collateral: not supported"
         );
         require(
-            IExchange(exchange).isSupportedIndexToken(index),
+            IExchange(_exchange).isSupportedIndexToken(index),
             "index: not supported"
         );
 
-        uint256 positionFee = IExchange(exchange).getPositionFee(
+        uint256 positionFee = IExchange(_exchange).getPositionFee(
             adapter,
             collateral,
             index,
@@ -557,7 +575,7 @@ contract Account is IAccount, PayableMulticall {
         );
         require(success, string(data));
 
-        address logger = IExchange(exchange).logger();
+        address logger = IExchange(_exchange).logger();
         if (logger != address(0)) {
             ILogger(logger).logIncreasePosition(
                 marketOrderId,
@@ -585,12 +603,11 @@ contract Account is IAccount, PayableMulticall {
         uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
-    ) external payable virtual override onlyOwnerOrRelayer {
-        if (msg.sender != owner) {
+    ) public payable virtual override onlyOwnerOrRelayer {
+        if (msg.sender != _owner) {
             require(
                 _verifySignature(
                     deadline,
-                    delegatedAccount.wallet,
                     keccak256(
                         abi.encodePacked(
                             adapter,
@@ -632,7 +649,7 @@ contract Account is IAccount, PayableMulticall {
         uint256 size,
         uint256 acceptablePrice,
         uint256 networkFee
-    ) private {
+    ) internal {
         // slither-disable-next-line controlled-delegatecall,low-level-calls
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
@@ -646,7 +663,7 @@ contract Account is IAccount, PayableMulticall {
         );
         require(success, string(data));
 
-        address logger = IExchange(exchange).logger();
+        address logger = IExchange(_exchange).logger();
         if (logger != address(0)) {
             ILogger(logger).logDecreasePosition(
                 address(this),
@@ -671,12 +688,11 @@ contract Account is IAccount, PayableMulticall {
         uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
-    ) external payable virtual override onlyOwnerOrRelayer {
-        if (msg.sender != owner) {
+    ) public payable virtual override onlyOwnerOrRelayer {
+        if (msg.sender != _owner) {
             require(
                 _verifySignature(
                     deadline,
-                    delegatedAccount.wallet,
                     keccak256(
                         abi.encodePacked(
                             adapter,
@@ -751,9 +767,9 @@ contract Account is IAccount, PayableMulticall {
         bool isLong,
         uint256 collateralAmount,
         uint256 networkFee
-    ) private {
+    ) internal {
         require(
-            IExchange(exchange).isRegisteredAdapter(adapter),
+            IExchange(_exchange).isRegisteredAdapter(adapter),
             "adapter: not registered"
         );
 
@@ -769,7 +785,7 @@ contract Account is IAccount, PayableMulticall {
         );
         require(success, string(data));
 
-        address logger = IExchange(exchange).logger();
+        address logger = IExchange(_exchange).logger();
         if (logger != address(0)) {
             ILogger(logger).logIncreaseCollateral(
                 address(this),
@@ -792,12 +808,11 @@ contract Account is IAccount, PayableMulticall {
         uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
-    ) external payable virtual override onlyOwnerOrRelayer {
-        if (msg.sender != owner) {
+    ) public payable virtual override onlyOwnerOrRelayer {
+        if (msg.sender != _owner) {
             require(
                 _verifySignature(
                     deadline,
-                    delegatedAccount.wallet,
                     keccak256(
                         abi.encodePacked(
                             adapter,
@@ -831,7 +846,7 @@ contract Account is IAccount, PayableMulticall {
         );
         require(success, string(data));
 
-        address logger = IExchange(exchange).logger();
+        address logger = IExchange(_exchange).logger();
         if (logger != address(0)) {
             ILogger(logger).logDecreaseCollateral(
                 address(this),
@@ -845,168 +860,10 @@ contract Account is IAccount, PayableMulticall {
         }
     }
 
-    function addAcmmMargin(
-        address adapter,
-        address collateral,
-        address index,
-        bool isLong,
-        address[] calldata tokens,
-        uint256[] calldata amounts
-    ) external payable virtual override onlyOrderKeeper {
-        require(tokens.length == amounts.length, "length: not match");
-
-        uint256 marginAmount;
-        for (uint256 i = 0; i < tokens.length; i++) {
-            require(
-                amounts[i] <= getWithdrawableBalance(tokens[i]),
-                "marginAmount: greater than balance"
-            );
-
-            if (collateral != tokens[i]) {
-                (uint256 amountOut, ) = _swap(
-                    tokens[i],
-                    collateral,
-                    amounts[i],
-                    0
-                );
-                marginAmount += amountOut;
-            } else {
-                marginAmount += amounts[i];
-            }
-        }
-
-        require(
-            IExchange(exchange).validateAddAcmmMargin(
-                adapter,
-                collateral,
-                index,
-                isLong,
-                marginAmount
-            ),
-            "validation failed"
-        );
-
-        uint256 addAcmmMarginFee
-            = IExchange(exchange).getAddAcmmMarginFee(marginAmount); // prettier-ignore
-        if (addAcmmMarginFee > 0) {
-            require(
-                marginAmount >= addAcmmMarginFee,
-                "marginAmount: less than margin management fee"
-            );
-            _collectProtocolFee(collateral, addAcmmMarginFee);
-            marginAmount -= addAcmmMarginFee;
-        }
-
-        _addAcmmMargin(
-            adapter,
-            collateral,
-            index,
-            isLong,
-            marginAmount,
-            addAcmmMarginFee
-        );
-    }
-
-    function _addAcmmMargin(
-        address adapter,
-        address collateral,
-        address index,
-        bool isLong,
-        uint256 marginAmount,
-        uint256 addAcmmMarginFee
-    ) private {
-        require(
-            IExchange(exchange).isRegisteredAdapter(adapter),
-            "adapter: not registered"
-        );
-
-        // slither-disable-next-line controlled-delegatecall,low-level-calls
-        (bool success, bytes memory data) = adapter.delegatecall(
-            abi.encodeWithSignature(
-                "addAcmmMargin(address,address,bool,uint256)",
-                collateral,
-                index,
-                isLong,
-                marginAmount
-            )
-        );
-        require(success, string(data));
-
-        address logger = IExchange(exchange).logger();
-        if (logger != address(0)) {
-            ILogger(logger).logAddAcmmMargin(
-                address(this),
-                adapter,
-                collateral,
-                index,
-                marginAmount,
-                isLong,
-                addAcmmMarginFee
-            );
-        }
-    }
-
-    function subAcmmMargin(
-        address adapter,
-        address collateral,
-        address index,
-        bool isLong,
-        uint256 marginAmount
-    ) external payable virtual override onlyOrderKeeper {
-        require(
-            IExchange(exchange).validateSubAcmmMargin(
-                adapter,
-                collateral,
-                index,
-                isLong,
-                marginAmount
-            ),
-            "validation failed"
-        );
-
-        // slither-disable-next-line controlled-delegatecall,low-level-calls
-        (bool success, bytes memory data) = adapter.delegatecall(
-            abi.encodeWithSignature(
-                "subAcmmMargin(address,address,bool,uint256)",
-                collateral,
-                index,
-                isLong,
-                marginAmount
-            )
-        );
-        require(success, string(data));
-
-        address marginToken = IExchange(exchange).getProfitToken(
-            adapter,
-            collateral,
-            index,
-            isLong
-        );
-
-        uint256 subAcmmMarginFee
-            = IExchange(exchange).getSubAcmmMarginFee(marginAmount); // prettier-ignore
-        if (subAcmmMarginFee > 0) {
-            _feeDebts[marginToken] += subAcmmMarginFee;
-        }
-
-        address logger = IExchange(exchange).logger();
-        if (logger != address(0)) {
-            ILogger(logger).logSubAcmmMargin(
-                address(this),
-                adapter,
-                collateral,
-                index,
-                marginAmount,
-                isLong,
-                subAcmmMarginFee
-            );
-        }
-    }
-
     function collectFeeDebt(
         address token,
         uint256 amount
-    ) external virtual override onlyOrderKeeper {
+    ) public virtual override onlyOrderKeeper {
         _collectFeeDebt(token, amount);
     }
 
@@ -1022,12 +879,11 @@ contract Account is IAccount, PayableMulticall {
         uint256 executionFee,
         uint256 deadline,
         bytes calldata signature
-    ) external payable virtual override onlyOwnerOrRelayer {
-        if (msg.sender != owner) {
+    ) public payable virtual override onlyOwnerOrRelayer {
+        if (msg.sender != _owner) {
             require(
                 _verifySignature(
                     deadline,
-                    delegatedAccount.wallet,
                     keccak256(
                         abi.encodePacked(
                             collateral,
@@ -1048,11 +904,11 @@ contract Account is IAccount, PayableMulticall {
             );
         }
         require(
-            IExchange(exchange).isSupportedCollateralToken(collateral),
+            IExchange(_exchange).isSupportedCollateralToken(collateral),
             "collateral: not supported"
         );
         require(
-            IExchange(exchange).isSupportedIndexToken(index),
+            IExchange(_exchange).isSupportedIndexToken(index),
             "index: not supported"
         );
 
@@ -1076,7 +932,7 @@ contract Account is IAccount, PayableMulticall {
 
         _lockedBalances[collateral] += collateralAmount;
 
-        IExchange(exchange).createLimitOrder(
+        IExchange(_exchange).createLimitOrder(
             collateral,
             index,
             collateralAmount,
@@ -1093,12 +949,11 @@ contract Account is IAccount, PayableMulticall {
         uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
-    ) external payable virtual override onlyOwnerOrRelayer {
-        if (msg.sender != owner) {
+    ) public payable virtual override onlyOwnerOrRelayer {
+        if (msg.sender != _owner) {
             require(
                 _verifySignature(
                     deadline,
-                    delegatedAccount.wallet,
                     keccak256(
                         abi.encodePacked(limitOrderId, networkFee, deadline)
                     ),
@@ -1109,7 +964,7 @@ contract Account is IAccount, PayableMulticall {
         }
 
         IWarehouse.LimitOrder memory limitOrder
-            = IExchange(exchange).cancelLimitOrder(address(this), limitOrderId); // prettier-ignore
+            = IExchange(_exchange).cancelLimitOrder(address(this), limitOrderId); // prettier-ignore
 
         _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
 
@@ -1121,9 +976,9 @@ contract Account is IAccount, PayableMulticall {
     function executeLimitOrder(
         uint256 limitOrderId,
         address adapter
-    ) external payable virtual override onlyOrderKeeper {
+    ) public payable virtual override onlyOrderKeeper {
         IWarehouse.LimitOrder memory limitOrder
-            = IExchange(exchange).executeLimitOrder(address(this), adapter, limitOrderId); // prettier-ignore
+            = IExchange(_exchange).executeLimitOrder(address(this), adapter, limitOrderId); // prettier-ignore
 
         _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
 
@@ -1160,8 +1015,8 @@ contract Account is IAccount, PayableMulticall {
         uint256 triggerPrice,
         uint256 acceptablePrice,
         uint256 networkFee
-    ) external payable virtual override onlyOrderKeeper {
-        IExchange(exchange).executeTriggerOrder(
+    ) public payable virtual override onlyOrderKeeper {
+        IExchange(_exchange).executeTriggerOrder(
             address(this),
             adapter,
             collateral,
@@ -1189,6 +1044,32 @@ contract Account is IAccount, PayableMulticall {
         );
     }
 
+    function version() public view virtual override returns (uint256) {
+        return StorageSlot.getUint256Slot(ACCOUNT_VERSION_SLOT).value;
+    }
+
+    function owner() public view virtual override returns (address) {
+        return _owner;
+    }
+
+    function exchange() public view virtual override returns (address) {
+        return _exchange;
+    }
+
+    function delegatedAccount() public view virtual override returns (address) {
+        return _delegatedAccount;
+    }
+
+    function delegatedAccountExpiration()
+        public
+        view
+        virtual
+        override
+        returns (uint256)
+    {
+        return _delegatedAccountExpiration;
+    }
+
     function getBalance(
         address token
     ) public view virtual override returns (uint256) {
@@ -1213,47 +1094,46 @@ contract Account is IAccount, PayableMulticall {
         return _feeDebts[token];
     }
 
-    function _collectFeeDebt(address token, uint256 amount) private {
+    function _collectFeeDebt(address token, uint256 amount) internal {
         _feeDebts[token] -= amount;
 
-        IERC20(token).transfer(exchange, amount);
-        IExchange(exchange).collectFeeDebt(address(this), token, amount);
+        IERC20(token).transfer(_exchange, amount);
+        IExchange(_exchange).collectFeeDebt(address(this), token, amount);
     }
 
-    function _collectNetworkFee(address token, uint256 amount) private {
-        IERC20(token).transfer(exchange, amount);
-        IExchange(exchange).collectNetworkFee(address(this), token, amount);
+    function _collectNetworkFee(address token, uint256 amount) internal {
+        IERC20(token).transfer(_exchange, amount);
+        IExchange(_exchange).collectNetworkFee(address(this), token, amount);
     }
 
-    function _collectExecutionFee(address token, uint256 amount) private {
-        IERC20(token).transfer(exchange, amount);
-        IExchange(exchange).collectExecutionFee(address(this), token, amount);
+    function _collectExecutionFee(address token, uint256 amount) internal {
+        IERC20(token).transfer(_exchange, amount);
+        IExchange(_exchange).collectExecutionFee(address(this), token, amount);
     }
 
-    function _collectProtocolFee(address token, uint256 amount) private {
-        IERC20(token).transfer(exchange, amount);
-        IExchange(exchange).collectProtocolFee(address(this), token, amount);
+    function _collectProtocolFee(address token, uint256 amount) internal {
+        IERC20(token).transfer(_exchange, amount);
+        IExchange(_exchange).collectProtocolFee(address(this), token, amount);
     }
 
     function _verifySignature(
         uint256 deadline,
-        address signer,
         bytes32 messageHash,
         bytes memory signature
-    ) private view returns (bool) {
+    ) internal view returns (bool) {
         require(deadline >= block.timestamp, "deadline: expired");
         require(
-            delegatedAccount.expiration > block.timestamp,
+            _delegatedAccountExpiration > block.timestamp,
             "delegatedAccount: expired"
         );
         return
             _recoverSigner(_getEthSignedMessageHash(messageHash), signature) ==
-            signer;
+            _delegatedAccount;
     }
 
     function _getEthSignedMessageHash(
         bytes32 _messageHash
-    ) private pure returns (bytes32) {
+    ) internal pure returns (bytes32) {
         return
             keccak256(
                 abi.encodePacked(
@@ -1266,7 +1146,7 @@ contract Account is IAccount, PayableMulticall {
     function _recoverSigner(
         bytes32 message,
         bytes memory signature
-    ) private pure returns (address) {
+    ) internal pure returns (address) {
         (bytes32 r, bytes32 s, uint8 v) = _splitSignature(signature);
 
         return ecrecover(message, v, r, s);
@@ -1274,7 +1154,7 @@ contract Account is IAccount, PayableMulticall {
 
     function _splitSignature(
         bytes memory sig
-    ) private pure returns (bytes32 r, bytes32 s, uint8 v) {
+    ) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
         require(sig.length == 65, "invalid signature length");
 
         assembly {

@@ -3,7 +3,7 @@ pragma solidity 0.8.7;
 
 import {IAccount} from "../interfaces/IAccount.sol";
 import {IAccountFactory} from "../interfaces/IAccountFactory.sol";
-
+import {AccountProxy} from "./AccountProxy.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
@@ -12,9 +12,9 @@ contract AccountFactory is
     OwnableUpgradeable,
     UUPSUpgradeable
 {
-    mapping(address => address) public override accounts;
+    uint256 internal _version;
 
-    address public override account; // targetContract
+    mapping(address => address) public override accounts;
     address public override exchange;
 
     modifier onlyExchange() {
@@ -22,15 +22,14 @@ contract AccountFactory is
         _;
     }
 
-    function initialize(
-        address _account,
-        address _exchange
-    ) external virtual initializer {
-        require(_account != address(0), "account: zero address");
-        require(_exchange != address(0), "exchange: zero address");
+    function version() external override view returns (uint256) {
+        return _version;
+    }
 
-        account = _account;
+    function initialize(address _exchange) external virtual initializer {
+        require(_exchange != address(0), "exchange: zero address");
         exchange = _exchange;
+        _version = 1;
 
         __Ownable_init();
         __UUPSUpgradeable_init();
@@ -38,54 +37,39 @@ contract AccountFactory is
 
     function createAccount(
         address accountOwner,
-        address delegatedWallet,
-        uint256 expiration
-    ) external override onlyExchange returns (address) {
+        address delegatedAccount,
+        uint256 delegatedAccountExpiration
+    ) external override onlyExchange returns (address account) {
         require(
             accounts[accountOwner] == address(0),
             "account: already created"
         );
 
-        address clonedAccount = _cloneAccount();
+        account = _createAccount();
+        accounts[accountOwner] = account;
+        emit AccountCreated(accountOwner, account);
 
-        accounts[accountOwner] = clonedAccount;
-        emit AccountCreated(accountOwner, clonedAccount);
-
-        IAccount(clonedAccount).initialize(
+        IAccount(account).initialize(
             accountOwner,
             exchange,
-            delegatedWallet,
-            expiration
+            delegatedAccount,
+            delegatedAccountExpiration
         );
-
-        return address(account);
     }
 
-    function setExchange(address _exchange) external override onlyOwner {
-        require(_exchange != address(0), "exchange: zero address");
+    function upgradeVersion(uint256 newVersion) external onlyOwner {
+        require(newVersion != 0, "newVersion: zero");
 
-        exchange = _exchange;
-        emit ExchangeSet(_exchange);
+        _version = newVersion;
+        emit VersionUpgraded(newVersion);
+    }
+
+    function _createAccount() private returns (address) {
+        AccountProxy accountProxy = new AccountProxy(exchange, _version);
+        return address(accountProxy);
     }
 
     function _authorizeUpgrade(
         address newImplementation
     ) internal override onlyOwner {}
-
-    function _cloneAccount() private returns (address clonedAccount) {
-        bytes20 targetBytes = bytes20(account);
-        assembly {
-            let clone := mload(0x40)
-            mstore(
-                clone,
-                0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000
-            )
-            mstore(add(clone, 0x14), targetBytes)
-            mstore(
-                add(clone, 0x28),
-                0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000
-            )
-            clonedAccount := create(0, clone, 0x37)
-        }
-    }
 }

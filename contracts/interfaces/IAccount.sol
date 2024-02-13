@@ -5,24 +5,16 @@ import {IWarehouse} from "./IWarehouse.sol";
 
 // prettier-ignore
 interface IAccount {
-    struct DelegatedAccount {
-        address wallet;
-        uint256 expiration;
-    }
-
-    function owner() external view returns (address);
-    function exchange() external view returns (address);
-    function delegatedAccount() external view returns (address, uint256);
-
     function initialize(
         address _owner,
         address _exchange,
-        address _delegatedWallet,
-        uint256 _expiration
+        address _delegatedAccount,
+        uint256 _delegatedAccountExpiration
     ) external;
+    function upgrade(uint256 version) external;
     function renewDelegatedAccount(
-        address _delegatedWallet,
-        uint256 _expiration
+        address _delegatedAccount,
+        uint256 _delegatedAccountExpiration
     ) external;
 
     function deposit(
@@ -116,21 +108,6 @@ interface IAccount {
         bytes calldata signature
     ) external payable;
 
-    function addAcmmMargin(
-        address adapter,
-        address collateral,
-        address index,
-        bool isLong,
-        address[] calldata marginTokens,
-        uint256[] calldata marginAmounts
-    ) external payable;
-    function subAcmmMargin(
-        address adapter,
-        address collateral,
-        address index,
-        bool isLong,
-        uint256 profitAmount
-    ) external payable;
     function collectFeeDebt(address token, uint256 amount) external;
 
     function createLimitOrder(
@@ -167,6 +144,13 @@ interface IAccount {
         uint256 acceptablePrice,
         uint256 networkFee
     ) external payable;
+
+    function version() external view returns (uint256);
+
+    function owner() external view returns (address);
+    function exchange() external view returns (address);
+    function delegatedAccount() external view returns (address);
+    function delegatedAccountExpiration() external view returns (uint256);
 
     function getBalance(address token) external view returns (uint256);
     function getLockedBalance(address token) external view returns (uint256);

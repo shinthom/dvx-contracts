@@ -5,7 +5,9 @@ const { deploy } = require("./fixture");
 
 describe("marginManagement", async () => {
   it("addMargin - gmxV1", async () => {
-    const {
+    let {
+      owner,
+      exchange,
       orderKeeper,
       account,
       gmxV1Adapter,
@@ -17,6 +19,11 @@ describe("marginManagement", async () => {
       increasePosition,
       executeIncreasePosition,
     } = await loadFixture(deploy);
+    const accountV2 = await ethers.deployContract("AccountV2", []);
+    await exchange.addAccountImplementation(2, accountV2.target);
+    await account.connect(owner).upgrade(2);
+    account = await ethers.getContractAt("AccountV2", account.target);
+
     await setDummyPrice();
 
     var collateral = WETH;
@@ -31,7 +38,7 @@ describe("marginManagement", async () => {
     await checkPosition(gmxV1Adapter, account, collateral, index, isLong);
 
     const marginWETH = ethers.parseEther("0.1");
-    const marginWBTC = ethers.parseEther("0.005");
+    const marginWBTC = ethers.parseUnits("0.005", 8);
 
     const adapterFee = await gmxV1Adapter.getMinExecutionFee();
     await expect(
@@ -106,7 +113,9 @@ describe("marginManagement", async () => {
   });
 
   it("addMargin - mux", async () => {
-    const {
+    let {
+      owner,
+      exchange,
       orderKeeper,
       account,
       muxAdapter,
@@ -117,6 +126,11 @@ describe("marginManagement", async () => {
       setDummyPrice,
       increasePosition,
     } = await loadFixture(deploy);
+    const accountV2 = await ethers.deployContract("AccountV2", []);
+    await exchange.addAccountImplementation(2, accountV2.target);
+    await account.connect(owner).upgrade(2);
+    account = await ethers.getContractAt("AccountV2", account.target);
+
     await setDummyPrice();
 
     var collateral = WETH;
@@ -207,7 +221,9 @@ describe("marginManagement", async () => {
   });
 
   it("subMargin - gmxV1", async () => {
-    const {
+    let {
+      owner,
+      exchange,
       orderKeeper,
       account,
       gmxV1Adapter,
@@ -220,6 +236,11 @@ describe("marginManagement", async () => {
       increasePosition,
       executeDecreasePosition,
     } = await loadFixture(deploy);
+    const accountV2 = await ethers.deployContract("AccountV2", []);
+    await exchange.addAccountImplementation(2, accountV2.target);
+    await account.connect(owner).upgrade(2);
+    account = await ethers.getContractAt("AccountV2", account.target);
+
     await setDummyPrice();
 
     var collateral = WETH;
@@ -254,7 +275,9 @@ describe("marginManagement", async () => {
   });
 
   it("subMargin - mux", async () => {
-    const {
+    let {
+      owner,
+      exchange,
       orderKeeper,
       account,
       muxAdapter,
@@ -267,6 +290,11 @@ describe("marginManagement", async () => {
       increasePosition,
       fillWithdrawalOrder,
     } = await loadFixture(deploy);
+    const accountV2 = await ethers.deployContract("AccountV2", []);
+    await exchange.addAccountImplementation(2, accountV2.target);
+    await account.connect(owner).upgrade(2);
+    account = await ethers.getContractAt("AccountV2", account.target);
+
     await setDummyPrice();
 
     var collateral = WETH;
@@ -302,11 +330,12 @@ describe("marginManagement", async () => {
 
   describe("fee", () => {
     it("addMargin", async () => {
-      const {
+      let {
+        owner,
+        exchange,
         orderKeeper,
         account,
         gmxV1Adapter,
-        exchange,
         WETH,
         weth,
         feeCollector,
@@ -317,6 +346,11 @@ describe("marginManagement", async () => {
         increasePosition,
         executeIncreasePosition,
       } = await loadFixture(deploy);
+      const accountV2 = await ethers.deployContract("AccountV2", []);
+      await exchange.addAccountImplementation(2, accountV2.target);
+      await account.connect(owner).upgrade(2);
+      account = await ethers.getContractAt("AccountV2", account.target);
+
       await setDummyPrice();
 
       var collateral = WETH;
@@ -352,7 +386,8 @@ describe("marginManagement", async () => {
     });
 
     it("subMargin", async () => {
-      const {
+      let {
+        owner,
         orderKeeper,
         account,
         gmxV1Adapter,
@@ -367,6 +402,11 @@ describe("marginManagement", async () => {
         increasePosition,
         executeDecreasePosition,
       } = await loadFixture(deploy);
+      const accountV2 = await ethers.deployContract("AccountV2", []);
+      await exchange.addAccountImplementation(2, accountV2.target);
+      await account.connect(owner).upgrade(2);
+      account = await ethers.getContractAt("AccountV2", account.target);
+
       await setDummyPrice();
 
       var collateral = WETH;

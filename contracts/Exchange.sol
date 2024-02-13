@@ -17,6 +17,8 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
     uint256 public constant BASIS_POINTS = 1e8;
 
+    mapping(uint256 => address) private _accountImplentation;
+
     address public override accountFactory;
     address public override warehouse;
     address public override marginManager;
@@ -46,14 +48,28 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
     receive() external payable {}
 
+    modifier onlyAccount(address account) {
+        require(msg.sender == account, "msg.sender: not account");
+        _;
+    }
+
     function initialize() external virtual initializer {
         __Ownable_init();
         __UUPSUpgradeable_init();
     }
 
-    modifier onlyAccount(address account) {
-        require(msg.sender == account, "msg.sender: not account");
-        _;
+    function addAccountImplementation(
+        uint256 version,
+        address implementation
+    ) external override onlyOwner {
+        require(implementation != address(0), "implementation: zero address");
+        require(
+            _accountImplentation[version] == address(0),
+            "version: already added"
+        );
+
+        _accountImplentation[version] = implementation;
+        emit AccountImplementationAdded(version, implementation);
     }
 
     function setAccountFactory(
@@ -265,24 +281,24 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function createAccount(
-        address delegatedWallet,
-        uint256 expiration
+        address delegatedAccount,
+        uint256 delegatedAccountExpiration
     ) public override returns (address) {
         return
             IAccountFactory(accountFactory).createAccount(
                 msg.sender,
-                delegatedWallet,
-                expiration
+                delegatedAccount,
+                delegatedAccountExpiration
             );
     }
 
     function createAccountAndDeposit(
-        address delegatedWallet,
-        uint256 expiration,
+        address delegatedAccount,
+        uint256 delegatedAccountExpiration,
         address token,
         uint256 amount
     ) external override returns (address account) {
-        account = createAccount(delegatedWallet, expiration);
+        account = createAccount(delegatedAccount, delegatedAccountExpiration);
 
         IERC20(token).transferFrom(msg.sender, address(this), amount);
         IERC20(token).approve(account, amount);
@@ -478,6 +494,12 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
                 isLong,
                 marginAmount
             );
+    }
+
+    function accountImplementation(
+        uint256 version
+    ) external view override returns (address) {
+        return _accountImplentation[version];
     }
 
     function getAccount(

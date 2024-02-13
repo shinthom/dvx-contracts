@@ -48,6 +48,8 @@ interface IExchange {
     event ExecutionFeeCollected(address indexed account, address indexed token, uint256 amount);
     event ProtocolFeeCollected(address indexed account, address indexed token, uint256 amount);
 
+    event AccountImplementationAdded(uint256 version, address implementation);
+
     function accountFactory() external returns (address);
     function warehouse() external returns (address);
     function swapper() external returns (address);
@@ -72,6 +74,11 @@ interface IExchange {
 
     function tiers(uint8) external view returns (uint256);
     function referralTiers(address) external view returns (uint8);
+
+    function addAccountImplementation(
+        uint256 version,
+        address implementation
+    ) external;
 
     function setAccountFactory(address _accountFactory) external;
     function setWarehouse(address _warehouse) external;
@@ -102,12 +109,12 @@ interface IExchange {
     function setReferralTier(address account, uint8 tierId) external;
 
     function createAccount(
-        address delegatedWallet,
-        uint256 expiration
+        address delegatedAccount,
+        uint256 delegatedAccountExpiration
     ) external returns (address account);
     function createAccountAndDeposit(
-        address delegatedWallet,
-        uint256 expiration,
+        address delegatedAccount,
+        uint256 delegatedAccountExpiration,
         address token,
         uint256 amount
     ) external returns (address account);
@@ -191,6 +198,8 @@ interface IExchange {
         bool isLong,
         uint256 profitAmount
     ) external view returns (bool);
+
+    function accountImplementation(uint256 version) external view returns (address);
 
     function getAccount(address _owner) external view returns (address);
     function getPosition(

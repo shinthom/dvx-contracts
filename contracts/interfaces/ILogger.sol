@@ -6,8 +6,8 @@ pragma solidity 0.8.7;
 interface ILogger {
     event DelegatedAccountRenewed(
         address indexed account,
-        address indexed delegatedWallet,
-        uint256 expiration
+        address indexed delegatedAccount,
+        uint256 delegatedAccountExpiration
     );
 
     event Deposited(
@@ -96,8 +96,8 @@ interface ILogger {
 
     function logRenewDelegatedAccount(
         address account,
-        address delegatedWallet,
-        uint256 expiration
+        address delegatedAccount,
+        uint256 delegatedAccountExpiration
     ) external;
 
     function logDeposit(
