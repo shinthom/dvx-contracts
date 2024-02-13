@@ -4,9 +4,8 @@ pragma solidity 0.8.7;
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-import "./ERC5633.sol";
 
-contract SBT is ERC5633, Ownable {
+contract SBT is ERC1155, Ownable {
     using Strings for uint256;
 
     string private baseURI;
@@ -16,12 +15,6 @@ contract SBT is ERC5633, Ownable {
     event Claimed(address indexed account, uint256 id, uint256 amount);
 
     constructor() ERC1155("") {}
-
-    function setSoulbound(uint256 id) external onlyOwner {
-        require(!isSoulbound(id), "already soulbound");
-
-        _setSoulbound(id, true);
-    }
 
     function mint(
         address account,
@@ -87,15 +80,28 @@ contract SBT is ERC5633, Ownable {
         baseURI = base;
     }
 
-    function uri(uint256 id)
-        public
-        view
-        override
-        returns (string memory)
-    {
+    function uri(uint256 id) public view override returns (string memory) {
         return
             bytes(baseURI).length > 0
                 ? string(abi.encodePacked(baseURI, id.toString()))
                 : baseURI;
+    }
+
+    function _beforeTokenTransfer(
+        address operator,
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) internal virtual override {
+        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+
+        for (uint256 i = 0; i < ids.length; ++i) {
+            require(
+                from == address(0) || to == address(0),
+                "non-transferable"
+            );
+        }
     }
 }

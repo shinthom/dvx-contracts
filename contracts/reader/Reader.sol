@@ -4,12 +4,6 @@ pragma solidity 0.8.7;
 import {IAdapter} from "../interfaces/IAdapter.sol";
 
 contract Reader {
-    address private immutable _warehouse;
-
-    constructor(address warehouse) {
-        _warehouse = warehouse;
-    }
-
     struct Position {
         address adapter;
         address collateral;

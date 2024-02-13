@@ -71,6 +71,7 @@ let owner;
 let other;
 let orderKeeper;
 let relayer;
+let feeCollector;
 let ownerPk;
 // va
 let vaPk;
@@ -99,7 +100,6 @@ let fastPriceFeed;
 let vaultPriceFeed;
 let secondaryPriceFeedMock;
 // dvx contracts
-let feeCollector; // todo: deploy feeCollector contract
 let accountFactory;
 let exchange;
 let warehouse;
@@ -118,7 +118,8 @@ const deploy = async (noAccount) => {
   vaPk = ethers.Wallet.createRandom().privateKey;
   va = new ethers.Wallet(vaPk);
 
-  [deployer, owner, other, orderKeeper, relayer] = await ethers.getSigners();
+  [deployer, owner, other, orderKeeper, relayer, feeCollector] =
+    await ethers.getSigners();
   ownerPk =
     "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"; // todo: fix
 
@@ -212,23 +213,16 @@ const deploy = async (noAccount) => {
     exchange.target,
   ]);
   quoter = await ethers.deployContract("Quoter");
-  reader = await ethers.deployContract("Reader", [warehouse.target]);
+  reader = await ethers.deployContract("Reader");
   swapper = await ethers.deployContract("Swapper");
-  feeCollector = await ethers.deployContract("FeeCollector");
   marginManager = await ethers.deployContract("MarginManager");
-
-  const startTime = Math.ceil(Date.now() / 1000) + 86400 * 3;
-  attendanceBook = await ethers.deployContract("AttendanceBook", [
-    startTime,
-    relayer,
-  ]);
 
   await exchange.addAccountImplementation(1, accountTargetContract.target);
   await exchange.setAccountFactory(accountFactory.target);
   await exchange.setWarehouse(warehouse.target);
   await exchange.setLogger(logger.target);
   await exchange.setSwapper(swapper.target);
-  await exchange.setFeeCollector(feeCollector.target);
+  await exchange.setFeeCollector(feeCollector.address);
   await exchange.setMarginManager(marginManager.target);
   await exchange.registerAdapter(gmxV1Adapter.target);
   await exchange.registerAdapter(muxAdapter.target);
@@ -242,6 +236,13 @@ const deploy = async (noAccount) => {
 
   await exchange.setOrderKeeper(orderKeeper.address, true);
   await exchange.setRelayer(relayer.address, true);
+
+  // attendanceBook
+  const startTime = Math.ceil(Date.now() / 1000) + 86400 * 3;
+  attendanceBook = await ethers.deployContract("AttendanceBook", [
+    startTime,
+    relayer,
+  ]);
   await exchange.setRelayer(attendanceBook.target, true);
 
   if (!noAccount) {

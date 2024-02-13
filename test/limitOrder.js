@@ -44,7 +44,7 @@ describe("createLimitOrder, cancelLimitOrder", () => {
       .cancelLimitOrder(0, networkFee, deadline, "0x");
     // console.log(await account.getLockedBalance(collateral));
     // console.log(await account.getFeeDebt(collateral));
-    console.log(await weth.balanceOf(feeCollector.target));
+    console.log(await weth.balanceOf(feeCollector.address));
   });
 
   it("network fee", async () => {
@@ -87,7 +87,7 @@ describe("createLimitOrder, cancelLimitOrder", () => {
       .cancelLimitOrder(0, networkFee, deadline, "0x");
     // console.log(await account.getLockedBalance(collateral));
     // console.log(await account.getFeeDebt(collateral));
-    console.log(await weth.balanceOf(feeCollector.target));
+    console.log(await weth.balanceOf(feeCollector.address));
   });
 
   it("network fee + execution fee", async () => {
@@ -130,7 +130,7 @@ describe("createLimitOrder, cancelLimitOrder", () => {
       .cancelLimitOrder(0, networkFee, deadline, "0x");
     // console.log(await account.getLockedBalance(collateral));
     // console.log(await account.getFeeDebt(collateral));
-    console.log(await weth.balanceOf(feeCollector.target));
+    console.log(await weth.balanceOf(feeCollector.address));
   });
 });
 
@@ -190,7 +190,7 @@ describe("createLimitOrder, executeLimitOrder", () => {
     // await checkPosition(gmxV1Adapter, account, collateral, index, isLong);
     // console.log(await account.getLockedBalance(collateral));
     // console.log(await account.getFeeDebt(collateral));
-    console.log(await weth.balanceOf(feeCollector.target));
+    console.log(await weth.balanceOf(feeCollector.address));
   });
 
   it("network fee", async () => {
@@ -248,7 +248,7 @@ describe("createLimitOrder, executeLimitOrder", () => {
     // await checkPosition(gmxV1Adapter, account, collateral, index, isLong);
     // console.log(await account.getLockedBalance(collateral));
     // console.log(await account.getFeeDebt(collateral));
-    console.log(await weth.balanceOf(feeCollector.target));
+    console.log(await weth.balanceOf(feeCollector.address));
   });
 
   it("network fee + execution fee", async () => {
@@ -306,6 +306,6 @@ describe("createLimitOrder, executeLimitOrder", () => {
     // await checkPosition(gmxV1Adapter, account, collateral, index, isLong);
     // console.log(await account.getLockedBalance(collateral));
     // console.log(await account.getFeeDebt(collateral));
-    console.log(await weth.balanceOf(feeCollector.target));
+    console.log(await weth.balanceOf(feeCollector.address));
   });
 });

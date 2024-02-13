@@ -382,7 +382,7 @@ describe("marginManagement", async () => {
         );
       await executeIncreasePosition(account.target);
       await checkPosition(gmxV1Adapter, account, collateral, index, isLong);
-      console.log(await weth.balanceOf(feeCollector.target));
+      console.log(await weth.balanceOf(feeCollector.address));
     });
 
     it("subMargin", async () => {
@@ -439,7 +439,7 @@ describe("marginManagement", async () => {
         );
       await executeDecreasePosition(account.target);
       await checkPosition(gmxV1Adapter, account, collateral, index, isLong);
-      console.log(await weth.balanceOf(feeCollector.target));
+      console.log(await weth.balanceOf(feeCollector.address));
       console.log(await account.getFeeDebt(WETH));
     });
   });

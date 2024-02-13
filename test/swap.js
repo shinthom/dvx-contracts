@@ -51,7 +51,7 @@ describe("swap", () => {
       .connect(owner)
       .swap(tokenIn, tokenOut, amountIn, networkFee, 0, "0x");
     expect(await weth.balanceOf(account.target)).to.equal(expectedAmountOut);
-    expect(await usdc.balanceOf(feeCollector.target)).to.equal(networkFee);
+    expect(await usdc.balanceOf(feeCollector.address)).to.equal(networkFee);
   });
 
   it("execution fee + swap fee", async () => {
@@ -90,7 +90,7 @@ describe("swap", () => {
       .connect(owner)
       .swap(tokenIn, tokenOut, amountIn, networkFee, 0, "0x");
     expect(await weth.balanceOf(account.target)).to.equal(expectedAmountOut);
-    expect(await usdc.balanceOf(feeCollector.target)).to.equal(
+    expect(await usdc.balanceOf(feeCollector.address)).to.equal(
       networkFee + swapFee
     );
   });

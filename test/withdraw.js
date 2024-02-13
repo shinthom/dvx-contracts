@@ -107,7 +107,7 @@ describe("withdraw", () => {
       .connect(owner)
       .withdraw(collateral, owner.address, withdrawAmount, 0, 0, "0x");
     console.log(await weth.balanceOf(owner.address));
-    expect(await weth.balanceOf(feeCollector.target)).to.equal(networkFee);
+    expect(await weth.balanceOf(feeCollector.address)).to.equal(networkFee);
     expect(await account.getFeeDebt(collateral)).to.equal(0);
     expect(await account.getBalance(collateral)).to.equal(0);
   });

@@ -14,6 +14,11 @@ const USDC = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
 const USDT = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9";
 const USDCe = "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8";
 
+const relayer = "0x8411D1E7eED0EB00D2E1F7332122581156062fD2";
+const triggerOrderKeeper = "0x38A9078645DA1DF08659837147fa8e0110ad1484";
+const limitOrderKeeper = "0x1D9BE7c2F33B0E7B70fC552a0f3599424Cc16eC0";
+const feeCollector = "0x0d8a1475bf3DA6b161a70E945f120ea3Fe6e0314";
+
 async function main() {
   let gasUsed = 0n;
 
@@ -87,7 +92,7 @@ async function main() {
     accountFactoryProxy.target
   );
   await waitAndLogAccumulatedGasUsed(
-    await accountFactory.initialize(accountTarget.target, exchange.target)
+    await accountFactory.initialize(exchange.target)
   );
   console.log("AccountFactory: initialize\n");
 
@@ -122,7 +127,7 @@ async function main() {
   console.log("Quoter deployed at:", quoter.target, "\n");
 
   const Reader = await ethers.getContractFactory("Reader");
-  const reader = await Reader.deploy(warehouse.target);
+  const reader = await Reader.deploy();
   await waitAndLogAccumulatedGasUsed(reader.deploymentTransaction());
   console.log("Reader deployed at:", reader.target, "\n");
 
@@ -131,23 +136,15 @@ async function main() {
   await waitAndLogAccumulatedGasUsed(swapper.deploymentTransaction());
   console.log("Swapper deployed at:", swapper.target, "\n");
 
-  const FeeCollector = await ethers.getContractFactory("FeeCollector");
-  const feeCollector = await FeeCollector.deploy();
-  await waitAndLogAccumulatedGasUsed(feeCollector.deploymentTransaction());
-  console.log("FeeCollector deployed at:", feeCollector.target, "\n");
-
   const MarginManager = await ethers.getContractFactory("MarginManager");
   const marginManager = await MarginManager.deploy();
   await waitAndLogAccumulatedGasUsed(marginManager.deploymentTransaction());
   console.log("MarginManager deployed at:", marginManager.target, "\n");
 
-  const AttendanceBook = await ethers.getContractFactory("AttendanceBook");
-  const attendanceBook = await AttendanceBook.deploy(
-    1707868800, // todo: fix
-    marginManager.target // todo: fix
+  await waitAndLogAccumulatedGasUsed(
+    await exchange.addAccountImplementation(1, accountTarget.target)
   );
-  await waitAndLogAccumulatedGasUsed(attendanceBook.deploymentTransaction());
-  console.log("MarginManager deployed at:", attendanceBook.target, "\n");
+  console.log("Exchange: addAccountImplementation\n");
 
   await waitAndLogAccumulatedGasUsed(
     await exchange.setAccountFactory(accountFactory.target)
@@ -166,7 +163,7 @@ async function main() {
   console.log("Exchange: setSwapper\n");
 
   await waitAndLogAccumulatedGasUsed(
-    await exchange.setFeeCollector(feeCollector.target)
+    await exchange.setFeeCollector(feeCollector)
   );
   console.log("Exchange: setFeeCollector\n");
 
@@ -217,19 +214,32 @@ async function main() {
   console.log("Warehouse: setExchange\n");
 
   await waitAndLogAccumulatedGasUsed(
-    await exchange.setRelayer(attendanceBook.target, true)
+    await exchange.setOrderKeeper(triggerOrderKeeper, true)
   );
-  console.log("Exchange: setRelayer (AttendanceBook)\n");
+  console.log("Exchange: setOrderKeeper (triggerOrderKeeper)\n");
 
-  // (optional) set relayer for AttendanceBook
-  // const owner = (await ethers.provider.getSigner()).address;
-  // await waitAndLogAccumulatedGasUsed(await exchange.setRelayer(owner, true));
-  // console.log("Exchange: setRelayer\n");
+  await waitAndLogAccumulatedGasUsed(
+    await exchange.setOrderKeeper(limitOrderKeeper, true)
+  );
+  console.log("Exchange: setOrderKeeper (limitOrderKeeper)\n");
+
+  await waitAndLogAccumulatedGasUsed(await exchange.setRelayer(relayer, true));
+  console.log("Exchange: setRelayer\n");
+
+  // deploy AttendanceBook contract
+
+  // const AttendanceBook = await ethers.getContractFactory("AttendanceBook");
+  // const attendanceBook = await AttendanceBook.deploy(
+  //   1707868800, // todo: fix
+  //   marginManager.target // todo: fix
+  // );
+  // await waitAndLogAccumulatedGasUsed(attendanceBook.deploymentTransaction());
+  // console.log("MarginManager deployed at:", attendanceBook.target, "\n");
 
   // await waitAndLogAccumulatedGasUsed(
-  //   await exchange.setOrderKeeper(owner, true)
+  //   await exchange.setRelayer(attendanceBook.target, true)
   // );
-  // console.log("Exchange: setOrderKeeper\n");
+  // console.log("Exchange: setRelayer (AttendanceBook)\n");
 }
 
 main().catch((error) => {

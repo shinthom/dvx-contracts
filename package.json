@@ -7,6 +7,8 @@
     "compile": "hardhat compile",
     "deploy-truffle": "hardhat run scripts/deploy.js --network truffle-dashboard",
     "deploy-testnet": "hardhat run scripts/deploy.js --network local",
+    "deploy-sbt-testnet": "hardhat run scripts/deploy-sbt.js --network local",
+    "deploy-sbt-truffle": "hardhat run scripts/deploy-sbt.js --network truffle-dashboard",
     "deploy": "hardhat run scripts/1_deploy-testnet.js --network local",
     "deposit": "hardhat run scripts/2_deposit-testnet.js --network local",
     "open-positions": "hardhat run scripts/3_open-positions-testnet.js --network local",

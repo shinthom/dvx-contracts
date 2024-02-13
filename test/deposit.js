@@ -32,7 +32,7 @@ describe("deposit", () => {
     await account
       .connect(relayer)
       .deposit(depositToken, depositAmount, networkFee, deadline, signature);
-    expect(await weth.balanceOf(feeCollector.target)).to.equal(networkFee);
+    expect(await weth.balanceOf(feeCollector.address)).to.equal(networkFee);
   });
 
   it("network fee", async () => {
@@ -62,7 +62,7 @@ describe("deposit", () => {
       .connect(relayer)
       .deposit(depositToken, depositAmount, networkFee, deadline, signature);
     expect(await weth.balanceOf(account.target)).to.equal(depositAmount - networkFee); // prettier-ignore
-    expect(await weth.balanceOf(feeCollector.target)).to.equal(networkFee);
+    expect(await weth.balanceOf(feeCollector.address)).to.equal(networkFee);
   });
 
   it("multicall - deposit", async () => {
