@@ -11,6 +11,7 @@
     "deploy-sbt-truffle": "hardhat run scripts/deploy-sbt.js --network truffle-dashboard",
     "deploy-ab-testnet": "hardhat run scripts/deploy-attendance-book.js --network local",
     "deploy-ab-truffle": "hardhat run scripts/deploy-attendance-book.js --network truffle-dashboard",
+    "add-whitelist-truffle": "hardhat run scripts/add-whitelist.js --network truffle-dashboard",
     "deploy": "hardhat run scripts/1_deploy-testnet.js --network local",
     "deposit": "hardhat run scripts/2_deposit-testnet.js --network local",
     "open-positions": "hardhat run scripts/3_open-positions-testnet.js --network local",
