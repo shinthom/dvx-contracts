@@ -29,7 +29,6 @@ interface IWarehouse {
         uint256 createdAt;
     }
 
-    event ExchangeSet(address indexed exchange);
     event OrderKeeperSet(address indexed orderKeeper, bool isActive);
     event PriceMinDeviationSet(uint256 indexed deviation);
 
@@ -57,8 +56,6 @@ interface IWarehouse {
         uint256 acceptablePrice,
         uint256 networkFee
     );
-
-    function setExchange(address exchange) external;
 
     function createLimitOrder(
         address account,

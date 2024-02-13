@@ -56,7 +56,9 @@ async function main() {
     "Warehouse",
     warehouseProxy.target
   );
-  await waitAndLogAccumulatedGasUsed(await warehouse.initialize());
+  await waitAndLogAccumulatedGasUsed(
+    await warehouse.initialize(exchange.target)
+  );
   console.log("Warehouse: initialize\n");
 
   const AccountTarget = await ethers.getContractFactory("Account");
@@ -207,11 +209,6 @@ async function main() {
     await exchange.addIndexTokens([WBTC, WETH])
   );
   console.log("Exchange: addIndexTokens\n");
-
-  await waitAndLogAccumulatedGasUsed(
-    await warehouse.setExchange(exchange.target)
-  );
-  console.log("Warehouse: setExchange\n");
 
   await waitAndLogAccumulatedGasUsed(
     await exchange.setOrderKeeper(triggerOrderKeeper, true)

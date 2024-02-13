@@ -183,7 +183,7 @@ const deploy = async (noAccount) => {
     "0x",
   ]);
   warehouse = await ethers.getContractAt("Warehouse", warehouseProxy.target);
-  await warehouse.initialize();
+  await warehouse.initialize(exchange.target);
 
   const accountTargetContract = await ethers.deployContract("Account", []);
 
@@ -232,7 +232,6 @@ const deploy = async (noAccount) => {
   await exchange.setDefaultStableToken(USDCe);
   await exchange.addCollateralTokens([WETH, WBTC, USDC, USDCe, USDT]);
   await exchange.addIndexTokens([WETH, WBTC]);
-  await warehouse.setExchange(exchange.target);
 
   await exchange.setOrderKeeper(orderKeeper.address, true);
   await exchange.setRelayer(relayer.address, true);

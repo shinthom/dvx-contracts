@@ -18,16 +18,15 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         _;
     }
 
-    function initialize() external virtual initializer {
+    function initialize(address _exchange) external virtual initializer {
+        require(
+            _exchange != address(0),
+            "exchange: zero address"
+        );
+        exchange = _exchange;
+
         __Ownable_init();
         __UUPSUpgradeable_init();
-    }
-
-    function setExchange(address _exchange) external override onlyOwner {
-        require(_exchange != address(0), "exchange: zero address");
-
-        exchange = _exchange;
-        emit ExchangeSet(_exchange);
     }
 
     function createLimitOrder(
