@@ -145,6 +145,7 @@ interface IAccount {
         uint256 networkFee
     ) external payable;
 
+    function beacon() external view returns (address);
     function version() external view returns (uint256);
 
     function owner() external view returns (address);

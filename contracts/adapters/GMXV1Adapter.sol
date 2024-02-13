@@ -951,8 +951,7 @@ contract GmxV1Adapter is IAdapter {
     ) private {
         if (isLong && (collateral != index)) {
             IERC20(collateral).approve(_exchange, collateralAmount);
-            (uint256 amountOut, ) = IExchange(_exchange).swap(
-                address(this),
+            uint256 amountOut = IExchange(_exchange).swap(
                 collateral,
                 index,
                 collateralAmount
@@ -968,8 +967,7 @@ contract GmxV1Adapter is IAdapter {
 
             IERC20(collateral).approve(_exchange, collateralAmount);
 
-            (uint256 amountOut, ) = IExchange(_exchange).swap(
-                address(this),
+            uint256 amountOut = IExchange(_exchange).swap(
                 collateral,
                 defaultStableToken,
                 collateralAmount

@@ -10,6 +10,8 @@ import {PayableMulticall} from "./PayableMulticall.sol";
 import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
 
 contract Storage {
+    bytes32 internal constant BEACON_SLOT =
+        bytes32(uint256(keccak256("dvx.beacon")) - 1);
     bytes32 internal constant ACCOUNT_VERSION_SLOT =
         bytes32(uint256(keccak256("dvx.account.version")) - 1);
 
@@ -40,18 +42,18 @@ contract Account is Storage, PayableMulticall, IAccount {
         _;
     }
 
-    modifier onlyOrderKeeper() {
-        require(
-            IExchange(_exchange).isOrderKeeper(msg.sender),
-            "msg.sender: not order keeper"
-        );
-        _;
-    }
-
     modifier onlyOwnerOrRelayer() {
         require(
             msg.sender == _owner || IExchange(_exchange).isRelayer(msg.sender),
             "msg.sender: not owner or relayer"
+        );
+        _;
+    }
+
+    modifier onlyOrderKeeper() {
+        require(
+            IExchange(_exchange).isOrderKeeper(msg.sender),
+            "msg.sender: not order keeper"
         );
         _;
     }
@@ -314,7 +316,7 @@ contract Account is Storage, PayableMulticall, IAccount {
             amountIn -= networkFee;
         }
 
-        (uint256 amountOut, uint256 swapFee) = _swap(
+        uint256 amountOut = _swap(
             tokenIn,
             tokenOut,
             amountIn,
@@ -327,16 +329,21 @@ contract Account is Storage, PayableMulticall, IAccount {
         address tokenOut,
         uint256 amountIn,
         uint256 networkFee
-    ) internal returns (uint256 amountOut, uint256 swapFee) {
+    ) internal returns (uint256 amountOut) {
+        uint256 swapFee = IExchange(_exchange).getSwapFee(amountIn);
+        if (swapFee > 0) {
+            require(amountIn >= swapFee, "amountIn: less than swapFee");
+            _collectProtocolFee(tokenIn, swapFee);
+            amountIn -= swapFee;
+        }
+
         IERC20(tokenIn).approve(_exchange, amountIn);
-        (amountOut, swapFee) = IExchange(_exchange).swap(
-            address(this),
+        amountOut = IExchange(_exchange).swap(
             tokenIn,
             tokenOut,
             amountIn
         );
 
-        amountIn -= swapFee; // log
         address logger = IExchange(_exchange).logger();
         if (logger != address(0)) {
             ILogger(logger).logSwap(
@@ -488,7 +495,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         }
 
         // stack too deep
-        (collateralAmount, ) = _swap(
+        collateralAmount = _swap(
             collateral,
             path[1],
             collateralAmount,
@@ -732,7 +739,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         uint256 collateralAmount = amountIn;
         bool swap = tokenIn != collateral;
         if (swap) {
-            (collateralAmount, ) = _swap(
+            collateralAmount = _swap(
                 tokenIn,
                 collateral,
                 amountIn,
@@ -913,10 +920,6 @@ contract Account is Storage, PayableMulticall, IAccount {
         );
 
         require(
-            executionFee <= collateralAmount,
-            "executionFee: greater than collateralAmount"
-        );
-        require(
             collateralAmount <= getWithdrawableBalance(collateral),
             "collateralAmount: greater than withdrawable balance"
         );
@@ -929,6 +932,10 @@ contract Account is Storage, PayableMulticall, IAccount {
             _collectNetworkFee(collateral, networkFee);
             collateralAmount -= networkFee;
         }
+        require(
+            executionFee <= collateralAmount,
+            "executionFee: greater than collateralAmount"
+        );
 
         _lockedBalances[collateral] += collateralAmount;
 
@@ -964,7 +971,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         }
 
         IWarehouse.LimitOrder memory limitOrder
-            = IExchange(_exchange).cancelLimitOrder(address(this), limitOrderId); // prettier-ignore
+            = IExchange(_exchange).cancelLimitOrder(limitOrderId); // prettier-ignore
 
         _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
 
@@ -978,7 +985,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         address adapter
     ) public payable virtual override onlyOrderKeeper {
         IWarehouse.LimitOrder memory limitOrder
-            = IExchange(_exchange).executeLimitOrder(address(this), adapter, limitOrderId); // prettier-ignore
+            = IExchange(_exchange).executeLimitOrder(adapter, limitOrderId); // prettier-ignore
 
         _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
 
@@ -1001,7 +1008,7 @@ contract Account is Storage, PayableMulticall, IAccount {
             limitOrder.size,
             limitOrder.isLong,
             limitOrder.acceptablePrice,
-            limitOrder.executionFee
+            limitOrder.executionFee // will be logged in `networkFee`
         );
     }
 
@@ -1017,7 +1024,6 @@ contract Account is Storage, PayableMulticall, IAccount {
         uint256 networkFee
     ) public payable virtual override onlyOrderKeeper {
         IExchange(_exchange).executeTriggerOrder(
-            address(this),
             adapter,
             collateral,
             index,
@@ -1042,6 +1048,10 @@ contract Account is Storage, PayableMulticall, IAccount {
             acceptablePrice,
             networkFee
         );
+    }
+
+    function beacon() public view virtual override returns (address) {
+        return StorageSlot.getAddressSlot(BEACON_SLOT).value;
     }
 
     function version() public view virtual override returns (uint256) {
@@ -1095,25 +1105,29 @@ contract Account is Storage, PayableMulticall, IAccount {
     }
 
     function _collectFeeDebt(address token, uint256 amount) internal {
+        require(
+            amount <= _feeDebts[token],
+            "amount: greater than fee debt"
+        );
         _feeDebts[token] -= amount;
 
-        IERC20(token).transfer(_exchange, amount);
-        IExchange(_exchange).collectFeeDebt(address(this), token, amount);
+        IERC20(token).approve(_exchange, amount);
+        IExchange(_exchange).collectFeeDebt(token, amount);
     }
 
     function _collectNetworkFee(address token, uint256 amount) internal {
-        IERC20(token).transfer(_exchange, amount);
-        IExchange(_exchange).collectNetworkFee(address(this), token, amount);
+        IERC20(token).approve(_exchange, amount);
+        IExchange(_exchange).collectNetworkFee(token, amount);
     }
 
     function _collectExecutionFee(address token, uint256 amount) internal {
-        IERC20(token).transfer(_exchange, amount);
-        IExchange(_exchange).collectExecutionFee(address(this), token, amount);
+        IERC20(token).approve(_exchange, amount);
+        IExchange(_exchange).collectExecutionFee(token, amount);
     }
 
     function _collectProtocolFee(address token, uint256 amount) internal {
-        IERC20(token).transfer(_exchange, amount);
-        IExchange(_exchange).collectProtocolFee(address(this), token, amount);
+        IERC20(token).approve(_exchange, amount);
+        IExchange(_exchange).collectProtocolFee(token, amount);
     }
 
     function _verifySignature(

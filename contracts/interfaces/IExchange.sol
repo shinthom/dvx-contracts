@@ -120,11 +120,10 @@ interface IExchange {
     ) external returns (address account);
 
     function swap(
-        address account,
         address tokenIn,
         address tokenOut,
         uint256 amountIn
-    ) external returns (uint256, uint256);
+    ) external returns (uint256 amountOut);
 
     function createLimitOrder(
         address collateral,
@@ -137,21 +136,17 @@ interface IExchange {
         uint256 executionFee
     ) external;
     function cancelLimitOrder(
-        address account,
         uint256 limitOrderId
     ) external returns (IWarehouse.LimitOrder memory limitOrder);
     function executeLimitOrder(
-        address account,
         address adapter,
         uint256 limitOrderId
     ) external payable returns (IWarehouse.LimitOrder memory limitOrder);
     function executeLimitOrderMulti(
-        address account,
         address[] calldata adapters,
         uint256 limitOrderId
     ) external payable returns (IWarehouse.LimitOrder memory limitOrder);
     function executeTriggerOrder(
-        address account,
         address adapter,
         address collateral,
         address index,
@@ -164,22 +159,18 @@ interface IExchange {
     ) external;
 
     function collectFeeDebt(
-        address account,
         address token,
         uint256 amount
     ) external;
     function collectNetworkFee(
-        address account,
         address token,
         uint256 amount
     ) external;
     function collectExecutionFee(
-        address account,
         address token,
         uint256 amount
     ) external;
     function collectProtocolFee(
-        address account,
         address token,
         uint256 amount
     ) external;

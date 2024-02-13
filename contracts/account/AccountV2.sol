@@ -26,7 +26,7 @@ contract AccountV2 is StorageV2, Account {
             );
 
             if (collateral != tokens[i]) {
-                (uint256 amountOut, ) = _swap(
+                uint256 amountOut = _swap(
                     tokens[i],
                     collateral,
                     amounts[i],

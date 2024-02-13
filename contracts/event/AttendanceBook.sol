@@ -26,6 +26,16 @@ contract AttendanceBook is Ownable {
         activated = true;
     }
 
+    function canCheckIn(address account) public view returns (bool) {
+        if (!activated) {
+            return false;
+        }
+        if (block.timestamp < startTime) {
+            return false;
+        }
+        return true;
+    }
+
     function getDay() public view returns (uint256) {
         if (block.timestamp < startTime) {
             return 0;

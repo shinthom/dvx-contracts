@@ -49,7 +49,10 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     receive() external payable {}
 
     modifier onlyAccount(address account) {
-        require(msg.sender == account, "msg.sender: not account");
+        require(
+            IAccount(account).beacon() == address(this),
+            "invalid account"
+        );
         _;
     }
 
@@ -88,8 +91,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         emit WarehouseSet(_warehouse);
     }
 
-    // todo: make external function
-    function setSwapper(address _swapper) public virtual override onlyOwner {
+    function setSwapper(address _swapper) external virtual override onlyOwner {
         require(_swapper != address(0), "warehouse: zero address");
 
         swapper = _swapper;
@@ -98,7 +100,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
     function setMarginManager(
         address _marginManager
-    ) public virtual override onlyOwner {
+    ) external virtual override onlyOwner {
         require(_marginManager != address(0), "manager: zero address");
 
         marginManager = _marginManager;
@@ -306,25 +308,17 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function swap(
-        address account,
         address tokenIn,
         address tokenOut,
         uint256 amountIn
-    ) public virtual override onlyAccount(account) returns (uint256, uint256) {
+    ) public virtual override onlyAccount(msg.sender) returns (uint256) {
         IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
-
-        uint256 swapFee = getSwapFee(amountIn);
-        if (swapFee > 0) {
-            require(amountIn >= swapFee, "amountIn: less than swapFee");
-            collectProtocolFee(msg.sender, tokenIn, swapFee);
-            amountIn -= swapFee;
-        }
 
         IERC20(tokenIn).approve(swapper, amountIn);
         uint256 amountOut = ISwapper(swapper).swap(tokenIn, tokenOut, amountIn);
 
         IERC20(tokenOut).transfer(msg.sender, amountOut);
-        return (amountOut, swapFee);
+        return amountOut;
     }
 
     function createLimitOrder(
@@ -336,7 +330,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         uint256 triggerPrice,
         uint256 acceptablePrice,
         uint256 executionFee
-    ) external override {
+    ) external override onlyAccount(msg.sender) {
         IWarehouse(warehouse).createLimitOrder(
             msg.sender,
             collateral,
@@ -351,57 +345,53 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function cancelLimitOrder(
-        address account,
         uint256 limitOrderId
     )
         external
         override
-        onlyAccount(account)
+        onlyAccount(msg.sender)
         returns (IWarehouse.LimitOrder memory)
     {
-        return IWarehouse(warehouse).cancelLimitOrder(account, limitOrderId);
+        return IWarehouse(warehouse).cancelLimitOrder(msg.sender, limitOrderId);
     }
 
     function executeLimitOrder(
-        address account,
         address adapter,
         uint256 limitOrderId
     )
         external
         payable
         override
-        onlyAccount(account)
+        onlyAccount(msg.sender)
         returns (IWarehouse.LimitOrder memory)
     {
         return
             IWarehouse(warehouse).executeLimitOrder(
-                account,
+                msg.sender,
                 adapter,
                 limitOrderId
             );
     }
 
     function executeLimitOrderMulti(
-        address account,
         address[] calldata adapters,
         uint256 limitOrderId
     )
         external
         payable
         override
-        onlyAccount(account)
+        onlyAccount(msg.sender)
         returns (IWarehouse.LimitOrder memory)
     {
         return
             IWarehouse(warehouse).executeLimitOrderMulti(
-                account,
+                msg.sender,
                 adapters,
                 limitOrderId
             );
     }
 
     function executeTriggerOrder(
-        address account,
         address adapter,
         address collateral,
         address index,
@@ -411,9 +401,9 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         uint256 triggerPrice,
         uint256 acceptablePrice,
         uint256 networkFee
-    ) external override onlyAccount(account) {
+    ) external override onlyAccount(msg.sender) {
         IWarehouse(warehouse).executeTriggerOrder(
-            account,
+            msg.sender,
             adapter,
             collateral,
             index,
@@ -427,39 +417,35 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function collectFeeDebt(
-        address account,
         address token,
         uint256 amount
-    ) external override {
-        IERC20(token).transfer(feeCollector, amount);
-        emit FeeDebtCollected(account, token, amount);
+    ) external override onlyAccount(msg.sender) {
+        IERC20(token).transferFrom(msg.sender, feeCollector, amount);
+        emit FeeDebtCollected(msg.sender, token, amount);
     }
 
     function collectNetworkFee(
-        address account,
         address token,
         uint256 amount
-    ) external override {
-        IERC20(token).transfer(feeCollector, amount);
-        emit NetworkFeeCollected(account, token, amount);
+    ) external override onlyAccount(msg.sender) {
+        IERC20(token).transferFrom(msg.sender, feeCollector, amount);
+        emit NetworkFeeCollected(msg.sender, token, amount);
     }
 
     function collectExecutionFee(
-        address account,
         address token,
         uint256 amount
-    ) external override {
-        IERC20(token).transfer(feeCollector, amount);
-        emit ExecutionFeeCollected(account, token, amount);
+    ) external override onlyAccount(msg.sender) {
+        IERC20(token).transferFrom(msg.sender, feeCollector, amount);
+        emit ExecutionFeeCollected(msg.sender, token, amount);
     }
 
     function collectProtocolFee(
-        address account,
         address token,
         uint256 amount
-    ) public override {
-        IERC20(token).transfer(feeCollector, amount);
-        emit ProtocolFeeCollected(account, token, amount);
+    ) public override onlyAccount(msg.sender) {
+        IERC20(token).transferFrom(msg.sender, feeCollector, amount);
+        emit ProtocolFeeCollected(msg.sender, token, amount);
     }
 
     function validateAddAcmmMargin(
