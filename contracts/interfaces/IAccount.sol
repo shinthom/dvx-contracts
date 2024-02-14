@@ -17,6 +17,9 @@ interface IAccount {
         uint256 _delegatedAccountExpiration
     ) external;
 
+    function depositETH(
+        uint256 amount
+    ) external payable;
     function deposit(
         address token,
         uint256 amount,

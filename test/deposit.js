@@ -6,6 +6,19 @@ const { deploy } = require("./fixture");
 const deadline = Math.ceil(Date.now() / 1000) + 60 * 60 * 3;
 
 describe("deposit", () => {
+  it("depositETH", async () => {
+    const { owner, account, WETH } = await loadFixture(deploy);
+    const wethBalance = await ethers.provider.getBalance(WETH);
+
+    var depositAmount = ethers.parseEther("1");
+    await account
+      .connect(owner)
+      .depositETH(depositAmount, { value: depositAmount });
+    expect(await ethers.provider.getBalance(WETH)).to.equal(
+      wethBalance + depositAmount
+    );
+  });
+
   it("no fee", async () => {
     const { owner, va, relayer, account, feeCollector, WETH, weth, faucet } =
       await loadFixture(deploy);

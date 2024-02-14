@@ -121,6 +121,25 @@ contract Account is Storage, PayableMulticall, IAccount {
         }
     }
 
+    function depositETH(
+        uint256 amount
+    ) public payable virtual override {
+        require(amount > 0, "amount: zero");
+        require(amount == msg.value, "amount: not equal to msg.value");
+
+        IERC20(_weth).deposit{value: msg.value}();
+
+        address logger = IExchange(_exchange).logger();
+        if (logger != address(0)) {
+            ILogger(logger).logDeposit(
+                address(this),
+                address(0),
+                amount,
+                0
+            );
+        }
+    }
+
     function deposit(
         address token,
         uint256 amount,
