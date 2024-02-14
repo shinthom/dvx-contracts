@@ -237,4 +237,90 @@ describe("increaseCollateral", () => {
       await checkWrapPosition(gmxV1Adapter, account, collateral, index, isLong);
     });
   });
+
+  describe("relay", () => {
+    it("increaseCollateral", async () => {
+      const {
+        owner,
+        va,
+        relayer,
+        account,
+        WETH,
+        weth,
+        gmxV1Adapter,
+        increasePosition,
+        USDC,
+        setDummyPrice,
+        checkWrapPosition,
+        deposit,
+      } = await loadFixture(deploy);
+
+      var collateral = WETH;
+      var index = WETH;
+      var collateralAmount = ethers.parseEther("1");
+      var size = ethers.parseEther("10");
+      var isLong = true;
+
+      await setDummyPrice();
+      var acceptablePrice = ethers.parseUnits("2000", 18);
+
+      await deposit(collateral, collateralAmount);
+      await increasePosition(
+        gmxV1Adapter,
+        collateral,
+        index,
+        collateralAmount,
+        size,
+        acceptablePrice,
+        isLong
+      );
+      await checkWrapPosition(gmxV1Adapter, account, collateral, index, isLong);
+
+      var tokenIn = USDC;
+      var amountIn = ethers.parseUnits("2000", 6);
+      await deposit(tokenIn, amountIn);
+
+      var networkFee = ethers.parseUnits("200", 6);
+      var deadline = Math.ceil(Date.now() / 1000) + 60 * 60 * 3;
+
+      var messageHash = ethers.solidityPackedKeccak256(
+        [
+          "address", // adapter
+          "address", // collateral
+          "address", // index
+          "bool", // isLong
+          "address", // tokenIn
+          "uint256", // amountIn
+          "uint256", // networkFee
+          "uint256", // deadline
+        ],
+        [
+          gmxV1Adapter.target,
+          collateral,
+          index,
+          isLong,
+          tokenIn,
+          amountIn,
+          networkFee,
+          deadline,
+        ]
+      );
+      var signature = await va.signMessage(ethers.getBytes(messageHash));
+
+      await account
+        .connect(relayer)
+        .increaseCollateral(
+          gmxV1Adapter.target,
+          collateral,
+          index,
+          isLong,
+          tokenIn,
+          amountIn,
+          networkFee,
+          deadline,
+          signature,
+          { value: await gmxV1Adapter.getMinExecutionFee() }
+        );
+    });
+  });
 });
