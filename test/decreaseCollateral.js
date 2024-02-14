@@ -150,26 +150,26 @@ describe("decreaseCollateral", () => {
       var networkFee = 0;
       var deadline = Math.ceil(Date.now() / 1000) + 60 * 60 * 3;
 
-      var messageHash = ethers.solidityPackedKeccak256(
-        [
-          "address", // adapter
-          "address", // collateral
-          "address", // index
-          "bool", // isLong
-          "uint256", // collateralAmount
-          "uint256", // networkFee
-          "uint256", // deadline
-        ],
-        [
-          gmxV1Adapter.target,
-          collateral,
-          index,
-          isLong,
-          collateralAmount / 2n,
-          networkFee,
-          deadline,
-        ]
-      );
+var messageHash = ethers.solidityPackedKeccak256(
+  [
+    "address", // adapter
+    "address", // collateral
+    "address", // index
+    "bool", // isLong
+    "uint256", // collateralAmount
+    "uint256", // networkFee
+    "uint256", // deadline
+  ],
+  [
+    gmxV1Adapter.target,
+    collateral,
+    index,
+    isLong,
+    collateralAmount / 2n,
+    networkFee,
+    deadline,
+  ]
+);
       var signature = await va.signMessage(ethers.getBytes(messageHash));
 
       await account

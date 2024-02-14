@@ -308,4 +308,96 @@ describe("createLimitOrder, executeLimitOrder", () => {
     // console.log(await account.getFeeDebt(collateral));
     console.log(await weth.balanceOf(feeCollector.address));
   });
+
+  describe("relay", () => {
+    const deadline = Math.ceil(Date.now() / 1000) + 60 * 60 * 3;
+
+    it("createLimitOrder", async () => {
+      const {
+        va,
+        relayer,
+        account,
+        WETH,
+        weth,
+        feeCollector,
+        setDummyPrice,
+        deposit,
+      } = await loadFixture(deploy);
+
+      var collateral = WETH;
+      var index = WETH;
+      var collateralAmount = ethers.parseEther("1");
+      var size = ethers.parseEther("10");
+      var isLong = true;
+
+      await setDummyPrice();
+      var acceptablePrice = ethers.parseUnits("2000", 18);
+      var triggerPrice = ethers.parseUnits("2000", 18);
+      var networkFee = 0;
+      var executionFee = 0;
+
+      var messageHash = ethers.solidityPackedKeccak256(
+        [
+          "address", // collateral
+          "address", // index
+          "uint256", // collateralAmount
+          "uint256", // size
+          "bool", // isLong
+          "uint256", // triggerPrice
+          "uint256", // acceptablePrice
+          "uint256", // networkFee
+          "uint256", // executionFee
+          "uint256", // deadline
+        ],
+        [
+          collateral,
+          index,
+          collateralAmount,
+          size,
+          isLong,
+          triggerPrice,
+          acceptablePrice,
+          networkFee,
+          executionFee,
+          deadline,
+        ]
+      );
+      var signature = await va.signMessage(ethers.getBytes(messageHash));
+
+      await deposit(collateral, collateralAmount);
+      await account
+        .connect(relayer)
+        .createLimitOrder(
+          collateral,
+          index,
+          collateralAmount,
+          size,
+          isLong,
+          triggerPrice,
+          acceptablePrice,
+          networkFee,
+          executionFee,
+          deadline,
+          signature
+        );
+      console.log(await account.getLockedBalance(collateral));
+
+      var messageHash = ethers.solidityPackedKeccak256(
+        [
+          "uint256", // limitOrderId
+          "uint256", // networkFee
+          "uint256", // deadline
+        ],
+        [0, networkFee, deadline]
+      );
+      var signature = await va.signMessage(ethers.getBytes(messageHash));
+
+      await account
+        .connect(relayer)
+        .cancelLimitOrder(0, networkFee, deadline, signature);
+      console.log(await account.getLockedBalance(collateral));
+      console.log(await account.getFeeDebt(collateral));
+      console.log(await weth.balanceOf(feeCollector.address));
+    });
+  });
 });
