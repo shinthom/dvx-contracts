@@ -121,9 +121,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         }
     }
 
-    function depositETH(
-        uint256 amount
-    ) public payable virtual override {
+    function depositETH(uint256 amount) public payable virtual override {
         require(amount > 0, "amount: zero");
         require(amount == msg.value, "amount: not equal to msg.value");
 
@@ -131,12 +129,7 @@ contract Account is Storage, PayableMulticall, IAccount {
 
         address logger = IExchange(_exchange).logger();
         if (logger != address(0)) {
-            ILogger(logger).logDeposit(
-                address(this),
-                _weth,
-                amount,
-                0
-            );
+            ILogger(logger).logDeposit(address(this), _weth, amount, 0);
         }
     }
 
@@ -282,7 +275,6 @@ contract Account is Storage, PayableMulticall, IAccount {
             _collectFeeDebt(token, feeDebt);
             amount -= feeDebt;
         }
-
         if (token == _weth) {
             IERC20(token).approve(_weth, amount);
             IERC20(_weth).withdraw(amount);
@@ -341,12 +333,7 @@ contract Account is Storage, PayableMulticall, IAccount {
             amountIn -= networkFee;
         }
 
-        uint256 amountOut = _swap(
-            tokenIn,
-            tokenOut,
-            amountIn,
-            networkFee
-        );
+        uint256 amountOut = _swap(tokenIn, tokenOut, amountIn, networkFee);
     }
 
     function _swap(
@@ -363,11 +350,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         }
 
         IERC20(tokenIn).approve(_exchange, amountIn);
-        amountOut = IExchange(_exchange).swap(
-            tokenIn,
-            tokenOut,
-            amountIn
-        );
+        amountOut = IExchange(_exchange).swap(tokenIn, tokenOut, amountIn);
 
         address logger = IExchange(_exchange).logger();
         if (logger != address(0)) {
@@ -764,12 +747,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         uint256 collateralAmount = amountIn;
         bool swap = tokenIn != collateral;
         if (swap) {
-            collateralAmount = _swap(
-                tokenIn,
-                collateral,
-                amountIn,
-                networkFee
-            );
+            collateralAmount = _swap(tokenIn, collateral, amountIn, networkFee);
 
             feeDebt = _feeDebts[collateral];
             if (feeDebt > 0) {
@@ -1130,10 +1108,7 @@ contract Account is Storage, PayableMulticall, IAccount {
     }
 
     function _collectFeeDebt(address token, uint256 amount) internal {
-        require(
-            amount <= _feeDebts[token],
-            "amount: greater than fee debt"
-        );
+        require(amount <= _feeDebts[token], "amount: greater than fee debt");
         _feeDebts[token] -= amount;
 
         IERC20(token).approve(_exchange, amount);

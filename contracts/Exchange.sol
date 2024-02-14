@@ -49,10 +49,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     receive() external payable {}
 
     modifier onlyAccount(address account) {
-        require(
-            IAccount(account).beacon() == address(this),
-            "invalid account"
-        );
+        require(IAccount(account).beacon() == address(this), "invalid account");
         _;
     }
 
@@ -302,7 +299,11 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address token,
         uint256 amount
     ) external payable override returns (address account) {
-        account = createAccount(accountOwner, delegatedAccount, delegatedAccountExpiration);
+        account = createAccount(
+            accountOwner,
+            delegatedAccount,
+            delegatedAccountExpiration
+        );
 
         IAccount(account).depositETH{value: amount}(amount);
     }
@@ -314,7 +315,11 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address token,
         uint256 amount
     ) external override returns (address account) {
-        account = createAccount(accountOwner, delegatedAccount, delegatedAccountExpiration);
+        account = createAccount(
+            accountOwner,
+            delegatedAccount,
+            delegatedAccountExpiration
+        );
 
         IERC20(token).transferFrom(msg.sender, address(this), amount);
         IERC20(token).approve(account, amount);

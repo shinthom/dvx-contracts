@@ -98,10 +98,7 @@ contract SBT is ERC1155, Ownable {
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
 
         for (uint256 i = 0; i < ids.length; ++i) {
-            require(
-                from == address(0) || to == address(0),
-                "non-transferable"
-            );
+            require(from == address(0) || to == address(0), "non-transferable");
         }
     }
 }

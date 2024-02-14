@@ -16,6 +16,8 @@ contract AttendanceBook is Ownable {
 
     event CheckedIn(address indexed account, uint256 indexed day);
 
+    receive() external payable {}
+
     constructor(uint256 _startTime, address _relayer) {
         require(_startTime > block.timestamp, "invalid start time");
         require(_relayer != address(0), "invalid relayer");
@@ -136,6 +138,13 @@ contract AttendanceBook is Ownable {
         uint256 amount
     ) external onlyOwner {
         IERC20(token).transfer(receiver, amount);
+    }
+
+    function withdrawETH(
+        address payable receiver,
+        uint256 amount
+    ) external onlyOwner {
+        receiver.transfer(amount);
     }
 
     function _verifySignature(

@@ -22,7 +22,7 @@ contract AccountFactory is
         _;
     }
 
-    function version() external override view returns (uint256) {
+    function version() external view override returns (uint256) {
         return _version;
     }
 

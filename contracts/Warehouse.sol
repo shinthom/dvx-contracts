@@ -19,10 +19,7 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function initialize(address _exchange) external virtual initializer {
-        require(
-            _exchange != address(0),
-            "exchange: zero address"
-        );
+        require(_exchange != address(0), "exchange: zero address");
         exchange = _exchange;
 
         __Ownable_init();
