@@ -283,24 +283,38 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function createAccount(
+        address accountOwner,
         address delegatedAccount,
         uint256 delegatedAccountExpiration
     ) public override returns (address) {
         return
             IAccountFactory(accountFactory).createAccount(
-                msg.sender,
+                accountOwner,
                 delegatedAccount,
                 delegatedAccountExpiration
             );
     }
 
+    function createAccountAndDepositETH(
+        address accountOwner,
+        address delegatedAccount,
+        uint256 delegatedAccountExpiration,
+        address token,
+        uint256 amount
+    ) external payable override returns (address account) {
+        account = createAccount(accountOwner, delegatedAccount, delegatedAccountExpiration);
+
+        IAccount(account).depositETH{value: amount}(amount);
+    }
+
     function createAccountAndDeposit(
+        address accountOwner,
         address delegatedAccount,
         uint256 delegatedAccountExpiration,
         address token,
         uint256 amount
     ) external override returns (address account) {
-        account = createAccount(delegatedAccount, delegatedAccountExpiration);
+        account = createAccount(accountOwner, delegatedAccount, delegatedAccountExpiration);
 
         IERC20(token).transferFrom(msg.sender, address(this), amount);
         IERC20(token).approve(account, amount);

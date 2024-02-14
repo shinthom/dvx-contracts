@@ -12,6 +12,7 @@
     "deploy-ab-testnet": "hardhat run scripts/deploy-attendance-book.js --network local",
     "deploy-ab-truffle": "hardhat run scripts/deploy-attendance-book.js --network truffle-dashboard",
     "add-whitelist-truffle": "hardhat run scripts/add-whitelist.js --network truffle-dashboard",
+    "renew-delegated-account-truffle": "hardhat run scripts/renew-delegated-account.js --network local",
     "deploy": "hardhat run scripts/1_deploy-testnet.js --network local",
     "deposit": "hardhat run scripts/2_deposit-testnet.js --network local",
     "open-positions": "hardhat run scripts/3_open-positions-testnet.js --network local",

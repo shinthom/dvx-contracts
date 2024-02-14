@@ -6,6 +6,22 @@ const { deploy } = require("./fixture");
 describe("withdraw", () => {
   const deadline = Math.ceil(Date.now() / 1000) + 60 * 60 * 3;
 
+  it("withdraw", async () => {
+    const { owner, account, WETH } = await loadFixture(deploy);
+    const wethBalance = await ethers.provider.getBalance(WETH);
+
+    const amount = ethers.parseEther("1");
+    await account.connect(owner).depositETH(amount, { value: amount });
+    expect(await ethers.provider.getBalance(WETH)).to.equal(
+      wethBalance + amount
+    );
+
+    const vaPk = ethers.Wallet.createRandom().privateKey;
+    const va = new ethers.Wallet(vaPk);
+    await account.connect(owner).withdraw(WETH, va.address, amount, 0, 0, "0x");
+    expect(await ethers.provider.getBalance(va.address)).to.equal(amount);
+  });
+
   it("no fee", async () => {
     const { owner, va, relayer, account, feeCollector, WETH, weth, deposit } =
       await loadFixture(deploy);

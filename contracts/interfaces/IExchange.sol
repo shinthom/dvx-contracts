@@ -109,10 +109,19 @@ interface IExchange {
     function setReferralTier(address account, uint8 tierId) external;
 
     function createAccount(
+        address accountOwner,
         address delegatedAccount,
         uint256 delegatedAccountExpiration
     ) external returns (address account);
+    function createAccountAndDepositETH(
+        address accountOwner,
+        address delegatedAccount,
+        uint256 delegatedAccountExpiration,
+        address token,
+        uint256 amount
+    ) external payable returns (address account);
     function createAccountAndDeposit(
+        address accountOwner,
         address delegatedAccount,
         uint256 delegatedAccountExpiration,
         address token,

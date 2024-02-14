@@ -245,7 +245,9 @@ const deploy = async (noAccount) => {
   await exchange.setRelayer(attendanceBook.target, true);
 
   if (!noAccount) {
-    await exchange.connect(owner).createAccount(va.address, ethers.MaxUint256);
+    await exchange
+      .connect(owner)
+      .createAccount(owner.address, va.address, ethers.MaxUint256);
     account = await ethers.getContractAt(
       "Account",
       await exchange.getAccount(owner.address)

@@ -133,7 +133,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         if (logger != address(0)) {
             ILogger(logger).logDeposit(
                 address(this),
-                address(0),
+                _weth,
                 amount,
                 0
             );
@@ -283,7 +283,13 @@ contract Account is Storage, PayableMulticall, IAccount {
             amount -= feeDebt;
         }
 
-        IERC20(token).transfer(to, amount);
+        if (token == _weth) {
+            IERC20(token).approve(_weth, amount);
+            IERC20(_weth).withdraw(amount);
+            payable(to).transfer(amount);
+        } else {
+            IERC20(token).transfer(to, amount);
+        }
 
         address logger = IExchange(_exchange).logger();
         if (logger != address(0)) {
