@@ -47,7 +47,7 @@ describe("increasePosition", () => {
     await checkPosition(gmxV1Adapter, account, collateral, index, isLong);
   });
 
-  it("execution fee", async () => {
+  it("network fee", async () => {
     const {
       owner,
       account,
@@ -90,7 +90,7 @@ describe("increasePosition", () => {
     await checkPosition(gmxV1Adapter, account, collateral, index, isLong);
   });
 
-  it("execution fee + position fee", async () => {
+  it("network fee + position fee", async () => {
     const {
       owner,
       account,
@@ -136,7 +136,7 @@ describe("increasePosition", () => {
     await checkPosition(gmxV1Adapter, account, collateral, index, isLong);
   });
 
-  it("execution fee + position fee + swap fee", async () => {
+  it("network fee + position fee + swap fee", async () => {
     const {
       owner,
       account,
@@ -211,7 +211,7 @@ describe("increasePosition", () => {
 
       await setDummyPrice();
       var acceptablePrice = ethers.parseUnits("2000", 18);
-      var networkFee = 0;
+      var networkFee = 1;
 
       await deposit(collateral, collateralAmount);
 

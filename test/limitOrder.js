@@ -333,8 +333,8 @@ describe("createLimitOrder, executeLimitOrder", () => {
       await setDummyPrice();
       var acceptablePrice = ethers.parseUnits("2000", 18);
       var triggerPrice = ethers.parseUnits("2000", 18);
-      var networkFee = 0;
-      var executionFee = 0;
+      var networkFee = 1;
+      var executionFee = 1;
 
       var messageHash = ethers.solidityPackedKeccak256(
         [

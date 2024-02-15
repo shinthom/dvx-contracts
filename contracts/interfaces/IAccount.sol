@@ -145,7 +145,9 @@ interface IAccount {
         IWarehouse.TriggerOrderType orderType,
         uint256 triggerPrice,
         uint256 acceptablePrice,
-        uint256 networkFee
+        uint256 networkFee,
+        uint256 deadline,
+        bytes calldata signature
     ) external payable;
 
     function beacon() external view returns (address);

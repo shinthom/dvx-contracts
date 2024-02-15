@@ -22,7 +22,7 @@ describe("swap", () => {
     expect(await weth.balanceOf(account.target)).to.equal(expectedAmountOut);
   });
 
-  it("execution fee", async () => {
+  it("network fee", async () => {
     const {
       owner,
       account,
@@ -54,7 +54,7 @@ describe("swap", () => {
     expect(await usdc.balanceOf(feeCollector.address)).to.equal(networkFee);
   });
 
-  it("execution fee + swap fee", async () => {
+  it("network fee + swap fee", async () => {
     const {
       owner,
       account,
@@ -93,5 +93,57 @@ describe("swap", () => {
     expect(await usdc.balanceOf(feeCollector.address)).to.equal(
       networkFee + swapFee
     );
+  });
+
+  describe("relay", () => {
+    it("swap", async () => {
+      const {
+        va,
+        owner,
+        account,
+        USDC,
+        WETH,
+        usdc,
+        weth,
+        relayer,
+        quoter,
+        feeCollector,
+        deposit,
+      } = await loadFixture(deploy);
+
+      var tokenIn = USDC;
+      var tokenOut = WETH;
+      var amountIn = ethers.parseUnits("2000", 6);
+
+      var networkFee = ethers.parseUnits("200", 6);
+      var deadline = Math.ceil(Date.now() / 1000) + 60 * 60 * 3;
+
+      var expectedAmountOut = await quoter.quoteExactInputSingle.staticCall(
+        tokenIn,
+        tokenOut,
+        amountIn - networkFee
+      );
+      await deposit(tokenIn, amountIn);
+
+      var messageHash = ethers.solidityPackedKeccak256(
+        [
+          "address", // tokenIn
+          "address", // tokenOut
+          "uint256", // amountIn
+          "uint256", // networkFee
+          "uint256", // deadline
+        ],
+        [tokenIn, tokenOut, amountIn, networkFee, deadline]
+      );
+      var signature = await va.signMessage(ethers.getBytes(messageHash));
+
+      const tx = await account
+        .connect(relayer)
+        .swap(tokenIn, tokenOut, amountIn, networkFee, deadline, signature);
+      console.log("tx data:", tx.data);
+      console.log("gas used:", (await tx.wait()).gasUsed);
+      // expect(await weth.balanceOf(account.target)).to.equal(expectedAmountOut);
+      // expect(await usdc.balanceOf(feeCollector.address)).to.equal(networkFee);
+    });
   });
 });
