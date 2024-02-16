@@ -233,7 +233,7 @@ contract Quoter {
         address adapter,
         Request memory request
     ) public view returns (uint256) {
-        int256 liquidationPrice = IAdapter(adapter).estimateLiquidationPrice(
+        uint256 liquidationPrice = IAdapter(adapter).estimateLiquidationPrice(
             account,
             request.collateral,
             request.index,
@@ -241,6 +241,6 @@ contract Quoter {
             request.size,
             request.isLong
         );
-        return uint256(liquidationPrice);
+        return liquidationPrice;
     }
 }

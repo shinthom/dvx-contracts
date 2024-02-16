@@ -785,7 +785,7 @@ contract GmxV1Adapter is IAdapter {
         address collateral,
         address index,
         bool isLong
-    ) external view override returns (int256) {
+    ) external view override returns (uint256) {
         IAdapter.Position memory position = getPosition(
             account,
             collateral,
@@ -827,8 +827,7 @@ contract GmxV1Adapter is IAdapter {
                 : liquidationPriceForMaxLevearge;
         }
 
-        // 1e30 -> 1e18
-        return int256(p / 1e12);
+        return p / 1e12;
     }
 
     function estimateLiquidationPrice(
@@ -838,7 +837,7 @@ contract GmxV1Adapter is IAdapter {
         uint256 collateralAmount,
         uint256 size,
         bool isLong
-    ) external view override returns (int256) {
+    ) external view override returns (uint256) {
         uint256 fundingFee = getFundingFee(account, collateral, index, isLong);
 
         uint256 collateralPrice = getPrice(collateral, isLong);
@@ -885,8 +884,7 @@ contract GmxV1Adapter is IAdapter {
                 : liquidationPriceForMaxLevearge;
         }
 
-        // 1e30 -> 1e18
-        return int256(p / 1e12);
+        return p / 1e12;
     }
 
     function _calculateTotalFees(

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.7;
 
+import {IAccount} from "../interfaces/IAccount.sol";
 import {IAdapter} from "../interfaces/IAdapter.sol";
 
 contract Reader {
@@ -14,6 +15,60 @@ contract Reader {
     struct TokenAmountInUseAsCollateral {
         address token;
         uint256 totalAmount;
+    }
+
+    function getAccountOwner(address account) external view returns (address) {
+        return IAccount(account).owner();
+    }
+
+    function getAccountBeacon(address account) external view returns (address) {
+        return IAccount(account).beacon();
+    }
+
+    function getAccountVersion(
+        address account
+    ) external view returns (uint256) {
+        return IAccount(account).version();
+    }
+
+    function getAccountDelegatedAccount(
+        address account
+    ) external view returns (address) {
+        return IAccount(account).delegatedAccount();
+    }
+
+    function getAccountDelegatedAccountExpiration(
+        address account
+    ) external view returns (uint256) {
+        return IAccount(account).delegatedAccountExpiration();
+    }
+
+    function getAccountBalance(
+        address account,
+        address token
+    ) external view returns (uint256) {
+        return IAccount(account).getBalance(token);
+    }
+
+    function getAccountLockedBalance(
+        address account,
+        address token
+    ) external view returns (uint256) {
+        return IAccount(account).getLockedBalance(token);
+    }
+
+    function getAccountWithdrawableBalance(
+        address account,
+        address token
+    ) external view returns (uint256) {
+        return IAccount(account).getWithdrawableBalance(token);
+    }
+
+    function getAccountFeeDebt(
+        address account,
+        address token
+    ) external view returns (uint256) {
+        return IAccount(account).getFeeDebt(token);
     }
 
     function getTokenAmountInUseAsCollateral(

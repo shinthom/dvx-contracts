@@ -150,7 +150,7 @@ interface IAdapter {
         address collateral,
         address index,
         bool isLong
-    ) external view returns (int256);
+    ) external view returns (uint256);
     function estimateLiquidationPrice(
         address account,
         address collateral,
@@ -158,7 +158,7 @@ interface IAdapter {
         uint256 collateralAmount,
         uint256 size,
         bool isLong
-    ) external view returns (int256 p);
+    ) external view returns (uint256 p);
 
     function getAvailableLiquidity(
         address index,

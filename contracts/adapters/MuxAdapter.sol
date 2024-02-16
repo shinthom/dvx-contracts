@@ -725,7 +725,7 @@ contract MuxAdapter is IAdapter {
         address collateral,
         address index,
         bool isLong
-    ) external view override returns (int256 p) {
+    ) external view override returns (uint256) {
         IAdapter.Position memory position = getPosition(
             account,
             collateral,
@@ -742,6 +742,7 @@ contract MuxAdapter is IAdapter {
         int256 t = ((longFactor - maintenanceMarginRate) *
             int256(position.size)) / 1e5;
 
+        int256 p;
         if (collateral == index) {
             p =
                 (longFactor * int256(position.price) * int256(position.size)) /
@@ -771,6 +772,8 @@ contract MuxAdapter is IAdapter {
 
             p = (p * 1e18) / t;
         }
+
+        return p >= 0 ? uint256(p) : 0;
     }
 
     function estimateLiquidationPrice(
@@ -780,7 +783,7 @@ contract MuxAdapter is IAdapter {
         uint256 collateralAmount,
         uint256 size,
         bool isLong
-    ) external view override returns (int256 p) {
+    ) external view override returns (uint256) {
         int256 maintenanceMarginRate = int256(_getMaintenanceMarginRate(index));
 
         uint256 price = getPrice(index, isLong);
@@ -790,6 +793,7 @@ contract MuxAdapter is IAdapter {
         int256 longFactor = isLong ? int256(1e5) : int256(-1e5);
         int256 t = ((longFactor - maintenanceMarginRate) * int256(size)) / 1e5;
 
+        int256 p;
         if (collateral == index) {
             p = (longFactor * int256(price) * int256(size)) / 1e18 / 1e5;
 
@@ -813,6 +817,8 @@ contract MuxAdapter is IAdapter {
 
             p = (p * 1e18) / t;
         }
+
+        return p >= 0 ? uint256(p) : 0;
     }
 
     function getAvailableLiquidity(
