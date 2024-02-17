@@ -22,10 +22,12 @@ async function main() {
   console.log("SBT: updateBaseUri\n");
 
   const owner = (await ethers.provider.getSigner()).address;
-  await waitAndLogAccumulatedGasUsed(
-    await sbt.mintBatch(owner, [1, 2, 3], [1, 1, 1])
-  );
-  console.log("SBT: mintBatch\n");
+  await waitAndLogAccumulatedGasUsed(await sbt.airdrop([owner], 1));
+  console.log("SBT: airdrop (#1)\n");
+  await waitAndLogAccumulatedGasUsed(await sbt.airdrop([owner], 2));
+  console.log("SBT: airdrop (#2)\n");
+  await waitAndLogAccumulatedGasUsed(await sbt.airdrop([owner], 3));
+  console.log("SBT: airdrop (#3)\n");
 }
 
 main().catch((error) => {

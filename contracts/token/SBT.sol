@@ -9,71 +9,52 @@ contract SBT is ERC1155, Ownable {
     using Strings for uint256;
 
     string private baseURI;
-    mapping(address => bool) public whitelist;
+    mapping(address => mapping(uint256 => bool)) private _whitelist;
+    mapping(address => mapping(uint256 => bool)) private _claimed;
 
     event WhitelistAdded(address[] accounts);
     event Claimed(address indexed account, uint256 id, uint256 amount);
 
     constructor() ERC1155("") {}
 
-    function mint(
+    function whitelist(
         address account,
-        uint256 id,
-        uint256 amount
-    ) external onlyOwner {
-        _mint(account, id, amount, "");
+        uint256 id
+    ) external view returns (bool) {
+        return _whitelist[account][id];
     }
 
-    function mintBatch(
-        address account,
-        uint256[] memory ids,
-        uint256[] memory amounts
+    function claimed(address account, uint256 id) external view returns (bool) {
+        return _claimed[account][id];
+    }
+
+    function addWhitelist(
+        address[] calldata accounts,
+        uint256 id
     ) external onlyOwner {
-        _mintBatch(account, ids, amounts, "");
+        for (uint256 i = 0; i < accounts.length; i++) {
+            _whitelist[accounts[i]][id] = true;
+        }
+        emit WhitelistAdded(accounts);
     }
 
     function airdrop(
         address[] calldata accounts,
-        uint256 id,
-        uint256[] calldata amounts
+        uint256 id
     ) external onlyOwner {
-        require(accounts.length == amounts.length, "length mismatch");
-
         for (uint256 i = 0; i < accounts.length; i++) {
-            require(amounts[i] != 0, "zero amount");
-
-            _mint(accounts[i], id, amounts[i], "");
+            _mint(accounts[i], id, 1, "");
         }
     }
 
-    function claim(uint256 id, uint256 amount) external {
-        require(whitelist[msg.sender], "not whitelisted");
+    function claim(uint256 id) external {
+        require(_whitelist[msg.sender][id], "not whitelisted");
+        require(!_claimed[msg.sender][id], "already claimed");
 
-        _mint(msg.sender, id, amount, "");
-        emit Claimed(msg.sender, id, amount);
-    }
+        _claimed[msg.sender][id] = true;
+        emit Claimed(msg.sender, id, 1);
 
-    function burn(
-        address account,
-        uint256 id,
-        uint256 amount
-    ) external onlyOwner {
-        _burn(account, id, amount);
-    }
-
-    function burnBatch(
-        address account,
-        uint256[] memory ids,
-        uint256[] memory amounts
-    ) external onlyOwner {
-        _burnBatch(account, ids, amounts);
-    }
-
-    function addWhitelist(address[] calldata accounts) external onlyOwner {
-        for (uint256 i = 0; i < accounts.length; i++) {
-            whitelist[accounts[i]] = true;
-        }
-        emit WhitelistAdded(accounts);
+        _mint(msg.sender, id, 1, "");
     }
 
     function updateBaseUri(string calldata base) external onlyOwner {
