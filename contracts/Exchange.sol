@@ -2,7 +2,6 @@
 pragma solidity 0.8.7;
 
 import {IAccount} from "./interfaces/IAccount.sol";
-import {IERC20} from "./interfaces/IERC20.sol";
 import {IAdapter} from "./interfaces/IAdapter.sol";
 import {IAccountFactory} from "./interfaces/IAccountFactory.sol";
 import {IExchange} from "./interfaces/IExchange.sol";
@@ -11,8 +10,13 @@ import {ISwapper} from "./interfaces/ISwapper.sol";
 import {IMarginManager} from "./interfaces/IMarginManager.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
+    using SafeERC20 for IERC20;
+
     address private constant _weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
 
     uint256 public constant BASIS_POINTS = 1e8;
@@ -305,6 +309,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             delegatedAccountExpiration
         );
 
+        // slither-disable-next-line arbitrary-send-eth
         IAccount(account).depositETH{value: amount}(amount);
     }
 
@@ -321,7 +326,8 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             delegatedAccountExpiration
         );
 
-        IERC20(token).transferFrom(msg.sender, address(this), amount);
+        IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+
         IERC20(token).approve(account, amount);
         IAccount(account).deposit(token, amount, 0, 0, "");
     }
@@ -331,12 +337,12 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address tokenOut,
         uint256 amountIn
     ) public virtual override onlyAccount(msg.sender) returns (uint256) {
-        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
+        IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
 
         IERC20(tokenIn).approve(swapper, amountIn);
         uint256 amountOut = ISwapper(swapper).swap(tokenIn, tokenOut, amountIn);
 
-        IERC20(tokenOut).transfer(msg.sender, amountOut);
+        IERC20(tokenOut).safeTransfer(msg.sender, amountOut);
         return amountOut;
     }
 
@@ -439,7 +445,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address token,
         uint256 amount
     ) external override onlyAccount(msg.sender) {
-        IERC20(token).transferFrom(msg.sender, feeCollector, amount);
+        IERC20(token).safeTransferFrom(msg.sender, feeCollector, amount);
         emit FeeDebtCollected(msg.sender, token, amount);
     }
 
@@ -447,7 +453,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address token,
         uint256 amount
     ) external override onlyAccount(msg.sender) {
-        IERC20(token).transferFrom(msg.sender, feeCollector, amount);
+        IERC20(token).safeTransferFrom(msg.sender, feeCollector, amount);
         emit NetworkFeeCollected(msg.sender, token, amount);
     }
 
@@ -455,7 +461,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address token,
         uint256 amount
     ) external override onlyAccount(msg.sender) {
-        IERC20(token).transferFrom(msg.sender, feeCollector, amount);
+        IERC20(token).safeTransferFrom(msg.sender, feeCollector, amount);
         emit ExecutionFeeCollected(msg.sender, token, amount);
     }
 
@@ -463,7 +469,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address token,
         uint256 amount
     ) public override onlyAccount(msg.sender) {
-        IERC20(token).transferFrom(msg.sender, feeCollector, amount);
+        IERC20(token).safeTransferFrom(msg.sender, feeCollector, amount);
         emit ProtocolFeeCollected(msg.sender, token, amount);
     }
 
@@ -561,7 +567,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         }
 
         uint256 indexPrice = IAdapter(adapter).getWrapPrice(index, isLong);
-        uint8 indexDecimals = IERC20(index).decimals();
+        uint8 indexDecimals = IERC20Metadata(index).decimals();
         uint256 feeUsd = (size * indexPrice * positionFeeRate) /
             BASIS_POINTS /
             (10 ** indexDecimals);
@@ -570,7 +576,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             collateral,
             isLong
         );
-        uint8 collateralDecimals = IERC20(collateral).decimals();
+        uint8 collateralDecimals = IERC20Metadata(collateral).decimals();
         return (feeUsd * (10 ** collateralDecimals)) / collateralPrice;
     }
 

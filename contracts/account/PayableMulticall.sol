@@ -2,6 +2,7 @@
 pragma solidity 0.8.7;
 
 abstract contract PayableMulticall {
+    // slither-disable-next-line delegatecall-loop
     function multicall(
         bytes[] calldata data
     ) external payable virtual returns (bytes[] memory results) {

@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.7;
 
-import {IERC20} from "../interfaces/IERC20.sol";
 import {ISwapper} from "../interfaces/ISwapper.sol";
 import {IQuoterV2} from "@uniswap/v3-periphery/contracts/interfaces/IQuoterV2.sol";
 import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract Swapper is ISwapper {
+    using SafeERC20 for IERC20;
+
     address private constant _swapRouter =
         0xE592427A0AEce92De3Edee1F18E0157C05861564;
     address private constant _swapQuoter =
@@ -17,7 +20,7 @@ contract Swapper is ISwapper {
         address tokenOut,
         uint256 amountIn
     ) public override returns (uint256 amountOut) {
-        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
+        IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
 
         IERC20(tokenIn).approve(_swapRouter, amountIn);
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter

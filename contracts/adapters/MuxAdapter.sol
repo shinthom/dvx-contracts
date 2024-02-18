@@ -3,7 +3,9 @@ pragma solidity 0.8.7;
 
 import {IAdapter} from "../interfaces/IAdapter.sol";
 import {IExchange} from "../interfaces/IExchange.sol";
-import {IERC20} from "../interfaces/IERC20.sol";
+import {IWETH} from "../interfaces/IWETH.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 interface ILiquidityPool {
     enum ReferenceOracleType {
@@ -196,8 +198,9 @@ contract MuxAdapter is IAdapter {
         );
 
         if (collateralId == _wethTokenId) {
-            IERC20(collateral).withdraw(collateralAmount);
+            IWETH(collateral).withdraw(collateralAmount);
 
+            // slither-disable-next-line arbitrary-send-eth
             IOrderBook(_orderBook).placePositionOrder3{value: collateralAmount}(
                 subAccountId,
                 uint96(collateralAmount),
@@ -279,8 +282,9 @@ contract MuxAdapter is IAdapter {
         );
 
         if (collateralId == _wethTokenId) {
-            IERC20(collateral).withdraw(collateralAmount);
+            IWETH(collateral).withdraw(collateralAmount);
 
+            // slither-disable-next-line arbitrary-send-eth
             IOrderBook(_orderBook).depositCollateral{value: collateralAmount}(
                 subAccountId,
                 collateralAmount
@@ -339,7 +343,9 @@ contract MuxAdapter is IAdapter {
         );
 
         if (collateralId == _wethTokenId) {
-            IERC20(collateral).withdraw(marginAmount);
+            IWETH(collateral).withdraw(marginAmount);
+
+            // slither-disable-next-line arbitrary-send-eth
             IOrderBook(_orderBook).depositCollateral{value: marginAmount}(
                 subAccountId,
                 marginAmount
@@ -449,12 +455,12 @@ contract MuxAdapter is IAdapter {
             uint256 fundingRate
         ) = ILiquidityPool(_liquidityPool).getSubAccount(subAccountId);
 
-        uint8 collateralDecimals = IERC20(collateral).decimals();
+        uint8 collateralDecimals = IERC20Metadata(collateral).decimals();
         collateralAmount =
             collateralAmount /
             (10 ** (TOKEN_DEFAULT_DECIMALS - collateralDecimals));
 
-        uint8 indexDecimals = IERC20(index).decimals();
+        uint8 indexDecimals = IERC20Metadata(index).decimals();
         size = size / (10 ** (TOKEN_DEFAULT_DECIMALS - indexDecimals));
 
         return
@@ -553,8 +559,8 @@ contract MuxAdapter is IAdapter {
             uint256 pnlUsd
         ) = getPositionNetValueUsd(account, collateral, index, isLong);
 
-        uint8 collateralDecimals = IERC20(collateral).decimals();
-        uint8 profitDecimals = IERC20(profitToken).decimals();
+        uint8 collateralDecimals = IERC20Metadata(collateral).decimals();
+        uint8 profitDecimals = IERC20Metadata(profitToken).decimals();
 
         uint256 collateralPrice = getPrice(collateral, isLong);
         uint256 profitTokenPrice = getPrice(profitToken, isLong);
@@ -628,7 +634,7 @@ contract MuxAdapter is IAdapter {
             .getAssetInfo(indexId);
 
         uint256 price = _getPrice(asset.referenceOracle);
-        uint256 decimals = IERC20(index).decimals();
+        uint256 decimals = IERC20Metadata(index).decimals();
         return
             ((price * asset.positionFeeRate) * size) / 1e5 / (10 ** decimals);
     }
@@ -839,7 +845,7 @@ contract MuxAdapter is IAdapter {
                 asset.totalShortPosition;
         }
 
-        uint8 indexDecimals = IERC20(index).decimals();
+        uint8 indexDecimals = IERC20Metadata(index).decimals();
         return availableLiquidity / (10 ** (PRICE_DECIMALS - indexDecimals));
     }
 
@@ -848,7 +854,7 @@ contract MuxAdapter is IAdapter {
         address token,
         uint256 size
     ) private view returns (uint256) {
-        uint8 decimals = IERC20(token).decimals();
+        uint8 decimals = IERC20Metadata(token).decimals();
 
         if (decimals <= 18) {
             return size * (10 ** (18 - decimals));

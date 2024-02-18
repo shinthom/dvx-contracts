@@ -2,9 +2,12 @@ pragma solidity 0.8.7;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IAccount} from "../interfaces/IAccount.sol";
-import {IERC20} from "../interfaces/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract AttendanceBook is Ownable {
+    using SafeERC20 for IERC20;
+
     uint256 public startTime;
     uint256 public endTime;
 
@@ -137,7 +140,8 @@ contract AttendanceBook is Ownable {
         address token,
         uint256 amount
     ) external onlyOwner {
-        IERC20(token).transfer(receiver, amount);
+        require(receiver != address(0), "invalid receiver");
+        IERC20(token).safeTransfer(receiver, amount);
     }
 
     function withdrawETH(

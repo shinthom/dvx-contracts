@@ -62,6 +62,7 @@ contract SBT is ERC1155, Ownable {
     }
 
     function uri(uint256 id) public view override returns (string memory) {
+        // slither-disable-next-line encode-packed-collision
         return
             bytes(baseURI).length > 0
                 ? string(abi.encodePacked(baseURI, id.toString()))

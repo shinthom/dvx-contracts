@@ -3,7 +3,8 @@ pragma solidity 0.8.7;
 
 import {IAdapter} from "../interfaces/IAdapter.sol";
 import {IExchange} from "../interfaces/IExchange.sol";
-import {IERC20} from "../interfaces/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 interface ITimelock {
     function marginFeeBasisPoints() external view returns (uint256);
@@ -246,7 +247,7 @@ contract GmxV1Adapter is IAdapter {
         require(collateral != address(0), "collateral: zero address");
         require(index != address(0), "index: zero address");
 
-        uint8 indexDecimal = IERC20(index).decimals();
+        uint8 indexDecimal = IERC20Metadata(index).decimals();
         uint256 indexPrice = getPrice(index, isLong);
 
         uint256 sizeUsd = (size * indexPrice) / (10 ** indexDecimal);
@@ -275,7 +276,7 @@ contract GmxV1Adapter is IAdapter {
             isLong
         );
         uint256 sizeUsd = (position.price * size) /
-            (10 ** IERC20(index).decimals());
+            (10 ** IERC20Metadata(index).decimals());
 
         if (position.collateralAmount > position.size - sizeUsd) {
             sizeUsd = position.size;
@@ -373,7 +374,7 @@ contract GmxV1Adapter is IAdapter {
         override
         returns (IExchange.MarketOrder memory marketOrder)
     {
-        uint8 indexDecimal = IERC20(index).decimals();
+        uint8 indexDecimal = IERC20Metadata(index).decimals();
         uint256 indexPrice = getPrice(index, isLong);
 
         uint256 sizeUsd = (size * indexPrice) / (10 ** indexDecimal);
@@ -446,7 +447,7 @@ contract GmxV1Adapter is IAdapter {
         }
 
         if (isLong) {
-            uint8 indexDecimals = IERC20(index).decimals();
+            uint8 indexDecimals = IERC20Metadata(index).decimals();
             return
                 IAdapter.Position({
                     collateralAmount: (position.collateralAmount *
@@ -459,8 +460,8 @@ contract GmxV1Adapter is IAdapter {
                     isLong: isLong
                 });
         } else {
-            uint8 collateralDecimals = IERC20(collateral).decimals();
-            uint8 indexDecimals = IERC20(index).decimals();
+            uint8 collateralDecimals = IERC20Metadata(collateral).decimals();
+            uint8 indexDecimals = IERC20Metadata(index).decimals();
             return
                 IAdapter.Position({
                     collateralAmount: position.collateralAmount /
@@ -572,8 +573,8 @@ contract GmxV1Adapter is IAdapter {
             uint256 pnlUsd
         ) = getPositionNetValueUsd(account, collateral, index, isLong);
 
-        uint8 collateralDecimals = IERC20(collateral).decimals();
-        uint8 profitDecimals = IERC20(profitToken).decimals();
+        uint8 collateralDecimals = IERC20Metadata(collateral).decimals();
+        uint8 profitDecimals = IERC20Metadata(profitToken).decimals();
 
         uint256 collateralPrice = getPrice(collateral, isLong);
         uint256 profitTokenPrice = getPrice(profitToken, isLong);
@@ -693,7 +694,7 @@ contract GmxV1Adapter is IAdapter {
             return 0;
         }
 
-        uint256 collateralDecimals = IERC20(collateral).decimals();
+        uint256 collateralDecimals = IERC20Metadata(collateral).decimals();
         uint256 minPrice = IVault(_vault).getMinPrice(collateral);
 
         uint256 depositFeeBasisPoints
@@ -842,7 +843,7 @@ contract GmxV1Adapter is IAdapter {
 
         uint256 collateralPrice = getPrice(collateral, isLong);
         {
-            uint8 collateralDecimal = IERC20(collateral).decimals();
+            uint8 collateralDecimal = IERC20Metadata(collateral).decimals();
             collateralAmount =
                 (collateralAmount * collateralPrice) /
                 (10 ** collateralDecimal);
@@ -850,7 +851,7 @@ contract GmxV1Adapter is IAdapter {
 
         uint256 indexPrice = getPrice(index, isLong);
         {
-            uint8 indexDecimal = IERC20(index).decimals();
+            uint8 indexDecimal = IERC20Metadata(index).decimals();
             size = (size * indexPrice) / (10 ** indexDecimal);
         }
 
@@ -933,7 +934,7 @@ contract GmxV1Adapter is IAdapter {
             : IPositionRouter(_positionRouter).maxGlobalShortSizes(index) -
                 IVault(_vault).globalShortSizes(index);
 
-        uint8 indexDecimals = IERC20(index).decimals();
+        uint8 indexDecimals = IERC20Metadata(index).decimals();
         return
             (availableLiquidityUsd * (10 ** indexDecimals)) /
             getPrice(index, isLong);
@@ -986,6 +987,8 @@ contract GmxV1Adapter is IAdapter {
         }
 
         IERC20(collateral).approve(_router, collateralAmount);
+
+        // slither-disable-next-line arbitrary-send-eth
         IPositionRouter(_positionRouter).createIncreasePosition{
             value: executionFee
         }(
@@ -1019,6 +1022,7 @@ contract GmxV1Adapter is IAdapter {
         address[] memory path = new address[](1);
         path[0] = collateral;
 
+        // slither-disable-next-line arbitrary-send-eth
         IPositionRouter(_positionRouter).createDecreasePosition{
             value: executionFee
         }(
