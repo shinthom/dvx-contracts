@@ -635,8 +635,8 @@ contract MuxAdapter is IAdapter {
 
         uint256 price = _getPrice(asset.referenceOracle);
         uint256 decimals = IERC20Metadata(index).decimals();
-        return
-            ((price * asset.positionFeeRate) * size) / 1e5 / (10 ** decimals);
+
+        return ((price * asset.positionFeeRate) * size) / 1e5 / 1e18;
     }
 
     function getDepositFee(
