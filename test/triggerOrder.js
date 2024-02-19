@@ -28,7 +28,7 @@ describe("createTriggerOrder, executeTriggerOrder", () => {
     await setDummyPrice();
     var acceptablePrice = ethers.parseUnits("2000", 18);
     var triggerPrice = ethers.parseUnits("2000", 18);
-    var networkFee = 0;
+    var networkFee = 1;
     var deadline = Math.ceil(Date.now() / 1000) + 60 * 60 * 3;
 
     await deposit(collateral, collateralAmount);
