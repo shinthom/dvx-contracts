@@ -144,11 +144,11 @@ const deploy = async (noAccount) => {
     "0x988aa44e12c7bce07e449a4156b4a269d6642b3a"
   );
   // tokens
-  weth = await ethers.getContractAt("IERC20", WETH);
-  wbtc = await ethers.getContractAt("IERC20", WBTC);
-  usdc = await ethers.getContractAt("IERC20", USDC);
-  usdce = await ethers.getContractAt("IERC20", USDCe);
-  usdt = await ethers.getContractAt("IERC20", USDT);
+  weth = await ethers.getContractAt("IWETH", WETH);
+  wbtc = await ethers.getContractAt("ERC20Mock", WBTC);
+  usdc = await ethers.getContractAt("ERC20Mock", USDC);
+  usdce = await ethers.getContractAt("ERC20Mock", USDCe);
+  usdt = await ethers.getContractAt("ERC20Mock", USDT);
   // gmx
   vault = await ethers.getContractAt("IVault", Vault);
   positionRouter = await ethers.getContractAt(
@@ -304,7 +304,7 @@ stable:
   const faucet = async (token, tokenAmount) => {
     const abiCoder = new ethers.AbiCoder();
     if (token == WETH) {
-      const weth = await ethers.getContractAt("IERC20", WETH);
+      const weth = await ethers.getContractAt("IWETH", WETH);
       await weth.connect(owner).deposit({ value: tokenAmount });
     } else if (token == USDC) {
       const storageSlot = 9n;

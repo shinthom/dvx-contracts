@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.7;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -49,6 +50,7 @@ contract AttendanceBook is Ownable {
     }
 
     function getEndDay() public view returns (uint256) {
+        // slither-disable-next-line incorrect-equality
         if (endTime == 0) {
             return 0;
         }
@@ -141,6 +143,8 @@ contract AttendanceBook is Ownable {
         uint256 amount
     ) external onlyOwner {
         require(receiver != address(0), "invalid receiver");
+        require(token != address(0), "invalid token");
+
         IERC20(token).safeTransfer(receiver, amount);
     }
 

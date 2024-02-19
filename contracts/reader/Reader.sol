@@ -119,7 +119,7 @@ contract Reader {
             collaterals.length
         );
         for (uint256 i = 0; i < collaterals.length; i++) {
-            uint256 totalAmount;
+            uint256 totalAmount = 0;
             for (uint256 j = 0; j < positions.length; j++) {
                 if (positions[j].collateral == collaterals[i]) {
                     totalAmount += positions[j].position.collateralAmount;

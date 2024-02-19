@@ -453,6 +453,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         );
     }
 
+    // slither-disable-next-line reentrancy-no-eth
     function swapAndIncreasePosition(
         address adapter,
         address[] calldata path,
@@ -590,7 +591,7 @@ contract Account is Storage, PayableMulticall, IAccount {
             collateralAmount -= positionFee;
         }
 
-        // slither-disable-next-line controlled-delegatecall
+        // slither-disable-next-line controlled-delegatecall,low-level-calls
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
                 "increasePosition(uint256,address,address,uint256,uint256,uint256,bool)",
@@ -708,6 +709,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         }
     }
 
+    // slither-disable-next-line reentrancy-no-eth
     function increaseCollateral(
         address adapter,
         address collateral,
@@ -892,6 +894,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         _collectFeeDebt(token, amount);
     }
 
+    // slither-disable-next-line reentrancy-no-eth
     function createLimitOrder(
         address collateral,
         address index,

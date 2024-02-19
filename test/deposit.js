@@ -531,8 +531,6 @@ describe("deposit", () => {
         verifyingContract: weth.target,
       };
 
-      console.log((await ethers.provider.getNetwork()).chainId);
-
       const types = {
         Permit: [
           {
