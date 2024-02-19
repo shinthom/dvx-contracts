@@ -111,8 +111,6 @@ interface IAccount {
         bytes calldata signature
     ) external payable;
 
-    function collectFeeDebt(address token, uint256 amount) external;
-
     function createLimitOrder(
         address collateral,
         address index,
@@ -149,6 +147,8 @@ interface IAccount {
         uint256 deadline,
         bytes calldata signature
     ) external payable;
+
+    function collectFeeDebt(address token, uint256 amount) external;
 
     function beacon() external view returns (address);
     function version() external view returns (uint256);

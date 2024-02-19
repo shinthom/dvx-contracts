@@ -891,13 +891,6 @@ contract Account is Storage, PayableMulticall, IAccount {
         }
     }
 
-    function collectFeeDebt(
-        address token,
-        uint256 amount
-    ) public virtual override onlyOrderKeeper {
-        _collectFeeDebt(token, amount);
-    }
-
     // slither-disable-next-line reentrancy-no-eth
     function createLimitOrder(
         address collateral,
@@ -1099,6 +1092,13 @@ contract Account is Storage, PayableMulticall, IAccount {
             acceptablePrice,
             networkFee
         );
+    }
+
+    function collectFeeDebt(
+        address token,
+        uint256 amount
+    ) public virtual override onlyOrderKeeper {
+        _collectFeeDebt(token, amount);
     }
 
     function beacon() public view virtual override returns (address) {
