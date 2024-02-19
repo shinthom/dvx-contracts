@@ -71,13 +71,38 @@ contract Reader {
         return IAccount(account).getFeeDebt(token);
     }
 
-    function getTokenAmountInUseAsCollateral(
+    function getTokenAmountInUse(
         address account,
         address[] memory adapters,
         address[] memory collaterals,
         address[] memory indexs
     )
         external
+        view
+        returns (
+            TokenAmountInUseAsCollateral[] memory tokenAmountInUseAsCollaterals
+        )
+    {
+        tokenAmountInUseAsCollaterals = getTokenAmountInUseAsCollateral(
+            account,
+            adapters,
+            collaterals,
+            indexs
+        );
+
+        for (uint256 i = 0; i < collaterals.length; i++) {
+            tokenAmountInUseAsCollaterals[i].totalAmount += IAccount(account)
+                .getLockedBalance(collaterals[i]);
+        }
+    }
+
+    function getTokenAmountInUseAsCollateral(
+        address account,
+        address[] memory adapters,
+        address[] memory collaterals,
+        address[] memory indexs
+    )
+        public
         view
         returns (
             TokenAmountInUseAsCollateral[] memory tokenAmountInUseAsCollaterals
