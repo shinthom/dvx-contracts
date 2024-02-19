@@ -237,6 +237,19 @@ async function main() {
   //   await exchange.setRelayer(attendanceBook.target, true)
   // );
   // console.log("Exchange: setRelayer (AttendanceBook)\n");
+
+  const startTime = Math.ceil(Date.now() / 1000) + 60;
+  const AttendanceBook = await ethers.getContractFactory("AttendanceBook");
+  const attendanceBook = await AttendanceBook.deploy(startTime, relayer);
+  await waitAndLogAccumulatedGasUsed(attendanceBook.deploymentTransaction());
+  console.log("AttendanceBook deployed at:", attendanceBook.target, "\n");
+
+  // const exchangeAddr = "0xcbEFf0C9698503Ca83B236E2a6D08138A79D1Aa6";
+  // const exchange = await ethers.getContractAt("Exchange", exchangeAddr);
+  await waitAndLogAccumulatedGasUsed(
+    await exchange.setRelayer(attendanceBook.target, true)
+  );
+  console.log("Exchange: setRelayer\n");
 }
 
 main().catch((error) => {
