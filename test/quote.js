@@ -27,4 +27,19 @@ describe("Quoter", () => {
     );
     console.log(answers2);
   });
+
+  it("quoteExactOutputSingle", async () => {
+    const { quoter, WBTC, WETH, USDC, USDT, USDCe } = await loadFixture(deploy);
+
+    var tokenIn = USDC;
+    var tokenOut = USDCe;
+    var amountOut = ethers.parseUnits("10", 6);
+
+    const amountIn = await quoter.quoteExactOutputSingle.staticCall(
+      tokenIn,
+      tokenOut,
+      amountOut
+    );
+    console.log(amountIn.toString());
+  });
 });
