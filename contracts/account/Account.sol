@@ -4,20 +4,24 @@ pragma solidity 0.8.7;
 import {IAccount} from "../interfaces/IAccount.sol";
 import {IExchange} from "../interfaces/IExchange.sol";
 import {IWarehouse} from "../interfaces/IWarehouse.sol";
-import {IERC20} from "../interfaces/IERC20.sol";
+import {IWETH} from "../interfaces/IWETH.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ILogger} from "../interfaces/ILogger.sol";
 import {PayableMulticall} from "./PayableMulticall.sol";
 import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
 
 contract Storage {
-    bytes32 internal constant BEACON_SLOT =
+    bytes32 internal constant _BEACON_SLOT =
         bytes32(uint256(keccak256("dvx.beacon")) - 1);
-    bytes32 internal constant ACCOUNT_VERSION_SLOT =
+    bytes32 internal constant _ACCOUNT_VERSION_SLOT =
         bytes32(uint256(keccak256("dvx.account.version")) - 1);
 
     address internal constant _weth =
         0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
 
+    bool internal _locked; // reentrancy guard
     bool internal _intitalized;
 
     address internal _owner;
@@ -31,10 +35,19 @@ contract Storage {
 }
 
 contract Account is Storage, PayableMulticall, IAccount {
+    using SafeERC20 for IERC20;
+
     receive() external payable {
         if (msg.sender != _weth) {
-            IERC20(_weth).deposit{value: msg.value}();
+            IWETH(_weth).deposit{value: msg.value}();
         }
+    }
+
+    modifier noReentrant() {
+        require(!_locked, "No re-entrancy");
+        _locked = true;
+        _;
+        _locked = false;
     }
 
     modifier onlyOwner() {
@@ -92,7 +105,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         );
         require(implementation != address(0), "implementation: zero address");
 
-        StorageSlot.getUint256Slot(ACCOUNT_VERSION_SLOT).value = version;
+        StorageSlot.getUint256Slot(_ACCOUNT_VERSION_SLOT).value = version;
     }
 
     function renewDelegatedAccount(
@@ -125,7 +138,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         require(amount > 0, "amount: zero");
         require(amount == msg.value, "amount: not equal to msg.value");
 
-        IERC20(_weth).deposit{value: msg.value}();
+        IWETH(_weth).deposit{value: msg.value}();
 
         address logger = IExchange(_exchange).logger();
         if (logger != address(0)) {
@@ -187,7 +200,7 @@ contract Account is Storage, PayableMulticall, IAccount {
             );
         }
 
-        IERC20(token).permit(
+        IERC20Permit(token).permit(
             _owner,
             address(this),
             amount,
@@ -211,7 +224,8 @@ contract Account is Storage, PayableMulticall, IAccount {
             "token: not supported"
         );
 
-        IERC20(token).transferFrom(_owner, address(this), amount);
+        // slither-disable-next-line arbitrary-send-erc20
+        IERC20(token).safeTransferFrom(_owner, address(this), amount);
 
         if (networkFee > 0) {
             require(amount >= networkFee, "amount: less than network fee");
@@ -277,10 +291,10 @@ contract Account is Storage, PayableMulticall, IAccount {
         }
         if (token == _weth) {
             IERC20(token).approve(_weth, amount);
-            IERC20(_weth).withdraw(amount);
+            IWETH(_weth).withdraw(amount);
             payable(to).transfer(amount);
         } else {
-            IERC20(token).transfer(to, amount);
+            IERC20(token).safeTransfer(to, amount);
         }
 
         address logger = IExchange(_exchange).logger();
@@ -377,7 +391,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
-    ) public payable virtual override onlyOwnerOrRelayer {
+    ) public payable virtual override noReentrant onlyOwnerOrRelayer {
         if (msg.sender != _owner) {
             require(
                 _verifySignature(
@@ -450,7 +464,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
-    ) public payable virtual override onlyOwnerOrRelayer {
+    ) public payable virtual override noReentrant onlyOwnerOrRelayer {
         require(path.length == 2, "path: invalid length");
         require(path[0] != path[1], "path: same token");
 
@@ -576,6 +590,7 @@ contract Account is Storage, PayableMulticall, IAccount {
             collateralAmount -= positionFee;
         }
 
+        // slither-disable-next-line controlled-delegatecall
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
                 "increasePosition(uint256,address,address,uint256,uint256,uint256,bool)",
@@ -703,7 +718,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
-    ) public payable virtual override onlyOwnerOrRelayer {
+    ) public payable virtual override noReentrant onlyOwnerOrRelayer {
         if (msg.sender != _owner) {
             require(
                 _verifySignature(
@@ -889,7 +904,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         uint256 executionFee,
         uint256 deadline,
         bytes calldata signature
-    ) public payable virtual override onlyOwnerOrRelayer {
+    ) public payable virtual override noReentrant onlyOwnerOrRelayer {
         if (msg.sender != _owner) {
             require(
                 _verifySignature(
@@ -986,7 +1001,7 @@ contract Account is Storage, PayableMulticall, IAccount {
     function executeLimitOrder(
         uint256 limitOrderId,
         address adapter
-    ) public payable virtual override onlyOrderKeeper {
+    ) public payable virtual override noReentrant onlyOrderKeeper {
         IWarehouse.LimitOrder memory limitOrder
             = IExchange(_exchange).executeLimitOrder(adapter, limitOrderId); // prettier-ignore
 
@@ -1027,7 +1042,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
-    ) public payable virtual override onlyOrderKeeper {
+    ) public payable virtual override noReentrant onlyOrderKeeper {
         if (msg.sender != _owner) {
             require(
                 _verifySignature(
@@ -1080,11 +1095,11 @@ contract Account is Storage, PayableMulticall, IAccount {
     }
 
     function beacon() public view virtual override returns (address) {
-        return StorageSlot.getAddressSlot(BEACON_SLOT).value;
+        return StorageSlot.getAddressSlot(_BEACON_SLOT).value;
     }
 
     function version() public view virtual override returns (uint256) {
-        return StorageSlot.getUint256Slot(ACCOUNT_VERSION_SLOT).value;
+        return StorageSlot.getUint256Slot(_ACCOUNT_VERSION_SLOT).value;
     }
 
     function owner() public view virtual override returns (address) {
