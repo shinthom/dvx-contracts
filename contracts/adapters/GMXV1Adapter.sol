@@ -699,6 +699,7 @@ contract GmxV1Adapter is IAdapter {
 
         uint256 depositFeeBasisPoints
             = IPositionRouter(_positionRouter).depositFee(); // prettier-ignore
+        // slither-disable-next-line divide-before-multiply
         uint256 collateralAmountAfterDepositFee = (marketOrder
             .collateralAmount * depositFeeBasisPoints) / BASIS_POINTS_DIVISOR;
 
@@ -852,6 +853,7 @@ contract GmxV1Adapter is IAdapter {
         uint256 indexPrice = getPrice(index, isLong);
         {
             uint8 indexDecimal = IERC20Metadata(index).decimals();
+            // slither-disable-next-line divide-before-multiply
             size = (size * indexPrice) / (10 ** indexDecimal);
         }
 

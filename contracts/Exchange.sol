@@ -568,6 +568,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
 
         uint256 indexPrice = IAdapter(adapter).getWrapPrice(index, isLong);
         uint8 indexDecimals = IERC20Metadata(index).decimals();
+        // slither-disable-next-line divide-before-multiply
         uint256 feeUsd = (size * indexPrice * positionFeeRate) /
             BASIS_POINTS /
             (10 ** indexDecimals);
@@ -577,6 +578,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
             isLong
         );
         uint8 collateralDecimals = IERC20Metadata(collateral).decimals();
+        // slither-disable-next-line divide-before-multiply
         return (feeUsd * (10 ** collateralDecimals)) / collateralPrice;
     }
 

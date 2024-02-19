@@ -751,6 +751,7 @@ contract MuxAdapter is IAdapter {
 
         int256 p;
         if (collateral == index) {
+            // slither-disable-next-line divide-before-multiply
             p =
                 (longFactor * int256(position.price) * int256(position.size)) /
                 1e18 /
@@ -764,6 +765,7 @@ contract MuxAdapter is IAdapter {
             p *= 1e18;
             p /= t + int256(position.collateralAmount);
         } else {
+            // slither-disable-next-line divide-before-multiply
             p =
                 (longFactor * int256(position.price) * int256(position.size)) /
                 1e18 /
@@ -802,6 +804,7 @@ contract MuxAdapter is IAdapter {
 
         int256 p;
         if (collateral == index) {
+            // slither-disable-next-line divide-before-multiply
             p = (longFactor * int256(price) * int256(size)) / 1e18 / 1e5;
 
             int256 fundingFee = int256(
@@ -812,6 +815,7 @@ contract MuxAdapter is IAdapter {
             p *= 1e18;
             p /= t + int256(collateralAmount);
         } else {
+            // slither-disable-next-line divide-before-multiply
             p = (longFactor * int256(price) * int256(size)) / 1e18 / 1e5;
 
             int256 fundingFee = int256(

@@ -634,7 +634,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
-    ) public payable virtual override onlyOwnerOrRelayer {
+    ) public payable virtual override noReentrant onlyOwnerOrRelayer {
         if (msg.sender != _owner) {
             require(
                 _verifySignature(
@@ -835,7 +835,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
-    ) public payable virtual override onlyOwnerOrRelayer {
+    ) public payable virtual override noReentrant onlyOwnerOrRelayer {
         if (msg.sender != _owner) {
             require(
                 _verifySignature(
@@ -977,7 +977,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         uint256 networkFee,
         uint256 deadline,
         bytes calldata signature
-    ) public payable virtual override onlyOwnerOrRelayer {
+    ) public payable virtual override noReentrant onlyOwnerOrRelayer {
         if (msg.sender != _owner) {
             require(
                 _verifySignature(

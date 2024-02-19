@@ -101,6 +101,8 @@ contract AttendanceBook is Ownable {
             "not account owner or relayer"
         );
 
+        _checkIn(account);
+
         if (msg.sender == relayer) {
             IAccount(account).withdraw(
                 token,
@@ -111,8 +113,6 @@ contract AttendanceBook is Ownable {
                 signature
             );
         }
-
-        _checkIn(account);
     }
 
     function _checkIn(address account) private {
@@ -152,6 +152,7 @@ contract AttendanceBook is Ownable {
         address payable receiver,
         uint256 amount
     ) external onlyOwner {
+        require(receiver != address(0), "invalid receiver");
         receiver.transfer(amount);
     }
 
