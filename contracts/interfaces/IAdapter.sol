@@ -16,7 +16,6 @@ interface IAdapter {
     }
 
     function increasePosition(
-        uint256 marketOrderId,
         address collateral,
         address index,
         uint256 collateralAmount,

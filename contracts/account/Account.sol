@@ -347,7 +347,7 @@ contract Account is Storage, PayableMulticall, IAccount {
             amountIn -= networkFee;
         }
 
-        uint256 amountOut = _swap(tokenIn, tokenOut, amountIn, networkFee);
+        _swap(tokenIn, tokenOut, amountIn, networkFee);
     }
 
     function _swap(
@@ -449,7 +449,7 @@ contract Account is Storage, PayableMulticall, IAccount {
             size,
             isLong,
             acceptablePrice,
-            networkFee
+            networkFee + feeDebt
         );
     }
 
@@ -522,7 +522,7 @@ contract Account is Storage, PayableMulticall, IAccount {
             collateral,
             path[1],
             collateralAmount,
-            networkFee
+            networkFee + feeDebt
         );
         collateral = path[1];
 
@@ -546,7 +546,7 @@ contract Account is Storage, PayableMulticall, IAccount {
             size,
             isLong,
             acceptablePrice,
-            0 // networkFee is already logged in `_swap`
+            feeDebt
         );
     }
 
@@ -594,8 +594,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         // slither-disable-next-line controlled-delegatecall,low-level-calls
         (bool success, bytes memory data) = adapter.delegatecall(
             abi.encodeWithSignature(
-                "increasePosition(uint256,address,address,uint256,uint256,uint256,bool)",
-                marketOrderId,
+                "increasePosition(address,address,uint256,uint256,uint256,bool)",
                 collateral,
                 index,
                 collateralAmount,
@@ -658,7 +657,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         }
 
         if (networkFee > 0) {
-            _feeDebts[collateral] += networkFee;
+            _addFeeDebt(collateral, networkFee);
         }
 
         _decreasePosition(
@@ -764,7 +763,12 @@ contract Account is Storage, PayableMulticall, IAccount {
         uint256 collateralAmount = amountIn;
         bool swap = tokenIn != collateral;
         if (swap) {
-            collateralAmount = _swap(tokenIn, collateral, amountIn, networkFee);
+            collateralAmount = _swap(
+                tokenIn,
+                collateral,
+                amountIn,
+                networkFee + feeDebt
+            );
 
             feeDebt = _feeDebts[collateral];
             if (feeDebt > 0) {
@@ -783,7 +787,7 @@ contract Account is Storage, PayableMulticall, IAccount {
             index,
             isLong,
             collateralAmount,
-            swap ? 0 : networkFee
+            swap ? feeDebt : networkFee + feeDebt
         );
     }
 
@@ -858,7 +862,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         }
 
         if (networkFee > 0) {
-            _feeDebts[collateral] += networkFee;
+            _addFeeDebt(collateral, networkFee);
         }
 
         // slither-disable-next-line controlled-delegatecall,low-level-calls
@@ -997,7 +1001,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         _lockedBalances[limitOrder.collateral] -= limitOrder.collateralAmount;
 
         if (networkFee > 0) {
-            _feeDebts[limitOrder.collateral] += networkFee;
+            _addFeeDebt(limitOrder.collateral, networkFee);
         }
     }
 
@@ -1083,7 +1087,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         );
 
         if (networkFee > 0) {
-            _feeDebts[collateral] += networkFee;
+            _addFeeDebt(collateral, networkFee);
         }
 
         _decreasePosition(
@@ -1149,6 +1153,11 @@ contract Account is Storage, PayableMulticall, IAccount {
         address token
     ) public view virtual override returns (uint256) {
         return _feeDebts[token];
+    }
+
+    function _addFeeDebt(address token, uint256 amount) internal {
+        _feeDebts[token] += amount;
+        IExchange(_exchange).addFeeDebt(token, amount);
     }
 
     function _collectFeeDebt(address token, uint256 amount) internal {

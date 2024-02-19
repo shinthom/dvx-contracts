@@ -43,6 +43,7 @@ interface IExchange {
     event TierSet(uint8 indexed tierId, uint256 discount);
     event ReferralTierSet(address indexed referral, uint8 indexed tierId);
 
+    event FeeDebtAdded(address indexed account, address indexed token, uint256 amount);
     event FeeDebtCollected(address indexed account, address indexed token, uint256 amount);
     event NetworkFeeCollected(address indexed account, address indexed token, uint256 amount);
     event ExecutionFeeCollected(address indexed account, address indexed token, uint256 amount);
@@ -167,6 +168,10 @@ interface IExchange {
         uint256 networkFee
     ) external;
 
+    function addFeeDebt(
+        address token,
+        uint256 amount
+    ) external;
     function collectFeeDebt(
         address token,
         uint256 amount

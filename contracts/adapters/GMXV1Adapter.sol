@@ -233,7 +233,6 @@ contract GmxV1Adapter is IAdapter {
     }
 
     function increasePosition(
-        uint256 marketOrderId,
         address collateral,
         address index,
         uint256 collateralAmount,

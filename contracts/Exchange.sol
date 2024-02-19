@@ -441,6 +441,13 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         );
     }
 
+    function addFeeDebt(
+        address token,
+        uint256 amount
+    ) external override onlyAccount(msg.sender) {
+        emit FeeDebtAdded(msg.sender, token, amount);
+    }
+
     function collectFeeDebt(
         address token,
         uint256 amount
