@@ -285,10 +285,9 @@ contract Account is Storage, PayableMulticall, IAccount {
 
         uint256 feeDebt = _feeDebts[token];
         if (feeDebt > 0) {
-            require(amount >= feeDebt, "amount: less than fee debt");
             _collectFeeDebt(token, feeDebt);
-            amount -= feeDebt;
         }
+
         if (token == _weth) {
             IERC20(token).approve(_weth, amount);
             IWETH(_weth).withdraw(amount);
@@ -380,6 +379,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         }
     }
 
+    // slither-disable-next-line reentrancy-no-eth
     function increasePosition(
         address adapter,
         address collateral,
@@ -431,11 +431,6 @@ contract Account is Storage, PayableMulticall, IAccount {
 
         uint256 feeDebt = _feeDebts[collateral];
         if (feeDebt > 0) {
-            require(
-                collateralAmount >= feeDebt,
-                "collateralAmount: less than fee debt"
-            );
-            collateralAmount -= feeDebt;
             _collectFeeDebt(collateral, feeDebt);
         }
 
@@ -449,7 +444,7 @@ contract Account is Storage, PayableMulticall, IAccount {
             size,
             isLong,
             acceptablePrice,
-            networkFee + feeDebt
+            networkFee
         );
     }
 
@@ -509,11 +504,6 @@ contract Account is Storage, PayableMulticall, IAccount {
 
         uint256 feeDebt = _feeDebts[collateral];
         if (feeDebt > 0) {
-            require(
-                collateralAmount >= feeDebt,
-                "collateralAmount: less than fee debt"
-            );
-            collateralAmount -= feeDebt;
             _collectFeeDebt(collateral, feeDebt);
         }
 
@@ -522,17 +512,12 @@ contract Account is Storage, PayableMulticall, IAccount {
             collateral,
             path[1],
             collateralAmount,
-            networkFee + feeDebt
+            networkFee
         );
         collateral = path[1];
 
         feeDebt = _feeDebts[collateral];
         if (feeDebt > 0) {
-            require(
-                collateralAmount >= feeDebt,
-                "collateralAmount: less than fee debt"
-            );
-            collateralAmount -= feeDebt;
             _collectFeeDebt(collateral, feeDebt);
         }
 
@@ -546,7 +531,7 @@ contract Account is Storage, PayableMulticall, IAccount {
             size,
             isLong,
             acceptablePrice,
-            feeDebt
+            0
         );
     }
 
@@ -755,28 +740,16 @@ contract Account is Storage, PayableMulticall, IAccount {
 
         uint256 feeDebt = _feeDebts[tokenIn];
         if (feeDebt > 0) {
-            require(amountIn >= feeDebt, "amountIn: less than fee debt");
-            amountIn -= feeDebt;
             _collectFeeDebt(tokenIn, feeDebt);
         }
 
         uint256 collateralAmount = amountIn;
         bool swap = tokenIn != collateral;
         if (swap) {
-            collateralAmount = _swap(
-                tokenIn,
-                collateral,
-                amountIn,
-                networkFee + feeDebt
-            );
+            collateralAmount = _swap(tokenIn, collateral, amountIn, networkFee);
 
-            feeDebt = _feeDebts[collateral];
+            uint256 feeDebt = _feeDebts[collateral];
             if (feeDebt > 0) {
-                require(
-                    collateralAmount >= feeDebt,
-                    "collateralAmount: less than fee debt"
-                );
-                collateralAmount -= feeDebt;
                 _collectFeeDebt(collateral, feeDebt);
             }
         }
@@ -787,7 +760,7 @@ contract Account is Storage, PayableMulticall, IAccount {
             index,
             isLong,
             collateralAmount,
-            swap ? feeDebt : networkFee + feeDebt
+            swap ? 0 : networkFee
         );
     }
 
@@ -1146,7 +1119,7 @@ contract Account is Storage, PayableMulticall, IAccount {
     function getWithdrawableBalance(
         address token
     ) public view virtual override returns (uint256) {
-        return getBalance(token) - getLockedBalance(token);
+        return getBalance(token) - getLockedBalance(token) - getFeeDebt(token);
     }
 
     function getFeeDebt(
