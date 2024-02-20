@@ -113,6 +113,7 @@ let marginManager;
 let attendanceBook;
 
 let account;
+let sbt;
 
 const deploy = async (noAccount) => {
   vaPk = ethers.Wallet.createRandom().privateKey;
@@ -217,6 +218,8 @@ const deploy = async (noAccount) => {
   swapper = await ethers.deployContract("Swapper");
   marginManager = await ethers.deployContract("MarginManager");
 
+  sbt = await ethers.deployContract("SBT");
+
   await exchange.addAccountImplementation(1, accountTargetContract.target);
   await exchange.setAccountFactory(accountFactory.target);
   await exchange.setWarehouse(warehouse.target);
@@ -239,7 +242,8 @@ const deploy = async (noAccount) => {
   // attendanceBook
   const startTime = Math.ceil(Date.now() / 1000) + 86400 * 3;
   attendanceBook = await ethers.deployContract("AttendanceBook", [
-    startTime,
+    startTime, // day 1
+    startTime + 86400 * 30, // day 31 = ⚫(30) -> ⭕(31)
     relayer,
   ]);
   await exchange.setRelayer(attendanceBook.target, true);
@@ -767,6 +771,7 @@ stable:
     collateralList,
     indexList,
     vault,
+    sbt,
     checkBalance,
     checkPosition,
     checkWrapPosition,

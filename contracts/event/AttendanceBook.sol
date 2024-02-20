@@ -12,8 +12,6 @@ contract AttendanceBook is Ownable {
     uint256 public startTime;
     uint256 public endTime;
 
-    bool public activated;
-
     mapping(address => mapping(uint256 => uint256)) public accountHistory;
 
     address public relayer;
@@ -22,70 +20,28 @@ contract AttendanceBook is Ownable {
 
     receive() external payable {}
 
-    constructor(uint256 _startTime, address _relayer) {
+    constructor(uint256 _startTime, uint256 _endTime, address _relayer) {
         require(_startTime > block.timestamp, "invalid start time");
+        require(_endTime > _startTime, "invalid end time");
         require(_relayer != address(0), "invalid relayer");
 
         startTime = _startTime;
+        endTime = _endTime;
         relayer = _relayer;
-
-        activated = true;
     }
 
-    function canCheckIn(address account) public view returns (bool) {
-        if (!activated) {
-            return false;
-        }
-        if (block.timestamp < startTime) {
-            return false;
-        }
-        return true;
+    function changeRelayer(address _relayer) external onlyOwner {
+        require(_relayer != address(0), "invalid relayer");
+        relayer = _relayer;
     }
 
-    function getDay() public view returns (uint256) {
-        if (block.timestamp < startTime) {
-            return 0;
-        }
-        return 1 + (block.timestamp - startTime) / (3600 * 24);
+    function expandEndTime(uint256 _endTime) external onlyOwner {
+        require(_endTime > endTime, "invalid end time");
+        endTime = _endTime;
     }
 
-    function getEndDay() public view returns (uint256) {
-        // slither-disable-next-line incorrect-equality
-        if (endTime == 0) {
-            return 0;
-        }
-
-        return 1 + (endTime - startTime) / (3600 * 24);
-    }
-
-    function getAccountHistory(
-        address account,
-        uint256 from,
-        uint256 to
-    ) external view returns (uint256[] memory) {
-        require(from > 0, "invalid from");
-        require(to >= from, "invalid to");
-
-        uint256[] memory history = new uint256[](to - from + 1);
-        for (uint256 i = from; i <= to; i++) {
-            history[i - from] = accountHistory[account][i];
-        }
-        return history;
-    }
-
-    function getTotalCheckIn(
-        address account,
-        uint256 from,
-        uint256 to
-    ) external view returns (uint256 totalCheckIn) {
-        require(from >= 1, "invalid from");
-        require(to >= from, "invalid to");
-
-        for (uint256 i = from; i <= to; i++) {
-            if (accountHistory[account][i] == 1) {
-                totalCheckIn++;
-            }
-        }
+    function deactivate() external onlyOwner {
+        endTime = block.timestamp;
     }
 
     function checkIn(
@@ -116,25 +72,14 @@ contract AttendanceBook is Ownable {
     }
 
     function _checkIn(address account) private {
-        require(activated, "not activated");
         require(block.timestamp > startTime, "not started");
+        require(block.timestamp < endTime, "ended");
 
         uint256 day = getDay();
         require(accountHistory[account][day] == 0, "already checked-in");
 
         accountHistory[account][day] = 1;
         emit CheckedIn(account, day);
-    }
-
-    function changeRelayer(address _relayer) external onlyOwner {
-        require(_relayer != address(0), "invalid relayer");
-        relayer = _relayer;
-    }
-
-    function deactivate() external onlyOwner {
-        activated = false;
-
-        endTime = block.timestamp;
     }
 
     function withdraw(
@@ -154,6 +99,56 @@ contract AttendanceBook is Ownable {
     ) external onlyOwner {
         require(receiver != address(0), "invalid receiver");
         receiver.transfer(amount);
+    }
+
+    function activated() public view returns (bool) {
+        if (block.timestamp < startTime || block.timestamp > endTime) {
+            return false;
+        }
+        return true;
+    }
+
+    function getDay() public view returns (uint256) {
+        if (block.timestamp < startTime) {
+            return 0;
+        }
+        return 1 + (block.timestamp - startTime) / (3600 * 24);
+    }
+
+    function getEndDay() public view returns (uint256) {
+        // startTime + 86400 * 30, // day 30 = ⚫(30) -> ⭕(31)
+        // We can take attendance until the end of day 30 (not 31)
+        return (endTime - startTime) / (3600 * 24);
+    }
+
+    function getAccountHistory(
+        address account,
+        uint256 from,
+        uint256 to
+    ) external view returns (uint256[] memory) {
+        require(from > 0, "invalid from");
+        require(to >= from, "invalid to");
+
+        uint256[] memory history = new uint256[](to - from + 1);
+        for (uint256 i = from; i <= to; i++) {
+            history[i - from] = accountHistory[account][i];
+        }
+        return history;
+    }
+
+    function getTotalCheckIn(
+        address account,
+        uint256 from,
+        uint256 to
+    ) external view returns (uint256 totalCheckIn) {
+        require(from >= 1, "invalid from");
+        require(to >= from, "invalid to");
+
+        for (uint256 i = from; i <= to; i++) {
+            if (accountHistory[account][i] == 1) {
+                totalCheckIn++;
+            }
+        }
     }
 
     function _verifySignature(
