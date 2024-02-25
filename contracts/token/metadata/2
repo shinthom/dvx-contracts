@@ -1,39 +1,11 @@
 {
-  "name": "Strong Guy #2",
-  "image": "ipfs://QmbL47yzzCu4dg3DdW9mqCvykfAoX5p3sQp1hy7kMiqmtA",
-  "description": "I'm super strong! SUPADUPA! #2",
+  "name": "DVX Alpha Access Card - Type V",
+  "image": "ipfs://QmXZAT4UoC4weicoVP3a4Qpr3LpAyZ48z999ARTAGCUWbK",
+  "description": "Alpha Access Card for High-Volume Traders across existing Perp DEXs",
   "attributes": [
     {
       "trait_type": "Type",
-      "value": "Human"
-    },
-    {
-      "trait_type": "Hair",
-      "value": "Brown Long"
-    },
-    {
-      "trait_type": "Special",
-      "value": "Fireflies"
-    },
-    {
-      "trait_type": "Clothing",
-      "value": "Straw Poncho"
-    },
-    {
-      "trait_type": "Eyes",
-      "value": "Tired"
-    },
-    {
-      "trait_type": "Mouth",
-      "value": "Long Stubble"
-    },
-    {
-      "trait_type": "Offhand",
-      "value": "Lantern"
-    },
-    {
-      "trait_type": "Background",
-      "value": "Cool Gray"
+      "value": "V"
     }
   ]
 }

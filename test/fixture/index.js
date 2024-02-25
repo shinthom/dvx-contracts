@@ -216,9 +216,7 @@ const deploy = async (noAccount) => {
   quoter = await ethers.deployContract("Quoter");
   reader = await ethers.deployContract("Reader");
   swapper = await ethers.deployContract("Swapper");
-  marginManager = await ethers.deployContract("MarginManager");
-
-  sbt = await ethers.deployContract("SBT");
+  // marginManager = await ethers.deployContract("MarginManager");
 
   await exchange.addAccountImplementation(1, accountTargetContract.target);
   await exchange.setAccountFactory(accountFactory.target);
@@ -226,7 +224,7 @@ const deploy = async (noAccount) => {
   await exchange.setLogger(logger.target);
   await exchange.setSwapper(swapper.target);
   await exchange.setFeeCollector(feeCollector.address);
-  await exchange.setMarginManager(marginManager.target);
+  // await exchange.setMarginManager(marginManager.target);
   await exchange.registerAdapter(gmxV1Adapter.target);
   await exchange.registerAdapter(muxAdapter.target);
   await exchange.setStableToken(USDC, true);
@@ -238,6 +236,9 @@ const deploy = async (noAccount) => {
 
   await exchange.setOrderKeeper(orderKeeper.address, true);
   await exchange.setRelayer(relayer.address, true);
+
+  // sbt
+  sbt = await ethers.deployContract("SBT");
 
   // attendanceBook
   const startTime = Math.ceil(Date.now() / 1000) + 86400 * 3;

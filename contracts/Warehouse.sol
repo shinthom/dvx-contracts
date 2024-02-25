@@ -166,16 +166,10 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         );
         require(position.size > 0, "position: not exist");
 
-        require(
-            (isLong && triggerPrice >= acceptablePrice) ||
-                (!isLong && triggerPrice <= acceptablePrice),
-            "triggerPrice: invalid"
-        );
-
         uint256 markPrice = IAdapter(adapter).getWrapPrice(index, isLong);
         require(
-            (isLong && markPrice >= acceptablePrice) ||
-                (!isLong && markPrice <= acceptablePrice),
+            (isLong && markPrice <= acceptablePrice) ||
+                (!isLong && markPrice >= acceptablePrice),
             "price: not acceptable"
         );
         emit TriggerOrderExecuted(

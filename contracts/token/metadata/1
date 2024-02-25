@@ -1,39 +1,11 @@
 {
-  "name": "Strong Guy #1",
-  "image": "ipfs://QmXsugFrC9rZRKYGPgC5ghnTuBPjsHejXvBiB2SfZf547J",
-  "description": "I'm super strong! SUPADUPA! #1",
+  "name": "DVX Alpha Access Card - Type D",
+  "image": "ipfs://QmUrkC9ZoejX2SfHobjo9UnTKpZbebVxNKee25v6eM7Mdv",
+  "description": "Alpha Access Card for DVX Early Bird Traders",
   "attributes": [
     {
       "trait_type": "Type",
-      "value": "Human"
-    },
-    {
-      "trait_type": "Hair",
-      "value": "Brown Long"
-    },
-    {
-      "trait_type": "Special",
-      "value": "Fireflies"
-    },
-    {
-      "trait_type": "Clothing",
-      "value": "Straw Poncho"
-    },
-    {
-      "trait_type": "Eyes",
-      "value": "Tired"
-    },
-    {
-      "trait_type": "Mouth",
-      "value": "Long Stubble"
-    },
-    {
-      "trait_type": "Offhand",
-      "value": "Lantern"
-    },
-    {
-      "trait_type": "Background",
-      "value": "Cool Gray"
+      "value": "D"
     }
   ]
 }

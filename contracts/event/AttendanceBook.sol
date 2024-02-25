@@ -21,7 +21,6 @@ contract AttendanceBook is Ownable {
     receive() external payable {}
 
     constructor(uint256 _startTime, uint256 _endTime, address _relayer) {
-        require(_startTime > block.timestamp, "invalid start time");
         require(_endTime > _startTime, "invalid end time");
         require(_relayer != address(0), "invalid relayer");
 
