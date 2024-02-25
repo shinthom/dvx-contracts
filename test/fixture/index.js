@@ -238,7 +238,7 @@ const deploy = async (noAccount) => {
   await exchange.setRelayer(relayer.address, true);
 
   // sbt
-  sbt = await ethers.deployContract("SBT");
+  sbt = await ethers.deployContract("AlphaAccessCard");
 
   // attendanceBook
   const startTime = Math.ceil(Date.now() / 1000) + 86400 * 3;
