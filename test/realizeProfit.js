@@ -11,6 +11,7 @@ describe("marketOrder", () => {
       owner,
       account,
       muxAdapter,
+      WETH,
       USDC,
       WBTC,
       checkBalance,
@@ -22,13 +23,13 @@ describe("marketOrder", () => {
     } = await loadFixture(deploy);
     await setDummyPrice();
 
-    const collateral = USDC;
-    const index = WBTC;
-    const collateralAmount = ethers.parseUnits("1000", 6);
-    const size = ethers.parseUnits("0.01", 8);
-    const isLong = false;
+    const collateral = WETH;
+    const index = WETH;
+    const collateralAmount = ethers.parseEther("1");
+    const size = ethers.parseEther("10");
+    const isLong = true;
 
-    const acceptablePrice = ethers.parseUnits("40000", 18);
+    const acceptablePrice = ethers.parseUnits("2000", 8);
     const networkFee = 0;
     const adapterFee = await muxAdapter.getMinExecutionFee();
 
@@ -66,8 +67,18 @@ describe("marketOrder", () => {
     );
     console.log(position);
 
-    var price = ethers.parseUnits("36000", 8);
-    await setPrice(muxAdapter, WBTC, price, price, true);
+    var price = ethers.parseUnits("2200", 8);
+    await setPrice(muxAdapter, WETH, price, price, true);
+
+    const pnlUsd = await muxAdapter.getPositionPnlUsd(
+      account.target,
+      collateral,
+      index,
+      isLong
+    );
+    console.log("pnlUsd:", pnlUsd.toString());
+    // 10 % of 20000 = 2000
+    // 2000
 
     await account
       .connect(owner)

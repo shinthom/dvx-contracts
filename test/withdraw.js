@@ -118,10 +118,18 @@ describe("withdraw", () => {
     console.log(await account.getFeeDebt(collateral));
     console.log(await account.getBalance(collateral));
 
-    var withdrawAmount = await account.getBalance(collateral);
+    var balance = await account.getBalance(collateral);
+    await expect(
+      account
+        .connect(owner)
+        .withdraw(collateral, owner.address, balance, 0, 0, "0x")
+    ).to.be.revertedWith("amount: greater than withdrawable balance");
+
+    var withdrawableBalance = await account.getWithdrawableBalance(collateral);
     await account
       .connect(owner)
-      .withdraw(collateral, owner.address, withdrawAmount, 0, 0, "0x");
+      .withdraw(collateral, owner.address, withdrawableBalance, 0, 0, "0x");
+
     console.log(await weth.balanceOf(owner.address));
     expect(await weth.balanceOf(feeCollector.address)).to.equal(networkFee);
     expect(await account.getFeeDebt(collateral)).to.equal(0);

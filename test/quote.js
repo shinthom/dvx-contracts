@@ -31,9 +31,9 @@ describe("Quoter", () => {
   it("quoteExactOutputSingle", async () => {
     const { quoter, WBTC, WETH, USDC, USDT, USDCe } = await loadFixture(deploy);
 
-    var tokenIn = USDC;
-    var tokenOut = USDCe;
-    var amountOut = ethers.parseUnits("10", 6);
+    var tokenIn = WETH;
+    var tokenOut = WBTC;
+    var amountOut = ethers.parseUnits("1", 8);
 
     const amountIn = await quoter.quoteExactOutputSingle.staticCall(
       tokenIn,
