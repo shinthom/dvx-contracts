@@ -17,6 +17,11 @@ const USDC = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
 const USDT = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9";
 const USDCe = "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8";
 
+const DAI = "0xda10009cbd5d07dd0cecc66161fc93d7c9000da1";
+const UNI = "0xfa7f8980b0f1e64a2062791cc3b0871572f1f7f0";
+const LINK = "0xf97f4df75117a78c1a5a0dbb814af92458539fb4";
+const ARB = "0x912ce59144191c1204e64559fe8253a0e49e6548";
+
 const collateralList = [
   {
     name: "WETH",
@@ -90,6 +95,10 @@ let wbtc;
 let usdc;
 let usdce;
 let usdt;
+let dai;
+let uni;
+let link;
+let arb;
 // mux contracts
 let orderBook;
 let liquidityPool;
@@ -150,6 +159,10 @@ const deploy = async (noAccount) => {
   usdc = await ethers.getContractAt("ERC20Mock", USDC);
   usdce = await ethers.getContractAt("ERC20Mock", USDCe);
   usdt = await ethers.getContractAt("ERC20Mock", USDT);
+  dai = await ethers.getContractAt("ERC20Mock", DAI);
+  uni = await ethers.getContractAt("ERC20Mock", UNI);
+  link = await ethers.getContractAt("ERC20Mock", LINK);
+  arb = await ethers.getContractAt("ERC20Mock", ARB);
   // gmx
   vault = await ethers.getContractAt("IVault", Vault);
   positionRouter = await ethers.getContractAt(
@@ -323,8 +336,26 @@ stable:
         balanceStorageSlot,
         abiCoder.encode(["uint256"], [tokenAmount]),
       ]);
-    } else if (token == WBTC || token == USDCe || token == USDT) {
+    } else if (
+      token == WBTC ||
+      token == USDCe ||
+      token == USDT ||
+      token == LINK ||
+      token == UNI
+    ) {
       const storageSlot = 51n;
+      const encoded = abiCoder.encode(
+        ["address", "uint256"],
+        [owner.address, storageSlot]
+      );
+      const balanceStorageSlot = ethers.keccak256(encoded);
+      await ethers.provider.send("hardhat_setStorageAt", [
+        token,
+        balanceStorageSlot,
+        abiCoder.encode(["uint256"], [tokenAmount]),
+      ]);
+    } else if (token == DAI) {
+      const storageSlot = 2n;
       const encoded = abiCoder.encode(
         ["address", "uint256"],
         [owner.address, storageSlot]
@@ -750,6 +781,10 @@ stable:
     usdc,
     usdce,
     usdt,
+    dai,
+    uni,
+    link,
+    arb,
     orderBook,
     liquidityPool,
     exchange,
@@ -769,6 +804,10 @@ stable:
     USDC,
     USDCe,
     USDT,
+    DAI,
+    UNI,
+    LINK,
+    ARB,
     collateralList,
     indexList,
     vault,

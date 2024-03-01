@@ -27,4 +27,8 @@ contract ERC20Mock is ERC20 {
      * prevents a signature from being used multiple times.
      */
     function nonces(address owner) external view returns (uint256) {}
+
+    function version() external pure returns (string memory) {
+        return "1";
+    }
 }

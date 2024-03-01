@@ -28,6 +28,54 @@ describe("Quoter", () => {
     console.log(answers2);
   });
 
+  it("quote, UNI / LINK", async () => {
+    const { owner, quoter, gmxV1Adapter, UNI, LINK } = await loadFixture(
+      deploy
+    );
+
+    var collateral = UNI;
+    var index = UNI;
+    var isLong = true;
+    var collateralAmount = ethers.parseEther("1");
+    var size = ethers.parseEther("10");
+    var request = { collateral, index, collateralAmount, size, isLong };
+    var answer = await quoter.quote(
+      owner.address,
+      [gmxV1Adapter.target],
+      request
+    );
+    console.log(answer);
+
+    var collateral = LINK;
+    var index = LINK;
+    var isLong = true;
+    var collateralAmount = ethers.parseEther("1");
+    var size = ethers.parseEther("10");
+    var request = { collateral, index, collateralAmount, size, isLong };
+    var answer = await quoter.quote(
+      owner.address,
+      [gmxV1Adapter.target],
+      request
+    );
+    console.log(answer);
+  });
+
+  it("quote, ARB", async () => {
+    const { owner, quoter, muxAdapter, ARB } = await loadFixture(deploy);
+
+    var collateral = ARB;
+    var index = ARB;
+    var isLong = true;
+    var collateralAmount = ethers.parseEther("10");
+    var size = ethers.parseEther("100");
+    var request = { collateral, index, collateralAmount, size, isLong };
+    var answer = await quoter.quote(
+      owner.address,
+      [muxAdapter.target],
+      request
+    );
+  });
+
   it("quoteExactOutputSingle", async () => {
     const { quoter, WBTC, WETH, USDC, USDT, USDCe } = await loadFixture(deploy);
 
