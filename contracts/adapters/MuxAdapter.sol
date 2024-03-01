@@ -167,6 +167,7 @@ contract MuxAdapter is IAdapter {
     uint256 public constant USD = 1 * (10 ** PRICE_DECIMALS);
 
     uint8 private constant _wethTokenId = 3;
+    address private constant ARB = 0x912CE59144191C1204E64559FE8253a0e49E6548;
 
     address private immutable _liquidityPool;
     address private immutable _orderBook;
@@ -635,7 +636,14 @@ contract MuxAdapter is IAdapter {
         ILiquidityPool.Asset memory asset = ILiquidityPool(_liquidityPool)
             .getAssetInfo(indexId);
 
-        uint256 price = _getPrice(asset.referenceOracle);
+        uint256 price;
+        if (asset.referenceOracle == address(0) && index == ARB) {
+            price = uint256(IChainlink(0xb2A824043730FE05F3DA2efaFa1CBbe83fa548D6).latestAnswer());
+            price *= 1e10;
+        } else {
+            price = _getPrice(asset.referenceOracle);
+        }
+
         uint256 decimals = IERC20Metadata(index).decimals();
 
         return ((price * asset.positionFeeRate) * size) / 1e5 / 1e18;
@@ -718,7 +726,16 @@ contract MuxAdapter is IAdapter {
         uint8 tokenId = _getIdFromTokenAddress(token);
         ILiquidityPool.Asset memory asset
             = ILiquidityPool(_liquidityPool).getAssetInfo(tokenId); // prettier-ignore
-        return _getPrice(asset.referenceOracle);
+
+        uint256 price;
+        if (asset.referenceOracle == address(0) && token == ARB) {
+            price = uint256(IChainlink(0xb2A824043730FE05F3DA2efaFa1CBbe83fa548D6).latestAnswer());
+            price *= 1e10;
+        } else {
+            price = _getPrice(asset.referenceOracle);
+        }
+
+        return price;
     }
 
     function getWrapPrice(
