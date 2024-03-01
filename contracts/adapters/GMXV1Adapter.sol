@@ -320,7 +320,7 @@ contract GmxV1Adapter is IAdapter {
                 IExchange(_exchange).isStableToken(collateral),
                 "INVALID_COLLATERAL"
             );
-            collateralAmountUsd = collateralAmount * (10 ** 24);
+            collateralAmountUsd = _adjustSizeDecimal(collateral, collateralAmount);
         }
 
         _decrease(collateral, index, collateralAmountUsd, 0, isLong, 0);
@@ -1039,5 +1039,18 @@ contract GmxV1Adapter is IAdapter {
             false, // withdrawETH,
             address(0)
         );
+    }
+
+    function _adjustSizeDecimal(
+        address token,
+        uint256 size
+    ) private view returns (uint256) {
+        uint8 decimals = IERC20Metadata(token).decimals();
+
+        if (decimals <= 30) {
+            return size * (10 ** (30 - decimals));
+        } else {
+            return size / (10 ** (decimals - 30));
+        }
     }
 }
