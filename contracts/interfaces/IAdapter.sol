@@ -15,6 +15,8 @@ interface IAdapter {
         bool isLong;
     }
 
+    function name() external view returns (string memory);
+
     function increasePosition(
         address collateral,
         address index,

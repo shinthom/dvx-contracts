@@ -199,6 +199,8 @@ interface IVaultPriceFeed {
 }
 
 contract GmxV1Adapter is IAdapter {
+    string public constant override name = "GMX_V1";
+
     uint256 public constant BASIS_POINTS_DIVISOR = 10_000;
 
     uint256 public constant PRICE_DECIMALS = 30;

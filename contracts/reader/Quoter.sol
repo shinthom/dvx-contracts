@@ -5,11 +5,19 @@ import {IAdapter} from "../interfaces/IAdapter.sol";
 import {IExchange} from "../interfaces/IExchange.sol";
 import {IQuoterV2} from "@uniswap/v3-periphery/contracts/interfaces/IQuoterV2.sol";
 
+interface IChainlink {
+    function latestAnswer() external view returns (int256);
+}
+
 contract Quoter {
     uint256 public constant PRICE_DECIMAL = 2;
 
     address private constant _swapQuoter =
         0x61fFE014bA17989E743c5F6cB21bF9697530B21e; // uniswap V3
+
+    address private constant UNI = 0xFa7F8980b0f1E64A2062791cc3b0871572f1F7f0;
+    address private constant LINK = 0xf97f4df75117a78c1A5a0DBb814Af92458539FB4;
+    address private constant ARB = 0x912CE59144191C1204E64559FE8253a0e49E6548;
 
     struct Request {
         address collateral;
@@ -73,27 +81,52 @@ contract Quoter {
         address[] memory adapters,
         Request memory request
     ) public view returns (Answer[] memory answers) {
-        uint256[] memory fees = new uint256[](adapters.length);
-        for (uint256 i = 0; i < adapters.length; i++) {
-            fees[i] = getFee(account, adapters[i], request);
-        }
-
-        // sort by fee
-        if (adapters.length > 1) {
+        if (
+            request.collateral == LINK ||
+            request.collateral == UNI ||
+            request.index == LINK ||
+            request.index == UNI
+        ) {
             for (uint256 i = 0; i < adapters.length; i++) {
-                for (uint256 j = i + 1; j < adapters.length; j++) {
-                    if (fees[i] > fees[j]) {
-                        address temp0 = adapters[i];
-                        adapters[i] = adapters[j];
-                        adapters[j] = temp0;
+                if (
+                    keccak256(bytes(IAdapter(adapters[i]).name())) == keccak256(bytes("GMX_V1"))
+                ) {
+                    answers = new Answer[](1);
+                    answers[0] = _get(account, adapters[i], request);
+                }
+            }
+        } else if (request.index == ARB) {
+            for (uint256 i = 0; i < adapters.length; i++) {
+                if (
+                    keccak256(bytes(IAdapter(adapters[i]).name())) == keccak256(bytes("MUX"))
+                ) {
+                    answers = new Answer[](1);
+                    answers[0] = _get(account, adapters[i], request);
+                }
+            }
+        } else {
+            uint256[] memory fees = new uint256[](adapters.length);
+            for (uint256 i = 0; i < adapters.length; i++) {
+                fees[i] = getFee(account, adapters[i], request);
+            }
+
+            // sort by fee
+            if (adapters.length > 1) {
+                for (uint256 i = 0; i < adapters.length; i++) {
+                    for (uint256 j = i + 1; j < adapters.length; j++) {
+                        if (fees[i] > fees[j]) {
+                            address temp0 = adapters[i];
+                            adapters[i] = adapters[j];
+                            adapters[j] = temp0;
+                        }
                     }
                 }
             }
-        }
 
-        // todo: split answers following available liquditiy.
-        answers = new Answer[](1);
-        answers[0] = _get(account, adapters[0], request);
+            // todo: split answers following available liquditiy.
+            answers = new Answer[](1);
+            answers[0] = _get(account, adapters[0], request);
+        }
     }
 
     function _get(

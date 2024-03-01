@@ -159,6 +159,8 @@ interface IChainlink {
 }
 
 contract MuxAdapter is IAdapter {
+    string public constant override name = "MUX";
+
     uint256 public constant TOKEN_DEFAULT_DECIMALS = 18;
 
     uint256 public constant PRICE_DECIMALS = 18;
