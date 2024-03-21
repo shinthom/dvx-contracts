@@ -1,16 +1,11 @@
-node_modules
+# Foundry
+cache/
+out/
+broadcast/
+
+# env
 .env
 
-# Hardhat files
-/cache
-/artifacts
-
-# TypeChain files
-/typechain
-/typechain-types
-
-# solidity-coverage files
-/coverage
-/coverage.json
-
+# editor / local state
 .idea
+.omc/
