@@ -638,7 +638,10 @@ contract MuxAdapter is IAdapter {
 
         uint256 price;
         if (asset.referenceOracle == address(0) && index == ARB) {
-            price = uint256(IChainlink(0xb2A824043730FE05F3DA2efaFa1CBbe83fa548D6).latestAnswer());
+            price = uint256(
+                IChainlink(0xb2A824043730FE05F3DA2efaFa1CBbe83fa548D6)
+                    .latestAnswer()
+            );
             price *= 1e10;
         } else {
             price = _getPrice(asset.referenceOracle);
@@ -676,8 +679,16 @@ contract MuxAdapter is IAdapter {
         ILiquidityPool.Asset memory asset
             = ILiquidityPool(_liquidityPool).getAssetInfo(indexId); // prettier-ignore
 
-        int256 price = IChainlink(asset.referenceOracle).latestAnswer();
-        price *= 1e10; // decimals 8 => 18
+        uint256 price;
+        if (asset.referenceOracle == address(0) && index == ARB) {
+            price = uint256(
+                IChainlink(0xb2A824043730FE05F3DA2efaFa1CBbe83fa548D6)
+                    .latestAnswer()
+            );
+            price *= 1e10;
+        } else {
+            price = _getPrice(asset.referenceOracle);
+        }
 
         uint256 cumulativeFunding;
         if (isLong) {
@@ -729,7 +740,10 @@ contract MuxAdapter is IAdapter {
 
         uint256 price;
         if (asset.referenceOracle == address(0) && token == ARB) {
-            price = uint256(IChainlink(0xb2A824043730FE05F3DA2efaFa1CBbe83fa548D6).latestAnswer());
+            price = uint256(
+                IChainlink(0xb2A824043730FE05F3DA2efaFa1CBbe83fa548D6)
+                    .latestAnswer()
+            );
             price *= 1e10;
         } else {
             price = _getPrice(asset.referenceOracle);

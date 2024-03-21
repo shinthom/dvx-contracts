@@ -341,7 +341,8 @@ stable:
       token == USDCe ||
       token == USDT ||
       token == LINK ||
-      token == UNI
+      token == UNI ||
+      token == ARB
     ) {
       const storageSlot = 51n;
       const encoded = abiCoder.encode(
