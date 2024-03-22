@@ -22,7 +22,7 @@ contract Storage {
         0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
 
     bool internal _locked; // reentrancy guard
-    bool internal _intitalized;
+    bool internal _initialized;
 
     address internal _owner;
     address internal _exchange;
@@ -77,8 +77,8 @@ contract Account is Storage, PayableMulticall, IAccount {
         address delegatedAccount,
         uint256 delegatedAccountExpiration
     ) public virtual override {
-        require(!_intitalized, "already initialized");
-        _intitalized = true;
+        require(!_initialized, "already initialized");
+        _initialized = true;
 
         require(owner != address(0), "owner: zero address");
         require(exchange != address(0), "exchange: zero address");
@@ -153,18 +153,13 @@ contract Account is Storage, PayableMulticall, IAccount {
         uint256 deadline,
         bytes calldata signature
     ) public virtual override onlyOwnerOrRelayer {
-        if (msg.sender != _owner) {
-            require(
-                _verifySignature(
-                    deadline,
-                    keccak256(
-                        abi.encodePacked(token, amount, networkFee, deadline)
-                    ),
-                    signature
-                ),
-                "signature: invalid"
-            );
-        }
+        _checkDelegatedSignature(
+            keccak256(
+                abi.encodePacked(token, amount, networkFee, deadline)
+            ),
+            deadline,
+            signature
+        );
 
         _deposit(token, amount, networkFee, signature);
     }
@@ -179,26 +174,21 @@ contract Account is Storage, PayableMulticall, IAccount {
         uint256 deadline,
         bytes calldata signature
     ) public virtual override onlyOwnerOrRelayer {
-        if (msg.sender != _owner) {
-            require(
-                _verifySignature(
-                    deadline,
-                    keccak256(
-                        abi.encodePacked(
-                            token,
-                            amount,
-                            v,
-                            r,
-                            s,
-                            networkFee,
-                            deadline
-                        )
-                    ),
-                    signature
-                ),
-                "signature: invalid"
-            );
-        }
+        _checkDelegatedSignature(
+            keccak256(
+                abi.encodePacked(
+                    token,
+                    amount,
+                    v,
+                    r,
+                    s,
+                    networkFee,
+                    deadline
+                )
+            ),
+            deadline,
+            signature
+        );
 
         IERC20Permit(token).permit(
             _owner,
@@ -227,11 +217,12 @@ contract Account is Storage, PayableMulticall, IAccount {
         // slither-disable-next-line arbitrary-send-erc20
         IERC20(token).safeTransferFrom(_owner, address(this), amount);
 
-        if (networkFee > 0) {
-            require(amount >= networkFee, "amount: less than network fee");
-            _collectNetworkFee(token, networkFee);
-            amount -= networkFee;
-        }
+        amount = _deductNetworkFee(
+            token,
+            amount,
+            networkFee,
+            "amount: less than network fee"
+        );
 
         address logger = IExchange(_exchange).logger();
         if (logger != address(0)) {
@@ -252,24 +243,19 @@ contract Account is Storage, PayableMulticall, IAccount {
         uint256 deadline,
         bytes calldata signature
     ) public virtual override onlyOwnerOrRelayer {
-        if (msg.sender != _owner) {
-            require(
-                _verifySignature(
-                    deadline,
-                    keccak256(
-                        abi.encodePacked(
-                            token,
-                            to,
-                            amount,
-                            networkFee,
-                            deadline
-                        )
-                    ),
-                    signature
-                ),
-                "signature: invalid"
-            );
-        }
+        _checkDelegatedSignature(
+            keccak256(
+                abi.encodePacked(
+                    token,
+                    to,
+                    amount,
+                    networkFee,
+                    deadline
+                )
+            ),
+            deadline,
+            signature
+        );
 
         require(amount != 0, "amount: zero");
         require(
@@ -277,19 +263,16 @@ contract Account is Storage, PayableMulticall, IAccount {
             "amount: greater than withdrawable balance"
         );
 
-        if (networkFee > 0) {
-            require(amount >= networkFee, "amount: less than network fee");
-            _collectNetworkFee(token, networkFee);
-            amount -= networkFee;
-        }
+        amount = _deductNetworkFee(
+            token,
+            amount,
+            networkFee,
+            "amount: less than network fee"
+        );
 
-        uint256 feeDebt = _feeDebts[token];
-        if (feeDebt > 0) {
-            _collectFeeDebt(token, feeDebt);
-        }
+        _settleFeeDebt(token);
 
         if (token == _weth) {
-            IERC20(token).approve(_weth, amount);
             IWETH(_weth).withdraw(amount);
             payable(to).transfer(amount);
         } else {
@@ -316,35 +299,31 @@ contract Account is Storage, PayableMulticall, IAccount {
         uint256 deadline,
         bytes calldata signature
     ) public virtual override onlyOwnerOrRelayer {
-        if (msg.sender != _owner) {
-            require(
-                _verifySignature(
-                    deadline,
-                    keccak256(
-                        abi.encodePacked(
-                            tokenIn,
-                            tokenOut,
-                            amountIn,
-                            networkFee,
-                            deadline
-                        )
-                    ),
-                    signature
-                ),
-                "signature: invalid"
-            );
-        }
+        _checkDelegatedSignature(
+            keccak256(
+                abi.encodePacked(
+                    tokenIn,
+                    tokenOut,
+                    amountIn,
+                    networkFee,
+                    deadline
+                )
+            ),
+            deadline,
+            signature
+        );
 
         require(
             amountIn <= getWithdrawableBalance(tokenIn),
             "amountIn: greater than withdrawable balance"
         );
 
-        if (networkFee > 0) {
-            require(amountIn >= networkFee, "amount: less than network fee");
-            _collectNetworkFee(tokenIn, networkFee);
-            amountIn -= networkFee;
-        }
+        amountIn = _deductNetworkFee(
+            tokenIn,
+            amountIn,
+            networkFee,
+            "amount: less than network fee"
+        );
 
         _swap(tokenIn, tokenOut, amountIn, networkFee);
     }
@@ -392,47 +371,37 @@ contract Account is Storage, PayableMulticall, IAccount {
         uint256 deadline,
         bytes calldata signature
     ) public payable virtual override noReentrant onlyOwnerOrRelayer {
-        if (msg.sender != _owner) {
-            require(
-                _verifySignature(
-                    deadline,
-                    keccak256(
-                        abi.encodePacked(
-                            adapter,
-                            collateral,
-                            index,
-                            collateralAmount,
-                            size,
-                            isLong,
-                            acceptablePrice,
-                            networkFee,
-                            deadline
-                        )
-                    ),
-                    signature
-                ),
-                "signature: invalid"
-            );
-        }
+        _checkDelegatedSignature(
+            keccak256(
+                abi.encodePacked(
+                    adapter,
+                    collateral,
+                    index,
+                    collateralAmount,
+                    size,
+                    isLong,
+                    acceptablePrice,
+                    networkFee,
+                    deadline
+                )
+            ),
+            deadline,
+            signature
+        );
 
         require(
             collateralAmount <= getWithdrawableBalance(collateral),
             "collateralAmount: greater than withdrawable balance"
         );
 
-        if (networkFee > 0) {
-            require(
-                collateralAmount >= networkFee,
-                "collateralAmount: less than network fee"
-            );
-            collateralAmount -= networkFee;
-            _collectNetworkFee(collateral, networkFee);
-        }
+        collateralAmount = _deductNetworkFee(
+            collateral,
+            collateralAmount,
+            networkFee,
+            "collateralAmount: less than network fee"
+        );
 
-        uint256 feeDebt = _feeDebts[collateral];
-        if (feeDebt > 0) {
-            _collectFeeDebt(collateral, feeDebt);
-        }
+        _settleFeeDebt(collateral);
 
         _marketOrderId++;
         _increasePosition(
@@ -464,28 +433,23 @@ contract Account is Storage, PayableMulticall, IAccount {
         require(path.length == 2, "path: invalid length");
         require(path[0] != path[1], "path: same token");
 
-        if (msg.sender != _owner) {
-            require(
-                _verifySignature(
-                    deadline,
-                    keccak256(
-                        abi.encodePacked(
-                            adapter,
-                            path,
-                            index,
-                            collateralAmount,
-                            size,
-                            isLong,
-                            acceptablePrice,
-                            networkFee,
-                            deadline
-                        )
-                    ),
-                    signature
-                ),
-                "signature: invalid"
-            );
-        }
+        _checkDelegatedSignature(
+            keccak256(
+                abi.encodePacked(
+                    adapter,
+                    path,
+                    index,
+                    collateralAmount,
+                    size,
+                    isLong,
+                    acceptablePrice,
+                    networkFee,
+                    deadline
+                )
+            ),
+            deadline,
+            signature
+        );
 
         address collateral = path[0];
         require(
@@ -493,19 +457,14 @@ contract Account is Storage, PayableMulticall, IAccount {
             "collateralAmount: greater than withdrawable balance"
         );
 
-        if (networkFee > 0) {
-            require(
-                collateralAmount >= networkFee,
-                "collateralAmount: less than network fee"
-            );
-            collateralAmount -= networkFee;
-            _collectNetworkFee(collateral, networkFee);
-        }
+        collateralAmount = _deductNetworkFee(
+            collateral,
+            collateralAmount,
+            networkFee,
+            "collateralAmount: less than network fee"
+        );
 
-        uint256 feeDebt = _feeDebts[collateral];
-        if (feeDebt > 0) {
-            _collectFeeDebt(collateral, feeDebt);
-        }
+        _settleFeeDebt(collateral);
 
         // stack too deep
         collateralAmount = _swap(
@@ -516,10 +475,7 @@ contract Account is Storage, PayableMulticall, IAccount {
         );
         collateral = path[1];
 
-        feeDebt = _feeDebts[collateral];
-        if (feeDebt > 0) {
-            _collectFeeDebt(collateral, feeDebt);
-        }
+        _settleFeeDebt(collateral);
 
         _marketOrderId++;
         _increasePosition(
@@ -619,27 +575,22 @@ contract Account is Storage, PayableMulticall, IAccount {
         uint256 deadline,
         bytes calldata signature
     ) public payable virtual override noReentrant onlyOwnerOrRelayer {
-        if (msg.sender != _owner) {
-            require(
-                _verifySignature(
-                    deadline,
-                    keccak256(
-                        abi.encodePacked(
-                            adapter,
-                            collateral,
-                            index,
-                            isLong,
-                            size,
-                            acceptablePrice,
-                            networkFee,
-                            deadline
-                        )
-                    ),
-                    signature
-                ),
-                "signature: invalid"
-            );
-        }
+        _checkDelegatedSignature(
+            keccak256(
+                abi.encodePacked(
+                    adapter,
+                    collateral,
+                    index,
+                    isLong,
+                    size,
+                    acceptablePrice,
+                    networkFee,
+                    deadline
+                )
+            ),
+            deadline,
+            signature
+        );
 
         if (networkFee > 0) {
             _addFeeDebt(collateral, networkFee);
@@ -705,53 +656,43 @@ contract Account is Storage, PayableMulticall, IAccount {
         uint256 deadline,
         bytes calldata signature
     ) public payable virtual override noReentrant onlyOwnerOrRelayer {
-        if (msg.sender != _owner) {
-            require(
-                _verifySignature(
-                    deadline,
-                    keccak256(
-                        abi.encodePacked(
-                            adapter,
-                            collateral,
-                            index,
-                            isLong,
-                            tokenIn,
-                            amountIn,
-                            networkFee,
-                            deadline
-                        )
-                    ),
-                    signature
-                ),
-                "signature: invalid"
-            );
-        }
+        _checkDelegatedSignature(
+            keccak256(
+                abi.encodePacked(
+                    adapter,
+                    collateral,
+                    index,
+                    isLong,
+                    tokenIn,
+                    amountIn,
+                    networkFee,
+                    deadline
+                )
+            ),
+            deadline,
+            signature
+        );
 
         require(
             amountIn <= getWithdrawableBalance(tokenIn),
             "tokenIn: greater than withdrawable balance"
         );
 
-        if (networkFee > 0) {
-            require(amountIn >= networkFee, "amountIn: less than network fee");
-            amountIn -= networkFee;
-            _collectNetworkFee(tokenIn, networkFee);
-        }
+        amountIn = _deductNetworkFee(
+            tokenIn,
+            amountIn,
+            networkFee,
+            "amountIn: less than network fee"
+        );
 
-        uint256 feeDebt = _feeDebts[tokenIn];
-        if (feeDebt > 0) {
-            _collectFeeDebt(tokenIn, feeDebt);
-        }
+        _settleFeeDebt(tokenIn);
 
         uint256 collateralAmount = amountIn;
         bool swap = tokenIn != collateral;
         if (swap) {
             collateralAmount = _swap(tokenIn, collateral, amountIn, networkFee);
 
-            uint256 feeDebt = _feeDebts[collateral];
-            if (feeDebt > 0) {
-                _collectFeeDebt(collateral, feeDebt);
-            }
+            _settleFeeDebt(collateral);
         }
 
         _increaseCollateral(
@@ -813,26 +754,21 @@ contract Account is Storage, PayableMulticall, IAccount {
         uint256 deadline,
         bytes calldata signature
     ) public payable virtual override noReentrant onlyOwnerOrRelayer {
-        if (msg.sender != _owner) {
-            require(
-                _verifySignature(
-                    deadline,
-                    keccak256(
-                        abi.encodePacked(
-                            adapter,
-                            collateral,
-                            index,
-                            isLong,
-                            collateralAmount,
-                            networkFee,
-                            deadline
-                        )
-                    ),
-                    signature
-                ),
-                "signature: invalid"
-            );
-        }
+        _checkDelegatedSignature(
+            keccak256(
+                abi.encodePacked(
+                    adapter,
+                    collateral,
+                    index,
+                    isLong,
+                    collateralAmount,
+                    networkFee,
+                    deadline
+                )
+            ),
+            deadline,
+            signature
+        );
 
         if (networkFee > 0) {
             _addFeeDebt(collateral, networkFee);
@@ -878,29 +814,24 @@ contract Account is Storage, PayableMulticall, IAccount {
         uint256 deadline,
         bytes calldata signature
     ) public payable virtual override noReentrant onlyOwnerOrRelayer {
-        if (msg.sender != _owner) {
-            require(
-                _verifySignature(
-                    deadline,
-                    keccak256(
-                        abi.encodePacked(
-                            collateral,
-                            index,
-                            collateralAmount,
-                            size,
-                            isLong,
-                            triggerPrice,
-                            acceptablePrice,
-                            networkFee,
-                            executionFee,
-                            deadline
-                        )
-                    ),
-                    signature
-                ),
-                "signature: invalid"
-            );
-        }
+        _checkDelegatedSignature(
+            keccak256(
+                abi.encodePacked(
+                    collateral,
+                    index,
+                    collateralAmount,
+                    size,
+                    isLong,
+                    triggerPrice,
+                    acceptablePrice,
+                    networkFee,
+                    executionFee,
+                    deadline
+                )
+            ),
+            deadline,
+            signature
+        );
         require(
             IExchange(_exchange).isSupportedCollateralToken(collateral),
             "collateral: not supported"
@@ -915,14 +846,12 @@ contract Account is Storage, PayableMulticall, IAccount {
             "collateralAmount: greater than withdrawable balance"
         );
 
-        if (networkFee > 0) {
-            require(
-                collateralAmount >= networkFee,
-                "collateralAmount: less than network fee"
-            );
-            _collectNetworkFee(collateral, networkFee);
-            collateralAmount -= networkFee;
-        }
+        collateralAmount = _deductNetworkFee(
+            collateral,
+            collateralAmount,
+            networkFee,
+            "collateralAmount: less than network fee"
+        );
         require(
             executionFee <= collateralAmount,
             "executionFee: greater than collateralAmount"
@@ -948,18 +877,13 @@ contract Account is Storage, PayableMulticall, IAccount {
         uint256 deadline,
         bytes calldata signature
     ) public payable virtual override noReentrant onlyOwnerOrRelayer {
-        if (msg.sender != _owner) {
-            require(
-                _verifySignature(
-                    deadline,
-                    keccak256(
-                        abi.encodePacked(limitOrderId, networkFee, deadline)
-                    ),
-                    signature
-                ),
-                "signature: invalid"
-            );
-        }
+        _checkDelegatedSignature(
+            keccak256(
+                abi.encodePacked(limitOrderId, networkFee, deadline)
+            ),
+            deadline,
+            signature
+        );
 
         IWarehouse.LimitOrder memory limitOrder
             = IExchange(_exchange).cancelLimitOrder(limitOrderId); // prettier-ignore
@@ -1016,29 +940,24 @@ contract Account is Storage, PayableMulticall, IAccount {
         uint256 deadline,
         bytes calldata signature
     ) public payable virtual override noReentrant onlyOrderKeeper {
-        if (msg.sender != _owner) {
-            require(
-                _verifySignature(
-                    deadline,
-                    keccak256(
-                        abi.encodePacked(
-                            adapter,
-                            collateral,
-                            index,
-                            isLong,
-                            size,
-                            orderType,
-                            triggerPrice,
-                            acceptablePrice,
-                            networkFee,
-                            deadline
-                        )
-                    ),
-                    signature
-                ),
-                "signature: invalid"
-            );
-        }
+        _checkDelegatedSignature(
+            keccak256(
+                abi.encodePacked(
+                    adapter,
+                    collateral,
+                    index,
+                    isLong,
+                    size,
+                    orderType,
+                    triggerPrice,
+                    acceptablePrice,
+                    networkFee,
+                    deadline
+                )
+            ),
+            deadline,
+            signature
+        );
 
         IExchange(_exchange).executeTriggerOrder(
             adapter,
@@ -1154,6 +1073,42 @@ contract Account is Storage, PayableMulticall, IAccount {
     function _collectProtocolFee(address token, uint256 amount) internal {
         IERC20(token).approve(_exchange, amount);
         IExchange(_exchange).collectProtocolFee(token, amount);
+    }
+
+    function _checkDelegatedSignature(
+        bytes32 messageHash,
+        uint256 deadline,
+        bytes calldata signature
+    ) internal view {
+        if (msg.sender == _owner) {
+            return;
+        }
+        require(
+            _verifySignature(deadline, messageHash, signature),
+            "signature: invalid"
+        );
+    }
+
+    function _settleFeeDebt(address token) internal {
+        uint256 feeDebt = _feeDebts[token];
+        if (feeDebt > 0) {
+            _collectFeeDebt(token, feeDebt);
+        }
+    }
+
+    function _deductNetworkFee(
+        address token,
+        uint256 amount,
+        uint256 networkFee,
+        string memory errorMessage
+    ) internal returns (uint256) {
+        if (networkFee == 0) {
+            return amount;
+        }
+
+        require(amount >= networkFee, errorMessage);
+        _collectNetworkFee(token, networkFee);
+        return amount - networkFee;
     }
 
     function _verifySignature(
