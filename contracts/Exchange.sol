@@ -17,11 +17,9 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
 
-    address private constant _weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
-
     uint256 public constant BASIS_POINTS = 1e8;
 
-    mapping(uint256 => address) private _accountImplentation;
+    mapping(uint256 => address) private _accountImplementation;
 
     address public override accountFactory;
     address public override warehouse;
@@ -68,11 +66,11 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     ) external override onlyOwner {
         require(implementation != address(0), "implementation: zero address");
         require(
-            _accountImplentation[version] == address(0),
+            _accountImplementation[version] == address(0),
             "version: already added"
         );
 
-        _accountImplentation[version] = implementation;
+        _accountImplementation[version] = implementation;
         emit AccountImplementationAdded(version, implementation);
     }
 
@@ -93,7 +91,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function setSwapper(address _swapper) external virtual override onlyOwner {
-        require(_swapper != address(0), "warehouse: zero address");
+        require(_swapper != address(0), "swapper: zero address");
 
         swapper = _swapper;
         emit SwapperSet(_swapper);
@@ -102,7 +100,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     function setMarginManager(
         address _marginManager
     ) external virtual override onlyOwner {
-        require(_marginManager != address(0), "manager: zero address");
+        require(_marginManager != address(0), "marginManager: zero address");
 
         marginManager = _marginManager;
         emit MarginManagerSet(_marginManager);
@@ -216,7 +214,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address orderKeeper,
         bool isActive
     ) external override onlyOwner {
-        require(orderKeeper != address(0), "exchange: zero address");
+        require(orderKeeper != address(0), "orderKeeper: zero address");
 
         isOrderKeeper[orderKeeper] = isActive;
         emit OrderKeeperSet(orderKeeper, isActive);
@@ -226,7 +224,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
         address relayer,
         bool isActive
     ) external override onlyOwner {
-        require(relayer != address(0), "exchange: zero address");
+        require(relayer != address(0), "relayer: zero address");
 
         isRelayer[relayer] = isActive;
         emit RelayerSet(relayer, isActive);
@@ -517,7 +515,7 @@ contract Exchange is IExchange, OwnableUpgradeable, UUPSUpgradeable {
     function accountImplementation(
         uint256 version
     ) external view override returns (address) {
-        return _accountImplentation[version];
+        return _accountImplementation[version];
     }
 
     function getAccount(
