@@ -7,8 +7,6 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
-    address private constant _weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
-
     mapping(address => LimitOrder[]) private _limitOrders;
 
     address public exchange;
@@ -38,8 +36,7 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
         uint256 executionFee
     ) external payable override onlyExchange {
         require(
-            (isLong && triggerPrice <= acceptablePrice) ||
-                (!isLong && triggerPrice >= acceptablePrice),
+            _isPriceAcceptable(isLong, triggerPrice, acceptablePrice),
             "triggerPrice: invalid"
         );
 
@@ -102,8 +99,11 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
             limitOrder.isLong
         );
         require(
-            (limitOrder.isLong && markPrice <= limitOrder.acceptablePrice) ||
-                (!limitOrder.isLong && markPrice >= limitOrder.acceptablePrice),
+            _isPriceAcceptable(
+                limitOrder.isLong,
+                markPrice,
+                limitOrder.acceptablePrice
+            ),
             "price: not acceptable"
         );
 
@@ -134,10 +134,11 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
                 limitOrder.isLong
             );
             require(
-                (limitOrder.isLong &&
-                    markPrice <= limitOrder.acceptablePrice) ||
-                    (!limitOrder.isLong &&
-                        markPrice >= limitOrder.acceptablePrice),
+                _isPriceAcceptable(
+                    limitOrder.isLong,
+                    markPrice,
+                    limitOrder.acceptablePrice
+                ),
                 "price: not acceptable"
             );
         }
@@ -168,8 +169,7 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
 
         uint256 markPrice = IAdapter(adapter).getWrapPrice(index, isLong);
         require(
-            (isLong && markPrice <= acceptablePrice) ||
-                (!isLong && markPrice >= acceptablePrice),
+            _isPriceAcceptable(isLong, markPrice, acceptablePrice),
             "price: not acceptable"
         );
         emit TriggerOrderExecuted(
@@ -184,6 +184,15 @@ contract Warehouse is IWarehouse, OwnableUpgradeable, UUPSUpgradeable {
             acceptablePrice,
             networkFee
         );
+    }
+
+    function _isPriceAcceptable(
+        bool isLong,
+        uint256 price,
+        uint256 acceptablePrice
+    ) internal pure returns (bool) {
+        return
+            isLong ? price <= acceptablePrice : price >= acceptablePrice;
     }
 
     function getPositionKey(
