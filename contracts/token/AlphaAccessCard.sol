@@ -79,7 +79,7 @@ contract AlphaAccessCard is ERC1155, Ownable {
     ) internal virtual override {
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
 
-        for (uint256 i = 0; i < ids.length; ++i) {
+        if (ids.length > 0) {
             require(from == address(0) || to == address(0), "non-transferable");
         }
     }
